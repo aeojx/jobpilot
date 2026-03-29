@@ -1,10 +1,9 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Redirect, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
 import KanbanBoard from "./pages/KanbanBoard";
 import Ingestion from "./pages/Ingestion";
 import Skills from "./pages/Skills";
@@ -18,10 +17,11 @@ import { useState } from "react";
 
 // ─── Gate Guard ───────────────────────────────────────────────────────────────
 // Checks the server-side cookie. If not unlocked, renders the password gate.
-// Once unlocked, re-renders the full app without a page reload.
+// Once unlocked, navigates directly to /dashboard — no intermediate landing page.
 
 function GateGuard({ children }: { children: React.ReactNode }) {
   const [forceUnlocked, setForceUnlocked] = useState(false);
+  const [, navigate] = useLocation();
 
   const { data, isLoading } = trpc.gate.check.useQuery(undefined, {
     retry: false,
@@ -52,7 +52,14 @@ function GateGuard({ children }: { children: React.ReactNode }) {
   const isUnlocked = forceUnlocked || data?.unlocked;
 
   if (!isUnlocked) {
-    return <PasswordGate onUnlocked={() => setForceUnlocked(true)} />;
+    return (
+      <PasswordGate
+        onUnlocked={() => {
+          setForceUnlocked(true);
+          navigate("/dashboard");
+        }}
+      />
+    );
   }
 
   return <>{children}</>;
@@ -61,13 +68,16 @@ function GateGuard({ children }: { children: React.ReactNode }) {
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
-      {/* /dashboard is the canonical route; /kanban kept for backward compat */}
+      {/* Root redirects straight to Dashboard — no landing page */}
+      <Route path="/">
+        {() => <Redirect to="/dashboard" />}
+      </Route>
       <Route path="/dashboard">
         {() => <AppLayout><KanbanBoard /></AppLayout>}
       </Route>
+      {/* /kanban kept for backward compat */}
       <Route path="/kanban">
-        {() => <AppLayout><KanbanBoard /></AppLayout>}
+        {() => <Redirect to="/dashboard" />}
       </Route>
       <Route path="/ingest">
         {() => <AppLayout><Ingestion /></AppLayout>}

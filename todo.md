@@ -131,3 +131,7 @@
 - [x] Build PasswordGate.tsx page with Atari retro styling
 - [x] Wrap all routes in App.tsx with a GateGuard component that redirects to /gate if not unlocked
 - [x] Add vitest for gate.unlock procedure (5 tests passing)
+
+## UX Fix: Remove Landing Page
+- [x] Redirect / directly to /dashboard (skip Home page entirely)
+- [x] PasswordGate onUnlocked navigates to /dashboard instead of re-rendering home
