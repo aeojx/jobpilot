@@ -270,39 +270,47 @@ async function executeFetch(
   const skills = await getSkillsProfile();
 
   for (const job of rawJobs as Record<string, unknown>[]) {
-    const title = (job.title as string) ?? "Untitled";
-    const company = (job.organization as string) ?? (job.company as string) ?? "Unknown";
-    const isDuplicate = await checkDuplicate(title, company);
-    if (isDuplicate) { jobsDuplicate++; }
-    const descText = (job.description_text as string) ?? (job.description as string) ?? "";
-    const emailFound = extractEmailFromText(descText) ?? (job.ai_hiring_manager_email_address as string) ?? null;
-    const hasEmail = !!emailFound;
-    let matchScore = 0;
-    let status: "ingested" | "matched" = "ingested";
-    if (skills && descText) {
-      matchScore = await scoreJobWithLLM(descText, skills.content);
-      if (matchScore > 0) status = "matched";
+    try {
+      const title = (job.title as string) ?? "Untitled";
+      const company = (job.organization as string) ?? (job.company as string) ?? "Unknown";
+      const isDuplicate = await checkDuplicate(title, company);
+      if (isDuplicate) { jobsDuplicate++; }
+      const descText = (job.description_text as string) ?? (job.description as string) ?? "";
+      const emailFound = extractEmailFromText(descText) ?? (job.ai_hiring_manager_email_address as string) ?? null;
+      const hasEmail = !!emailFound;
+      let matchScore = 0;
+      let status: "ingested" | "matched" = "ingested";
+      if (skills && descText) {
+        matchScore = await scoreJobWithLLM(descText, skills.content);
+        if (matchScore > 0) status = "matched";
+      }
+      const locRaw = job.locations_derived as { city?: string; admin?: string; country?: string }[] | undefined;
+      const locationStr = locRaw?.[0] ? [locRaw[0].city, locRaw[0].admin, locRaw[0].country].filter(Boolean).join(", ") : (job.location as string) ?? "";
+      // Ensure tags is null (not []) when empty — TiDB JSON columns accept null
+      const tagsRaw = (job.ai_taxonomies_a as string[]) ?? null;
+      const tags = Array.isArray(tagsRaw) && tagsRaw.length > 0 ? tagsRaw : null;
+      await insertJob({
+        externalId: (job.id as string) ?? undefined,
+        title,
+        company,
+        location: locationStr,
+        description: descText,
+        descriptionHtml: (job.description_html as string) ?? undefined,
+        applyUrl: (job.url as string) ?? undefined,
+        source: (job.source as string) ?? undefined,
+        isDuplicate,
+        hasEmail,
+        emailFound: emailFound ?? undefined,
+        matchScore,
+        status,
+        tags,
+        rawJson: job,
+      });
+      jobsIngested++;
+    } catch (jobErr) {
+      console.error("[fetchJobs] Failed to insert job:", (jobErr as Error).message, job);
+      // Continue processing remaining jobs — don't abort the whole batch
     }
-    const locRaw = job.locations_derived as { city?: string; admin?: string; country?: string }[] | undefined;
-    const locationStr = locRaw?.[0] ? [locRaw[0].city, locRaw[0].admin, locRaw[0].country].filter(Boolean).join(", ") : (job.location as string) ?? "";
-    await insertJob({
-      externalId: (job.id as string) ?? undefined,
-      title,
-      company,
-      location: locationStr,
-      description: descText,
-      descriptionHtml: (job.description_html as string) ?? undefined,
-      applyUrl: (job.url as string) ?? undefined,
-      source: (job.source as string) ?? undefined,
-      isDuplicate,
-      hasEmail,
-      emailFound: emailFound ?? undefined,
-      matchScore,
-      status,
-      tags: (job.ai_taxonomies_a as string[]) ?? [],
-      rawJson: job,
-    });
-    jobsIngested++;
   }
 
   await insertFetchHistory({

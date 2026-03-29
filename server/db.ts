@@ -198,9 +198,14 @@ export async function updateApiQuota(
 ) {
   const db = await getDb();
   if (!db) return;
+  // Strip undefined values — Drizzle throws "No values to set" if the set object is empty
+  const defined = Object.fromEntries(
+    Object.entries(quota).filter(([, v]) => v !== undefined)
+  ) as Partial<typeof quota>;
+  if (Object.keys(defined).length === 0) return; // nothing to update
   await db.insert(apiUsage)
-    .values({ monthKey, callCount: 0, ...quota })
-    .onDuplicateKeyUpdate({ set: quota });
+    .values({ monthKey, callCount: 0, ...defined })
+    .onDuplicateKeyUpdate({ set: defined });
 }
 
 // ─── Fetch Schedules ──────────────────────────────────────────────────────────

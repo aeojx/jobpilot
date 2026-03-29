@@ -135,3 +135,7 @@
 ## UX Fix: Remove Landing Page
 - [x] Redirect / directly to /dashboard (skip Home page entirely)
 - [x] PasswordGate onUnlocked navigates to /dashboard instead of re-rendering home
+
+## Bug Fix: Fetch Jobs "No values to set"
+- [x] Diagnose root cause of "No values to set" error in fetchJobs / ingest procedure
+- [x] Fix the bug: updateApiQuota now strips undefined fields before Drizzle update; per-job loop wrapped in try/catch; tags uses null instead of [] for TiDB compatibility
