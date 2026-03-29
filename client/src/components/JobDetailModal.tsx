@@ -50,26 +50,26 @@ export default function JobDetailModal({
       <div
         className="w-full max-w-2xl max-h-[90vh] flex flex-col"
         style={{
-          background: "oklch(0.07 0 0)",
-          border: "2px solid oklch(0.2 0 0)",
+          background: "var(--atari-panel)",
+          border: "2px solid var(--atari-border)",
         }}
       >
         {/* Header */}
-        <div className="flex items-start justify-between p-5 border-b" style={{ borderColor: "oklch(0.15 0 0)" }}>
+        <div className="flex items-start justify-between p-5 border-b" style={{ borderColor: "var(--atari-border)" }}>
           <div className="flex-1 min-w-0 pr-4">
             <h2
               className="text-xl font-black text-foreground leading-tight"
-              style={{ fontFamily: "var(--font-condensed)", letterSpacing: "0.03em" }}
+              style={{ fontFamily: "Press Start 2P, monospace", letterSpacing: "0.03em" }}
             >
               {job.title}
             </h2>
             <p
               className="mt-1"
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Press Start 2P, monospace",
                 fontSize: "0.8rem",
                 letterSpacing: "0.08em",
-                color: "oklch(0.55 0 0)",
+                color: "var(--atari-gray)",
                 textTransform: "uppercase",
               }}
             >
@@ -86,7 +86,7 @@ export default function JobDetailModal({
         </div>
 
         {/* Red divider */}
-        <div className="brutal-divider flex-shrink-0" />
+        <div className="atari-divider flex-shrink-0" />
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
@@ -96,8 +96,8 @@ export default function JobDetailModal({
               <span
                 className="brutal-tag"
                 style={{
-                  borderColor: score >= 70 ? "oklch(0.65 0.18 145)" : score >= 40 ? "oklch(0.75 0.18 65)" : "oklch(0.5 0.22 27)",
-                  color: score >= 70 ? "oklch(0.65 0.18 145)" : score >= 40 ? "oklch(0.75 0.18 65)" : "oklch(0.5 0.22 27)",
+                  borderColor: score >= 70 ? "var(--atari-green)" : score >= 40 ? "var(--atari-amber)" : "var(--atari-amber)",
+                  color: score >= 70 ? "var(--atari-green)" : score >= 40 ? "var(--atari-amber)" : "var(--atari-amber)",
                   fontSize: "0.75rem",
                   padding: "3px 8px",
                 }}
@@ -106,17 +106,17 @@ export default function JobDetailModal({
               </span>
             )}
             {job.source && (
-              <span className="brutal-tag" style={{ borderColor: "oklch(0.6 0.15 200)", color: "oklch(0.6 0.15 200)" }}>
+              <span className="brutal-tag" style={{ borderColor: "var(--atari-cyan)", color: "var(--atari-cyan)" }}>
                 {job.source}
               </span>
             )}
             {job.hasEmail && (
-              <span className="brutal-tag" style={{ borderColor: "oklch(0.75 0.18 65)", color: "oklch(0.75 0.18 65)" }}>
+              <span className="brutal-tag" style={{ borderColor: "var(--atari-amber)", color: "var(--atari-amber)" }}>
                 <AtSign size={9} /> Email Outreach
               </span>
             )}
             {job.isDuplicate && (
-              <span className="brutal-tag" style={{ borderColor: "oklch(0.5 0.22 27)", color: "oklch(0.5 0.22 27)" }}>
+              <span className="brutal-tag" style={{ borderColor: "var(--atari-amber)", color: "var(--atari-amber)" }}>
                 <Copy size={9} /> Duplicated
               </span>
             )}
@@ -130,17 +130,17 @@ export default function JobDetailModal({
             >
               <p
                 style={{
-                  fontFamily: "var(--font-condensed)",
+                  fontFamily: "Press Start 2P, monospace",
                   fontSize: "0.7rem",
                   letterSpacing: "0.1em",
-                  color: "oklch(0.75 0.18 65)",
+                  color: "var(--atari-amber)",
                   textTransform: "uppercase",
                   marginBottom: 4,
                 }}
               >
                 Email Found
               </p>
-              <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", color: "oklch(0.98 0 0)" }}>
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", color: "var(--atari-white)" }}>
                 {job.emailFound}
               </p>
             </div>
@@ -154,10 +154,10 @@ export default function JobDetailModal({
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-sm transition-colors"
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Press Start 2P, monospace",
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
-                color: "oklch(0.6 0.15 200)",
+                color: "var(--atari-cyan)",
                 fontSize: "0.8rem",
               }}
             >
@@ -172,10 +172,10 @@ export default function JobDetailModal({
               <p
                 className="mb-2"
                 style={{
-                  fontFamily: "var(--font-condensed)",
+                  fontFamily: "Press Start 2P, monospace",
                   fontSize: "0.7rem",
                   letterSpacing: "0.1em",
-                  color: "oklch(0.4 0 0)",
+                  color: "var(--atari-gray)",
                   textTransform: "uppercase",
                 }}
               >
@@ -204,10 +204,10 @@ export default function JobDetailModal({
               <p
                 className="mb-2"
                 style={{
-                  fontFamily: "var(--font-condensed)",
+                  fontFamily: "Press Start 2P, monospace",
                   fontSize: "0.7rem",
                   letterSpacing: "0.1em",
-                  color: "oklch(0.4 0 0)",
+                  color: "var(--atari-gray)",
                   textTransform: "uppercase",
                 }}
               >
@@ -244,8 +244,8 @@ export default function JobDetailModal({
                   disabled={!question.trim() || askQuestion.isPending}
                   className="px-3 py-2 text-xs font-bold uppercase tracking-widest transition-all"
                   style={{
-                    fontFamily: "var(--font-condensed)",
-                    background: "oklch(0.12 0 0)",
+                    fontFamily: "Press Start 2P, monospace",
+                    background: "var(--atari-dark)",
                     border: "1.5px solid oklch(0.3 0 0)",
                     color: "oklch(0.7 0 0)",
                   }}
@@ -258,7 +258,7 @@ export default function JobDetailModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-5 border-t flex items-center gap-3" style={{ borderColor: "oklch(0.15 0 0)" }}>
+        <div className="p-5 border-t flex items-center gap-3" style={{ borderColor: "var(--atari-border)" }}>
           {/* Applier: Mark as Complete */}
           {!isOwner && job.status === "to_apply" && (
             <button
@@ -266,10 +266,10 @@ export default function JobDetailModal({
               disabled={markApplied.isPending}
               className="flex-1 py-3 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 transition-all"
               style={{
-                fontFamily: "var(--font-condensed)",
-                background: "oklch(0.65 0.18 145)",
-                color: "oklch(0.04 0 0)",
-                border: "2px solid oklch(0.65 0.18 145)",
+                fontFamily: "Press Start 2P, monospace",
+                background: "var(--atari-green)",
+                color: "var(--atari-black)",
+                border: "2px solid var(--atari-green)",
                 letterSpacing: "0.15em",
               }}
             >
@@ -286,10 +286,10 @@ export default function JobDetailModal({
                   onClick={() => onStatusChange("to_apply")}
                   className="flex-1 py-3 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 transition-all"
                   style={{
-                    fontFamily: "var(--font-condensed)",
-                    background: "oklch(0.98 0 0)",
-                    color: "oklch(0.04 0 0)",
-                    border: "2px solid oklch(0.98 0 0)",
+                    fontFamily: "Press Start 2P, monospace",
+                    background: "var(--atari-white)",
+                    color: "var(--atari-black)",
+                    border: "2px solid var(--atari-white)",
                     letterSpacing: "0.1em",
                   }}
                 >
@@ -302,10 +302,10 @@ export default function JobDetailModal({
                   onClick={() => onStatusChange("rejected")}
                   className="py-3 px-4 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 transition-all"
                   style={{
-                    fontFamily: "var(--font-condensed)",
+                    fontFamily: "Press Start 2P, monospace",
                     background: "transparent",
-                    color: "oklch(0.5 0.22 27)",
-                    border: "2px solid oklch(0.5 0.22 27)",
+                    color: "var(--atari-amber)",
+                    border: "2px solid var(--atari-amber)",
                     letterSpacing: "0.1em",
                   }}
                 >
@@ -320,10 +320,10 @@ export default function JobDetailModal({
             onClick={onClose}
             className="py-3 px-4 font-bold text-xs tracking-widest uppercase transition-all"
             style={{
-              fontFamily: "var(--font-condensed)",
+              fontFamily: "Press Start 2P, monospace",
               background: "transparent",
-              color: "oklch(0.4 0 0)",
-              border: "1.5px solid oklch(0.2 0 0)",
+              color: "var(--atari-gray)",
+              border: "1.5px solid var(--atari-border)",
               letterSpacing: "0.1em",
             }}
           >

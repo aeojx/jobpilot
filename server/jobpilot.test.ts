@@ -153,15 +153,11 @@ describe("jobs", () => {
     ).rejects.toThrow();
   });
 
-  it("batch ingest returns count", async () => {
+  it("single ingest by owner works", async () => {
     const caller = appRouter.createCaller(makeOwnerCtx());
-    const result = await caller.jobs.batchIngest({
-      jobs: [
-        { title: "Engineer", company_name: "Corp A", description: "React developer" },
-        { title: "Manager", company_name: "Corp B", description: "Team lead" },
-      ],
-    });
-    expect(result.count).toBe(2);
+    const result = await caller.jobs.ingest({ title: "Engineer", company: "Corp A", description: "React developer" });
+    expect(result.success).toBe(true);
+    expect(typeof result.matchScore).toBe("number");
   });
 });
 

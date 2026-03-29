@@ -18,17 +18,17 @@ import JobDetailModal from "@/components/JobDetailModal";
 type KanbanStatus = "ingested" | "matched" | "to_apply" | "applied" | "rejected";
 
 const COLUMNS: { id: KanbanStatus; label: string; color: string }[] = [
-  { id: "ingested", label: "Job Ingested", color: "oklch(0.4 0 0)" },
-  { id: "matched", label: "Matched", color: "oklch(0.65 0.18 145)" },
-  { id: "to_apply", label: "To Apply", color: "oklch(0.75 0.18 65)" },
-  { id: "applied", label: "Applied", color: "oklch(0.6 0.15 200)" },
-  { id: "rejected", label: "Rejected", color: "oklch(0.5 0.22 27)" },
+  { id: "ingested", label: "Ingested", color: "var(--atari-gray)" },
+  { id: "matched", label: "Matched", color: "var(--atari-green)" },
+  { id: "to_apply", label: "To Apply", color: "var(--atari-amber)" },
+  { id: "applied", label: "Applied", color: "var(--atari-cyan)" },
+  { id: "rejected", label: "Rejected", color: "var(--atari-red)" },
 ];
 
 function getScoreColor(score: number) {
-  if (score >= 70) return "oklch(0.65 0.18 145)";
-  if (score >= 40) return "oklch(0.75 0.18 65)";
-  return "oklch(0.5 0.22 27)";
+  if (score >= 70) return "var(--atari-green)";
+  if (score >= 40) return "var(--atari-amber)";
+  return "var(--atari-red)";
 }
 
 function JobCard({
@@ -57,8 +57,8 @@ function JobCard({
     >
       {/* Title */}
       <p
-        className="text-foreground font-bold leading-tight mb-1"
-        style={{ fontFamily: "var(--font-condensed)", fontSize: "0.9rem", letterSpacing: "0.03em" }}
+        className="font-bold leading-tight mb-1"
+        style={{ fontFamily: "Share Tech Mono, monospace", fontSize: "0.82rem", color: "var(--atari-white)" }}
       >
         {job.title}
       </p>
@@ -66,10 +66,10 @@ function JobCard({
       <p
         className="mb-2"
         style={{
-          fontFamily: "var(--font-condensed)",
-          fontSize: "0.75rem",
+          fontFamily: "Share Tech Mono, monospace",
+          fontSize: "0.7rem",
           letterSpacing: "0.05em",
-          color: "oklch(0.55 0 0)",
+          color: "var(--atari-gray)",
           textTransform: "uppercase",
         }}
       >
@@ -114,7 +114,7 @@ function JobCard({
         {job.source && (
           <span
             className="brutal-tag"
-            style={{ borderColor: "oklch(0.6 0.15 200)", color: "oklch(0.6 0.15 200)" }}
+            style={{ borderColor: "var(--atari-cyan)", color: "var(--atari-cyan)" }}
           >
             {job.source}
           </span>
@@ -122,7 +122,7 @@ function JobCard({
         {job.hasEmail && (
           <span
             className="brutal-tag"
-            style={{ borderColor: "oklch(0.75 0.18 65)", color: "oklch(0.75 0.18 65)" }}
+            style={{ borderColor: "var(--atari-green)", color: "var(--atari-green)" }}
           >
             <AtSign size={8} />
             Email
@@ -131,7 +131,7 @@ function JobCard({
         {job.isDuplicate && (
           <span
             className="brutal-tag"
-            style={{ borderColor: "oklch(0.5 0.22 27)", color: "oklch(0.5 0.22 27)" }}
+            style={{ borderColor: "var(--atari-magenta)", color: "var(--atari-magenta)" }}
           >
             <Copy size={8} />
             Dupe
@@ -179,12 +179,15 @@ function KanbanColumn({
       }}
     >
       <div className="kanban-column-header" style={{ borderBottomColor: column.color }}>
-        <span style={{ color: column.color }}>{column.label}</span>
+        <span className="font-pixel" style={{ color: column.color, fontSize: "8px" }}>{column.label}</span>
         <span
+          className="font-pixel"
           style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.7rem",
-            color: "oklch(0.4 0 0)",
+            fontSize: "8px",
+            color: column.color,
+            background: `${column.color}22`,
+            padding: "2px 6px",
+            border: `1px solid ${column.color}`,
           }}
         >
           {jobs.length}
@@ -194,18 +197,19 @@ function KanbanColumn({
         {jobs.length === 0 && (
           <div
             className="flex items-center justify-center h-16 border border-dashed"
-            style={{ borderColor: "oklch(0.15 0 0)" }}
+            style={{ borderColor: "var(--atari-border)" }}
           >
             <span
+              className="blink"
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Share Tech Mono, monospace",
                 fontSize: "0.65rem",
                 letterSpacing: "0.1em",
-                color: "oklch(0.25 0 0)",
+                color: "var(--atari-border)",
                 textTransform: "uppercase",
               }}
             >
-              Empty
+              EMPTY_
             </span>
           </div>
         )}
@@ -270,37 +274,34 @@ export default function KanbanBoard() {
       <div className="flex-shrink-0 px-5 pt-5 pb-3">
         <div className="flex items-center justify-between mb-1">
           <h2
-            className="text-2xl font-black text-foreground"
-            style={{ fontFamily: "var(--font-condensed)", letterSpacing: "0.05em" }}
+            className="font-pixel glow-amber"
+            style={{ color: "var(--atari-amber)", fontSize: "12px" }}
           >
-            Kanban Pipeline
+            DASHBOARD
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.7rem",
-                color: "oklch(0.4 0 0)",
-              }}
+              className="font-pixel"
+              style={{ fontSize: "8px", color: "var(--atari-cyan)" }}
             >
-              {jobs.length} jobs
+              {jobs.length} JOBS
             </span>
-            {isLoading && <Loader2 size={14} className="animate-spin text-foreground/40" />}
+            {isLoading && <Loader2 size={14} className="animate-spin" style={{ color: "var(--atari-amber)" }} />}
           </div>
         </div>
-        <div className="brutal-divider" />
+        <div className="atari-divider" />
         {isOwner && (
           <p
             className="mt-2"
             style={{
-              fontFamily: "var(--font-condensed)",
-              fontSize: "0.7rem",
+              fontFamily: "Share Tech Mono, monospace",
+              fontSize: "0.65rem",
               letterSpacing: "0.1em",
-              color: "oklch(0.4 0 0)",
+              color: "var(--atari-gray)",
               textTransform: "uppercase",
             }}
           >
-            Drag cards to move them between stages
+            ▶ DRAG CARDS TO MOVE BETWEEN STAGES
           </p>
         )}
       </div>

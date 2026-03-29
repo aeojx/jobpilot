@@ -30,7 +30,7 @@ export default function QuestionBank() {
         <div className="flex items-center justify-between mb-1">
           <h2
             className="text-2xl font-black text-foreground"
-            style={{ fontFamily: "var(--font-condensed)", letterSpacing: "0.05em" }}
+            style={{ fontFamily: "Press Start 2P, monospace", letterSpacing: "0.05em" }}
           >
             Question Bank
           </h2>
@@ -38,7 +38,7 @@ export default function QuestionBank() {
             {unanswered.length > 0 && (
               <span
                 className="brutal-tag"
-                style={{ borderColor: "oklch(0.5 0.22 27)", color: "oklch(0.5 0.22 27)", fontSize: "0.75rem" }}
+                style={{ borderColor: "var(--atari-amber)", color: "var(--atari-amber)", fontSize: "0.75rem" }}
               >
                 {unanswered.length} Pending
               </span>
@@ -46,14 +46,14 @@ export default function QuestionBank() {
             {isLoading && <Loader2 size={14} className="animate-spin text-foreground/40" />}
           </div>
         </div>
-        <div className="brutal-divider" />
+        <div className="atari-divider" />
         <p
           className="mt-2"
           style={{
-            fontFamily: "var(--font-condensed)",
+            fontFamily: "Press Start 2P, monospace",
             fontSize: "0.7rem",
             letterSpacing: "0.08em",
-            color: "oklch(0.4 0 0)",
+            color: "var(--atari-gray)",
             textTransform: "uppercase",
           }}
         >
@@ -68,10 +68,10 @@ export default function QuestionBank() {
             <p
               className="mb-3"
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Press Start 2P, monospace",
                 fontSize: "0.7rem",
                 letterSpacing: "0.12em",
-                color: "oklch(0.5 0.22 27)",
+                color: "var(--atari-amber)",
                 textTransform: "uppercase",
               }}
             >
@@ -83,19 +83,19 @@ export default function QuestionBank() {
                   key={q.id}
                   className="p-4"
                   style={{
-                    background: "oklch(0.07 0 0)",
+                    background: "var(--atari-panel)",
                     border: "1.5px solid oklch(0.5 0.22 27 / 0.4)",
                   }}
                 >
                   {/* Job context */}
                   <div className="flex items-center gap-2 mb-2">
-                    <HelpCircle size={12} style={{ color: "oklch(0.5 0.22 27)", flexShrink: 0 }} />
+                    <HelpCircle size={12} style={{ color: "var(--atari-amber)", flexShrink: 0 }} />
                     <span
                       style={{
-                        fontFamily: "var(--font-condensed)",
+                        fontFamily: "Press Start 2P, monospace",
                         fontSize: "0.7rem",
                         letterSpacing: "0.08em",
-                        color: "oklch(0.5 0.22 27)",
+                        color: "var(--atari-amber)",
                         textTransform: "uppercase",
                       }}
                     >
@@ -107,10 +107,10 @@ export default function QuestionBank() {
                   <p
                     className="mb-1"
                     style={{
-                      fontFamily: "var(--font-condensed)",
+                      fontFamily: "Press Start 2P, monospace",
                       fontSize: "0.65rem",
                       letterSpacing: "0.1em",
-                      color: "oklch(0.4 0 0)",
+                      color: "var(--atari-gray)",
                       textTransform: "uppercase",
                     }}
                   >
@@ -146,10 +146,10 @@ export default function QuestionBank() {
                         disabled={!answerMap[q.id]?.trim() || answerMutation.isPending}
                         className="px-4 py-2 font-black text-xs tracking-widest uppercase flex items-center gap-1 transition-all"
                         style={{
-                          fontFamily: "var(--font-condensed)",
-                          background: "oklch(0.98 0 0)",
-                          color: "oklch(0.04 0 0)",
-                          border: "2px solid oklch(0.98 0 0)",
+                          fontFamily: "Press Start 2P, monospace",
+                          background: "var(--atari-white)",
+                          color: "var(--atari-black)",
+                          border: "2px solid var(--atari-white)",
                           letterSpacing: "0.1em",
                         }}
                       >
@@ -181,10 +181,10 @@ export default function QuestionBank() {
             <p
               className="mb-3"
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Press Start 2P, monospace",
                 fontSize: "0.7rem",
                 letterSpacing: "0.12em",
-                color: "oklch(0.65 0.18 145)",
+                color: "var(--atari-green)",
                 textTransform: "uppercase",
               }}
             >
@@ -197,14 +197,14 @@ export default function QuestionBank() {
                   className="p-4"
                   style={{
                     background: "oklch(0.06 0 0)",
-                    border: "1.5px solid oklch(0.15 0 0)",
+                    border: "1.5px solid var(--atari-border)",
                   }}
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle size={12} style={{ color: "oklch(0.65 0.18 145)", flexShrink: 0 }} />
+                    <CheckCircle size={12} style={{ color: "var(--atari-green)", flexShrink: 0 }} />
                     <span
                       style={{
-                        fontFamily: "var(--font-condensed)",
+                        fontFamily: "Press Start 2P, monospace",
                         fontSize: "0.7rem",
                         letterSpacing: "0.08em",
                         color: "oklch(0.5 0 0)",
@@ -218,7 +218,7 @@ export default function QuestionBank() {
                   <p
                     className="mb-1"
                     style={{
-                      fontFamily: "var(--font-condensed)",
+                      fontFamily: "Press Start 2P, monospace",
                       fontSize: "0.65rem",
                       letterSpacing: "0.1em",
                       color: "oklch(0.35 0 0)",
@@ -237,10 +237,10 @@ export default function QuestionBank() {
                   <p
                     className="mb-1"
                     style={{
-                      fontFamily: "var(--font-condensed)",
+                      fontFamily: "Press Start 2P, monospace",
                       fontSize: "0.65rem",
                       letterSpacing: "0.1em",
-                      color: "oklch(0.65 0.18 145)",
+                      color: "var(--atari-green)",
                       textTransform: "uppercase",
                     }}
                   >
@@ -257,7 +257,7 @@ export default function QuestionBank() {
                     style={{
                       fontFamily: "var(--font-mono)",
                       fontSize: "0.6rem",
-                      color: "oklch(0.25 0 0)",
+                      color: "var(--atari-border)",
                     }}
                   >
                     Answered {q.answeredAt ? new Date(q.answeredAt).toLocaleString() : ""}
@@ -271,12 +271,12 @@ export default function QuestionBank() {
         {questions.length === 0 && !isLoading && (
           <div
             className="flex flex-col items-center justify-center py-16"
-            style={{ border: "1.5px dashed oklch(0.15 0 0)" }}
+            style={{ border: "1.5px dashed var(--atari-border)" }}
           >
-            <MessageSquare size={28} style={{ color: "oklch(0.25 0 0)", marginBottom: 12 }} />
+            <MessageSquare size={28} style={{ color: "var(--atari-border)", marginBottom: 12 }} />
             <p
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Press Start 2P, monospace",
                 fontSize: "0.75rem",
                 letterSpacing: "0.12em",
                 color: "oklch(0.3 0 0)",

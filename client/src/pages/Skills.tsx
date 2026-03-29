@@ -57,7 +57,7 @@ export default function Skills() {
         <div className="flex items-center justify-between mb-1">
           <h2
             className="text-2xl font-black text-foreground"
-            style={{ fontFamily: "var(--font-condensed)", letterSpacing: "0.05em" }}
+            style={{ fontFamily: "Press Start 2P, monospace", letterSpacing: "0.05em" }}
           >
             Skills Profile
           </h2>
@@ -73,14 +73,14 @@ export default function Skills() {
             </p>
           )}
         </div>
-        <div className="brutal-divider" />
+        <div className="atari-divider" />
         <p
           className="mt-2"
           style={{
-            fontFamily: "var(--font-condensed)",
+            fontFamily: "Press Start 2P, monospace",
             fontSize: "0.7rem",
             letterSpacing: "0.08em",
-            color: "oklch(0.4 0 0)",
+            color: "var(--atari-gray)",
             textTransform: "uppercase",
           }}
         >
@@ -93,7 +93,7 @@ export default function Skills() {
         <div
           className="flex flex-col items-center justify-center p-6 border-2 border-dashed cursor-pointer transition-all"
           style={{
-            borderColor: isDragging ? "oklch(0.5 0.22 27)" : "oklch(0.2 0 0)",
+            borderColor: isDragging ? "var(--atari-amber)" : "var(--atari-border)",
             background: isDragging ? "oklch(0.08 0 0)" : "transparent",
           }}
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -101,10 +101,10 @@ export default function Skills() {
           onDrop={handleDrop}
           onClick={() => fileRef.current?.click()}
         >
-          <Upload size={24} style={{ color: "oklch(0.4 0 0)", marginBottom: 8 }} />
+          <Upload size={24} style={{ color: "var(--atari-gray)", marginBottom: 8 }} />
           <p
             style={{
-              fontFamily: "var(--font-condensed)",
+              fontFamily: "Press Start 2P, monospace",
               fontSize: "0.8rem",
               letterSpacing: "0.1em",
               textTransform: "uppercase",
@@ -130,7 +130,7 @@ export default function Skills() {
           <label
             className="block mb-1"
             style={{
-              fontFamily: "var(--font-condensed)",
+              fontFamily: "Press Start 2P, monospace",
               fontSize: "0.7rem",
               letterSpacing: "0.1em",
               color: "oklch(0.45 0 0)",
@@ -166,11 +166,11 @@ export default function Skills() {
             disabled={upsert.isPending || !content.trim()}
             className="flex-1 py-3 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 transition-all"
             style={{
-              fontFamily: "var(--font-condensed)",
+              fontFamily: "Press Start 2P, monospace",
               letterSpacing: "0.15em",
-              background: "oklch(0.98 0 0)",
-              color: "oklch(0.04 0 0)",
-              border: "2px solid oklch(0.98 0 0)",
+              background: "var(--atari-white)",
+              color: "var(--atari-black)",
+              border: "2px solid var(--atari-white)",
             }}
           >
             {upsert.isPending ? (
@@ -185,11 +185,11 @@ export default function Skills() {
             disabled={rescore.isPending || !profile}
             className="py-3 px-4 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 transition-all"
             style={{
-              fontFamily: "var(--font-condensed)",
+              fontFamily: "Press Start 2P, monospace",
               letterSpacing: "0.1em",
               background: "transparent",
-              color: "oklch(0.5 0.22 27)",
-              border: "2px solid oklch(0.5 0.22 27)",
+              color: "var(--atari-amber)",
+              border: "2px solid var(--atari-amber)",
             }}
             title="Re-score all existing jobs with current skills profile"
           >
@@ -211,10 +211,10 @@ export default function Skills() {
           >
             <p
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Press Start 2P, monospace",
                 fontSize: "0.75rem",
                 letterSpacing: "0.08em",
-                color: "oklch(0.5 0.22 27)",
+                color: "var(--atari-amber)",
                 textTransform: "uppercase",
               }}
             >

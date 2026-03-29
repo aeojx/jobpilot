@@ -17,10 +17,10 @@ import { toast } from "sonner";
 import JobDetailModal from "@/components/JobDetailModal";
 
 const TIERS = [
-  { name: "Rookie", minXp: 0, color: "oklch(0.55 0 0)" },
-  { name: "Grinder", minXp: 100, color: "oklch(0.75 0.18 65)" },
-  { name: "Machine", minXp: 500, color: "oklch(0.6 0.15 200)" },
-  { name: "Legend", minXp: 2000, color: "oklch(0.5 0.22 27)" },
+  { name: "Rookie", minXp: 0, color: "var(--atari-gray)" },
+  { name: "Grinder", minXp: 100, color: "var(--atari-amber)" },
+  { name: "Machine", minXp: 500, color: "var(--atari-cyan)" },
+  { name: "Legend", minXp: 2000, color: "var(--atari-amber)" },
 ];
 
 function getTier(xp: number) {
@@ -28,9 +28,9 @@ function getTier(xp: number) {
 }
 
 function getScoreColor(score: number) {
-  if (score >= 70) return "oklch(0.65 0.18 145)";
-  if (score >= 40) return "oklch(0.75 0.18 65)";
-  return "oklch(0.5 0.22 27)";
+  if (score >= 70) return "var(--atari-green)";
+  if (score >= 40) return "var(--atari-amber)";
+  return "var(--atari-amber)";
 }
 
 export default function ApplierView() {
@@ -67,21 +67,21 @@ export default function ApplierView() {
         <div className="flex items-center justify-between mb-1">
           <h2
             className="text-2xl font-black text-foreground"
-            style={{ fontFamily: "var(--font-condensed)", letterSpacing: "0.05em" }}
+            style={{ fontFamily: "Press Start 2P, monospace", letterSpacing: "0.05em" }}
           >
             My Queue
           </h2>
           <div className="flex items-center gap-2">
             <span
               className="brutal-tag"
-              style={{ borderColor: "oklch(0.75 0.18 65)", color: "oklch(0.75 0.18 65)", fontSize: "0.75rem" }}
+              style={{ borderColor: "var(--atari-amber)", color: "var(--atari-amber)", fontSize: "0.75rem" }}
             >
               {toApplyJobs.length} to apply
             </span>
             {isLoading && <Loader2 size={14} className="animate-spin text-foreground/40" />}
           </div>
         </div>
-        <div className="brutal-divider" />
+        <div className="atari-divider" />
       </div>
 
       <div className="flex-1 px-5 pb-5 space-y-5">
@@ -89,8 +89,8 @@ export default function ApplierView() {
         <div
           className="p-4"
           style={{
-            background: "oklch(0.07 0 0)",
-            border: `2px solid ${isComplete ? "oklch(0.65 0.18 145)" : "oklch(0.2 0 0)"}`,
+            background: "var(--atari-panel)",
+            border: `2px solid ${isComplete ? "var(--atari-green)" : "var(--atari-border)"}`,
           }}
         >
           <div className="flex items-center justify-between mb-2">
@@ -98,10 +98,10 @@ export default function ApplierView() {
               <div>
                 <p
                   style={{
-                    fontFamily: "var(--font-condensed)",
+                    fontFamily: "Press Start 2P, monospace",
                     fontSize: "0.65rem",
                     letterSpacing: "0.12em",
-                    color: "oklch(0.4 0 0)",
+                    color: "var(--atari-gray)",
                     textTransform: "uppercase",
                   }}
                 >
@@ -109,10 +109,10 @@ export default function ApplierView() {
                 </p>
                 <p
                   style={{
-                    fontFamily: "var(--font-condensed)",
+                    fontFamily: "Press Start 2P, monospace",
                     fontSize: "1.8rem",
                     fontWeight: 800,
-                    color: isComplete ? "oklch(0.65 0.18 145)" : "oklch(0.98 0 0)",
+                    color: isComplete ? "var(--atari-green)" : "var(--atari-white)",
                     lineHeight: 1,
                   }}
                 >
@@ -129,13 +129,13 @@ export default function ApplierView() {
               <div className="flex items-center gap-3">
                 <div className="text-center">
                   <div className="flex items-center gap-1">
-                    <Flame size={12} style={{ color: "oklch(0.75 0.18 65)" }} />
+                    <Flame size={12} style={{ color: "var(--atari-amber)" }} />
                     <span
                       style={{
-                        fontFamily: "var(--font-condensed)",
+                        fontFamily: "Press Start 2P, monospace",
                         fontSize: "1rem",
                         fontWeight: 800,
-                        color: "oklch(0.98 0 0)",
+                        color: "var(--atari-white)",
                       }}
                     >
                       {gami.currentStreak}
@@ -143,7 +143,7 @@ export default function ApplierView() {
                   </div>
                   <p
                     style={{
-                      fontFamily: "var(--font-condensed)",
+                      fontFamily: "Press Start 2P, monospace",
                       fontSize: "0.55rem",
                       color: "oklch(0.35 0 0)",
                       textTransform: "uppercase",
@@ -155,13 +155,13 @@ export default function ApplierView() {
                 </div>
                 <div className="text-center">
                   <div className="flex items-center gap-1">
-                    <Zap size={12} style={{ color: "oklch(0.5 0.22 27)" }} />
+                    <Zap size={12} style={{ color: "var(--atari-amber)" }} />
                     <span
                       style={{
-                        fontFamily: "var(--font-condensed)",
+                        fontFamily: "Press Start 2P, monospace",
                         fontSize: "1rem",
                         fontWeight: 800,
-                        color: "oklch(0.98 0 0)",
+                        color: "var(--atari-white)",
                       }}
                     >
                       {gami.totalXp}
@@ -169,7 +169,7 @@ export default function ApplierView() {
                   </div>
                   <p
                     style={{
-                      fontFamily: "var(--font-condensed)",
+                      fontFamily: "Press Start 2P, monospace",
                       fontSize: "0.55rem",
                       color: "oklch(0.35 0 0)",
                       textTransform: "uppercase",
@@ -185,7 +185,7 @@ export default function ApplierView() {
                 >
                   <p
                     style={{
-                      fontFamily: "var(--font-condensed)",
+                      fontFamily: "Press Start 2P, monospace",
                       fontSize: "0.7rem",
                       fontWeight: 800,
                       color: tier.color,
@@ -210,10 +210,10 @@ export default function ApplierView() {
             <p
               className="mt-2"
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Press Start 2P, monospace",
                 fontSize: "0.7rem",
                 letterSpacing: "0.1em",
-                color: "oklch(0.65 0.18 145)",
+                color: "var(--atari-green)",
                 textTransform: "uppercase",
               }}
             >
@@ -226,12 +226,12 @@ export default function ApplierView() {
         {toApplyJobs.length === 0 && !isLoading ? (
           <div
             className="flex flex-col items-center justify-center py-16"
-            style={{ border: "1.5px dashed oklch(0.15 0 0)" }}
+            style={{ border: "1.5px dashed var(--atari-border)" }}
           >
-            <Trophy size={28} style={{ color: "oklch(0.25 0 0)", marginBottom: 12 }} />
+            <Trophy size={28} style={{ color: "var(--atari-border)", marginBottom: 12 }} />
             <p
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Press Start 2P, monospace",
                 fontSize: "0.8rem",
                 letterSpacing: "0.12em",
                 color: "oklch(0.35 0 0)",
@@ -242,10 +242,10 @@ export default function ApplierView() {
             </p>
             <p
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Press Start 2P, monospace",
                 fontSize: "0.65rem",
                 letterSpacing: "0.08em",
-                color: "oklch(0.25 0 0)",
+                color: "var(--atari-border)",
                 textTransform: "uppercase",
                 marginTop: 4,
               }}
@@ -263,11 +263,11 @@ export default function ApplierView() {
                   key={job.id}
                   className="p-4"
                   style={{
-                    background: "oklch(0.07 0 0)",
+                    background: "var(--atari-panel)",
                     border: "1.5px solid oklch(0.18 0 0)",
                     transition: "border-color 0.15s ease",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "oklch(0.5 0.22 27)")}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--atari-amber)")}
                   onMouseLeave={(e) => (e.currentTarget.style.borderColor = "oklch(0.18 0 0)")}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -275,17 +275,17 @@ export default function ApplierView() {
                       <p
                         className="font-bold leading-tight mb-1"
                         style={{
-                          fontFamily: "var(--font-condensed)",
+                          fontFamily: "Press Start 2P, monospace",
                           fontSize: "1rem",
                           letterSpacing: "0.02em",
-                          color: "oklch(0.98 0 0)",
+                          color: "var(--atari-white)",
                         }}
                       >
                         {job.title}
                       </p>
                       <p
                         style={{
-                          fontFamily: "var(--font-condensed)",
+                          fontFamily: "Press Start 2P, monospace",
                           fontSize: "0.75rem",
                           letterSpacing: "0.06em",
                           color: "oklch(0.5 0 0)",
@@ -320,17 +320,17 @@ export default function ApplierView() {
                       {/* Tags */}
                       <div className="flex flex-wrap gap-1 mt-2">
                         {job.source && (
-                          <span className="brutal-tag" style={{ borderColor: "oklch(0.6 0.15 200)", color: "oklch(0.6 0.15 200)" }}>
+                          <span className="brutal-tag" style={{ borderColor: "var(--atari-cyan)", color: "var(--atari-cyan)" }}>
                             {job.source}
                           </span>
                         )}
                         {job.hasEmail && (
-                          <span className="brutal-tag" style={{ borderColor: "oklch(0.75 0.18 65)", color: "oklch(0.75 0.18 65)" }}>
+                          <span className="brutal-tag" style={{ borderColor: "var(--atari-amber)", color: "var(--atari-amber)" }}>
                             <AtSign size={8} /> Email
                           </span>
                         )}
                         {job.isDuplicate && (
-                          <span className="brutal-tag" style={{ borderColor: "oklch(0.5 0.22 27)", color: "oklch(0.5 0.22 27)" }}>
+                          <span className="brutal-tag" style={{ borderColor: "var(--atari-amber)", color: "var(--atari-amber)" }}>
                             <Copy size={8} /> Dupe
                           </span>
                         )}
@@ -344,10 +344,10 @@ export default function ApplierView() {
                         disabled={markApplied.isPending}
                         className="flex items-center gap-1 px-3 py-2 font-black text-xs tracking-widest uppercase transition-all"
                         style={{
-                          fontFamily: "var(--font-condensed)",
-                          background: "oklch(0.65 0.18 145)",
-                          color: "oklch(0.04 0 0)",
-                          border: "2px solid oklch(0.65 0.18 145)",
+                          fontFamily: "Press Start 2P, monospace",
+                          background: "var(--atari-green)",
+                          color: "var(--atari-black)",
+                          border: "2px solid var(--atari-green)",
                           letterSpacing: "0.08em",
                           whiteSpace: "nowrap",
                         }}
@@ -363,10 +363,10 @@ export default function ApplierView() {
                         onClick={() => setSelectedJob(job)}
                         className="flex items-center gap-1 px-3 py-2 font-bold text-xs tracking-widest uppercase transition-all"
                         style={{
-                          fontFamily: "var(--font-condensed)",
+                          fontFamily: "Press Start 2P, monospace",
                           background: "transparent",
                           color: "oklch(0.5 0 0)",
-                          border: "1.5px solid oklch(0.2 0 0)",
+                          border: "1.5px solid var(--atari-border)",
                           letterSpacing: "0.08em",
                           whiteSpace: "nowrap",
                         }}
@@ -385,10 +385,10 @@ export default function ApplierView() {
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 mt-3 text-xs"
                       style={{
-                        fontFamily: "var(--font-condensed)",
+                        fontFamily: "Press Start 2P, monospace",
                         letterSpacing: "0.08em",
                         textTransform: "uppercase",
-                        color: "oklch(0.6 0.15 200)",
+                        color: "var(--atari-cyan)",
                         fontSize: "0.7rem",
                       }}
                       onClick={(e) => e.stopPropagation()}

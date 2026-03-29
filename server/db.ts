@@ -1,13 +1,17 @@
-import { and, desc, eq, like, or, sql } from "drizzle-orm";
+import { and, desc, eq, like, or, sql, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
   Job,
   InsertJob,
   InsertQuestion,
+  InsertFetchSchedule,
+  InsertFetchHistory,
   apiUsage,
   applierGamification,
   applierStats,
+  fetchHistory,
+  fetchSchedules,
   jobs,
   questionBank,
   skillsProfile,
@@ -186,6 +190,80 @@ export async function incrementApiUsage(monthKey: string) {
   if (!db) return;
   await db.insert(apiUsage).values({ monthKey, callCount: 1 })
     .onDuplicateKeyUpdate({ set: { callCount: sql`${apiUsage.callCount} + 1` } });
+}
+
+export async function updateApiQuota(
+  monthKey: string,
+  quota: { jobsLimit?: number; jobsRemaining?: number; requestsLimit?: number; requestsRemaining?: number; quotaResetSeconds?: number }
+) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(apiUsage)
+    .values({ monthKey, callCount: 0, ...quota })
+    .onDuplicateKeyUpdate({ set: quota });
+}
+
+// ─── Fetch Schedules ──────────────────────────────────────────────────────────
+
+export async function getAllFetchSchedules() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(fetchSchedules).orderBy(desc(fetchSchedules.createdAt));
+}
+
+export async function getFetchScheduleById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(fetchSchedules).where(eq(fetchSchedules.id, id)).limit(1);
+  return result[0];
+}
+
+export async function insertFetchSchedule(schedule: InsertFetchSchedule) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(fetchSchedules).values(schedule);
+  return result;
+}
+
+export async function updateFetchSchedule(id: number, updates: Partial<InsertFetchSchedule>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(fetchSchedules).set(updates).where(eq(fetchSchedules.id, id));
+}
+
+export async function deleteFetchSchedule(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(fetchSchedules).where(eq(fetchSchedules.id, id));
+}
+
+export async function getDueFetchSchedules() {
+  const db = await getDb();
+  if (!db) return [];
+  const now = new Date();
+  return db.select().from(fetchSchedules).where(
+    and(eq(fetchSchedules.enabled, true), lte(fetchSchedules.nextRunAt, now))
+  );
+}
+
+// ─── Fetch History ────────────────────────────────────────────────────────────
+
+export async function insertFetchHistory(entry: InsertFetchHistory) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(fetchHistory).values(entry);
+}
+
+export async function getAllFetchHistory() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(fetchHistory).orderBy(desc(fetchHistory.ranAt)).limit(100);
+}
+
+export async function getFetchHistoryBySchedule(scheduleId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(fetchHistory).where(eq(fetchHistory.scheduleId, scheduleId)).orderBy(desc(fetchHistory.ranAt)).limit(50);
 }
 
 // ─── Applier Stats ────────────────────────────────────────────────────────────

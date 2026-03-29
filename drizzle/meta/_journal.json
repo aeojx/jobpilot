@@ -15,6 +15,13 @@
       "when": 1774784914797,
       "tag": "0001_overconfident_falcon",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1774787598881,
+      "tag": "0002_gigantic_molecule_man",
+      "breakpoints": true
     }
   ]
 }

@@ -4,7 +4,6 @@ import { trpc } from "@/lib/trpc";
 import {
   BarChart3,
   BookOpen,
-  Briefcase,
   HelpCircle,
   LayoutGrid,
   LogOut,
@@ -17,9 +16,9 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 
 const ownerNav = [
-  { href: "/kanban", label: "Kanban Board", icon: LayoutGrid },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
   { href: "/ingest", label: "Ingest Jobs", icon: Radar },
-  { href: "/skills", label: "Skills Profile", icon: Briefcase },
+  { href: "/skills", label: "Skills Profile", icon: BookOpen },
   { href: "/questions", label: "Question Bank", icon: HelpCircle },
   { href: "/performance", label: "Performance", icon: BarChart3 },
 ];
@@ -42,14 +41,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--atari-black)" }}>
         <div className="text-center">
-          <div className="brutal-divider mb-6" />
-          <p
-            className="text-foreground/60"
-            style={{ fontFamily: "var(--font-condensed)", letterSpacing: "0.15em", textTransform: "uppercase" }}
-          >
-            Loading...
+          <p className="font-pixel text-xs glow-amber" style={{ color: "var(--atari-amber)", letterSpacing: "0.2em" }}>
+            LOADING<span className="blink">_</span>
           </p>
         </div>
       </div>
@@ -58,31 +53,55 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center max-w-sm w-full px-6">
-          <h1
-            className="text-5xl font-black text-foreground mb-2"
-            style={{ fontFamily: "var(--font-condensed)", letterSpacing: "0.05em" }}
-          >
-            JOBPILOT
-          </h1>
-          <div className="brutal-divider mb-6" />
-          <p className="text-foreground/50 text-sm mb-8" style={{ fontFamily: "var(--font-condensed)", letterSpacing: "0.1em" }}>
-            SIGN IN TO CONTINUE
+      <div className="min-h-screen flex items-center justify-center px-6" style={{ background: "var(--atari-black)" }}>
+        <div className="text-center max-w-sm w-full">
+          {/* Atari-style logo */}
+          <div className="mb-6">
+            <div className="inline-block px-4 py-2 mb-4" style={{ border: "2px solid var(--atari-amber)" }}>
+              <p className="font-pixel text-xs" style={{ color: "var(--atari-amber)", letterSpacing: "0.15em" }}>
+                ★ INSERT COIN ★
+              </p>
+            </div>
+            <h1 className="font-pixel glow-amber mb-0" style={{ color: "var(--atari-amber)", fontSize: "22px" }}>
+              JOB
+            </h1>
+            <h1 className="font-pixel glow-cyan mb-0" style={{ color: "var(--atari-cyan)", fontSize: "22px" }}>
+              PILOT
+            </h1>
+          </div>
+
+          <div className="atari-divider mb-6" />
+
+          <p className="text-xs mb-8" style={{ color: "var(--atari-gray)", letterSpacing: "0.15em", fontFamily: "Share Tech Mono" }}>
+            DUAL-ROLE JOB APPLICATION SYSTEM
           </p>
+
           <a
             href={getLoginUrl()}
-            className="block w-full py-3 text-center font-black text-sm tracking-widest uppercase"
+            className="block w-full py-3 text-center text-xs tracking-widest uppercase transition-all"
             style={{
-              fontFamily: "var(--font-condensed)",
-              background: "oklch(0.98 0 0)",
-              color: "oklch(0.04 0 0)",
-              border: "2px solid oklch(0.98 0 0)",
-              transition: "all 0.1s ease",
+              fontFamily: "Press Start 2P, monospace",
+              fontSize: "10px",
+              background: "transparent",
+              color: "var(--atari-amber)",
+              border: "2px solid var(--atari-amber)",
+              boxShadow: "0 0 8px rgba(255,176,0,0.3)",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.background = "var(--atari-amber)";
+              (e.currentTarget as HTMLAnchorElement).style.color = "var(--atari-black)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
+              (e.currentTarget as HTMLAnchorElement).style.color = "var(--atari-amber)";
             }}
           >
-            Sign In
+            ▶ PRESS START
           </a>
+
+          <p className="text-xs mt-8 animate-pixel-pulse" style={{ color: "var(--atari-gray)", fontFamily: "Share Tech Mono" }}>
+            © 2025 JOBPILOT SYSTEMS
+          </p>
         </div>
       </div>
     );
@@ -91,31 +110,39 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isOwner = user?.role === "admin";
   const navItems = isOwner ? ownerNav : applierNav;
 
+  // Quota info
+  const jobsRemaining = apiUsage && "jobsRemaining" in apiUsage ? apiUsage.jobsRemaining : null;
+  const jobsLimit = apiUsage && "jobsLimit" in apiUsage ? apiUsage.jobsLimit : null;
+  const quotaPct = jobsLimit && jobsRemaining != null ? Math.round((jobsRemaining / jobsLimit) * 100) : null;
+  const quotaWarning = quotaPct !== null && quotaPct < 20;
+
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-4 pt-5 pb-3">
-        <Link href={isOwner ? "/kanban" : "/apply"} onClick={() => setMobileOpen(false)}>
-          <h1
-            className="text-3xl font-black text-foreground tracking-tight"
-            style={{ fontFamily: "var(--font-condensed)", letterSpacing: "0.05em" }}
-          >
-            JOB<span style={{ color: "oklch(0.5 0.22 27)" }}>PILOT</span>
-          </h1>
+        <Link href={isOwner ? "/dashboard" : "/apply"} onClick={() => setMobileOpen(false)}>
+          <div className="mb-1">
+            <span className="font-pixel glow-amber" style={{ color: "var(--atari-amber)", fontSize: "14px" }}>JOB</span>
+            <span className="font-pixel glow-cyan" style={{ color: "var(--atari-cyan)", fontSize: "14px" }}>PILOT</span>
+          </div>
         </Link>
-        <div className="brutal-divider mt-2" />
+        <div className="atari-divider" />
       </div>
 
       {/* Role badge */}
       <div className="px-4 pb-3">
         <span
-          className="brutal-tag"
+          className="inline-block text-xs px-2 py-1"
           style={{
-            borderColor: isOwner ? "oklch(0.5 0.22 27)" : "oklch(0.65 0.18 145)",
-            color: isOwner ? "oklch(0.5 0.22 27)" : "oklch(0.65 0.18 145)",
+            fontFamily: "Press Start 2P, monospace",
+            fontSize: "8px",
+            border: `1px solid ${isOwner ? "var(--atari-amber)" : "var(--atari-green)"}`,
+            color: isOwner ? "var(--atari-amber)" : "var(--atari-green)",
+            background: isOwner ? "rgba(255,176,0,0.08)" : "rgba(57,255,20,0.08)",
+            letterSpacing: "0.1em",
           }}
         >
-          {isOwner ? "● Owner" : "● Applier"}
+          {isOwner ? "★ OWNER" : "▶ APPLIER"}
         </span>
       </div>
 
@@ -123,7 +150,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <nav className="flex-1 py-2">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location === item.href;
+          const isActive = location === item.href || (item.href === "/dashboard" && location === "/kanban");
           return (
             <Link
               key={item.href}
@@ -131,53 +158,59 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               className={`sidebar-nav-item ${isActive ? "active" : ""}`}
               onClick={() => setMobileOpen(false)}
             >
-              <Icon size={15} />
+              <Icon size={14} />
               {item.label}
             </Link>
           );
         })}
       </nav>
 
-      {/* API Usage (Owner only) */}
+      {/* API Quota (Owner only) */}
       {isOwner && apiUsage && (
-        <div className="px-4 py-3 border-t border-border/30">
-          <p
-            className="text-foreground/40 text-xs mb-1"
-            style={{ fontFamily: "var(--font-condensed)", letterSpacing: "0.1em", textTransform: "uppercase" }}
-          >
-            API Calls This Month
+        <div className="px-4 py-3" style={{ borderTop: "1px solid var(--atari-border)" }}>
+          <p className="text-xs mb-1" style={{ color: "var(--atari-gray)", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "Share Tech Mono" }}>
+            API CALLS / MONTH
           </p>
-          <p
-            className="text-foreground font-black text-lg"
-            style={{ fontFamily: "var(--font-condensed)" }}
-          >
+          <p className="font-pixel mb-1" style={{ color: quotaWarning ? "var(--atari-red)" : "var(--atari-amber)", fontSize: "10px" }}>
             {apiUsage.callCount}
-            <span className="text-foreground/30 text-sm font-normal ml-1">/ ∞</span>
           </p>
-          <div className="progress-track mt-1">
-            <div
-              className="progress-fill"
-              style={{ width: `${Math.min(100, (apiUsage.callCount / 500) * 100)}%` }}
-            />
-          </div>
+          {jobsRemaining != null && (
+            <>
+              <p className="text-xs mb-1" style={{ color: "var(--atari-gray)", fontFamily: "Share Tech Mono" }}>
+                {jobsRemaining.toLocaleString()} jobs left
+                {quotaWarning && <span style={{ color: "var(--atari-red)" }}> ⚠</span>}
+              </p>
+              {quotaPct !== null && (
+                <div className="progress-track">
+                  <div
+                    className={`progress-fill ${quotaPct >= 100 ? "complete" : ""}`}
+                    style={{
+                      width: `${quotaPct}%`,
+                      background: quotaWarning ? "var(--atari-red)" : undefined,
+                    }}
+                  />
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
       {/* User */}
-      <div className="px-4 py-4 border-t border-border/30">
+      <div className="px-4 py-4" style={{ borderTop: "1px solid var(--atari-border)" }}>
         <div className="flex items-center justify-between">
           <div className="min-w-0">
-            <p
-              className="text-foreground text-sm font-bold truncate"
-              style={{ fontFamily: "var(--font-condensed)", letterSpacing: "0.05em" }}
-            >
-              {user?.name ?? "User"}
+            <p className="text-sm font-bold truncate" style={{ color: "var(--atari-white)", fontFamily: "Share Tech Mono" }}>
+              {user?.name ?? "USER"}
             </p>
-            <p className="text-foreground/40 text-xs truncate">{user?.email ?? ""}</p>
+            <p className="text-xs truncate" style={{ color: "var(--atari-gray)" }}>{user?.email ?? ""}</p>
           </div>
           <button
             onClick={() => logout()}
-            className="text-foreground/40 hover:text-foreground/80 transition-colors p-1 ml-2"
+            className="transition-colors p-1 ml-2"
+            style={{ color: "var(--atari-gray)" }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "var(--atari-red)")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "var(--atari-gray)")}
             title="Logout"
           >
             <LogOut size={14} />
@@ -188,11 +221,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={{ background: "var(--atari-black)" }}>
       {/* Desktop Sidebar */}
       <aside
-        className="hidden md:flex flex-col w-52 flex-shrink-0 border-r"
-        style={{ background: "oklch(0.06 0 0)", borderColor: "oklch(0.15 0 0)" }}
+        className="hidden md:flex flex-col w-52 flex-shrink-0"
+        style={{ background: "var(--atari-black)", borderRight: "2px solid var(--atari-border)" }}
       >
         <SidebarContent />
       </aside>
@@ -200,16 +233,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile Sidebar Overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div
-            className="absolute inset-0 bg-black/80"
-            onClick={() => setMobileOpen(false)}
-          />
+          <div className="absolute inset-0 bg-black/80" onClick={() => setMobileOpen(false)} />
           <aside
-            className="absolute left-0 top-0 bottom-0 w-64 flex flex-col border-r"
-            style={{ background: "oklch(0.06 0 0)", borderColor: "oklch(0.15 0 0)" }}
+            className="absolute left-0 top-0 bottom-0 w-64 flex flex-col"
+            style={{ background: "var(--atari-black)", borderRight: "2px solid var(--atari-amber)" }}
           >
             <button
-              className="absolute top-4 right-4 text-foreground/50 hover:text-foreground"
+              className="absolute top-4 right-4 transition-colors"
+              style={{ color: "var(--atari-gray)" }}
               onClick={() => setMobileOpen(false)}
             >
               <X size={18} />
@@ -223,23 +254,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile Header */}
         <header
-          className="md:hidden flex items-center justify-between px-4 py-3 border-b flex-shrink-0"
-          style={{ background: "oklch(0.06 0 0)", borderColor: "oklch(0.15 0 0)" }}
+          className="md:hidden flex items-center justify-between px-4 py-3 flex-shrink-0"
+          style={{ background: "var(--atari-black)", borderBottom: "2px solid var(--atari-border)" }}
         >
-          <button onClick={() => setMobileOpen(true)} className="text-foreground/60 hover:text-foreground">
+          <button
+            onClick={() => setMobileOpen(true)}
+            style={{ color: "var(--atari-gray)" }}
+          >
             <Menu size={20} />
           </button>
-          <h1
-            className="text-xl font-black"
-            style={{ fontFamily: "var(--font-condensed)", letterSpacing: "0.05em" }}
-          >
-            JOB<span style={{ color: "oklch(0.5 0.22 27)" }}>PILOT</span>
-          </h1>
+          <div>
+            <span className="font-pixel" style={{ color: "var(--atari-amber)", fontSize: "12px" }}>JOB</span>
+            <span className="font-pixel" style={{ color: "var(--atari-cyan)", fontSize: "12px" }}>PILOT</span>
+          </div>
           <span
-            className="brutal-tag text-xs"
+            className="text-xs px-2 py-1"
             style={{
-              borderColor: isOwner ? "oklch(0.5 0.22 27)" : "oklch(0.65 0.18 145)",
-              color: isOwner ? "oklch(0.5 0.22 27)" : "oklch(0.65 0.18 145)",
+              fontFamily: "Press Start 2P, monospace",
+              fontSize: "7px",
+              border: `1px solid ${isOwner ? "var(--atari-amber)" : "var(--atari-green)"}`,
+              color: isOwner ? "var(--atari-amber)" : "var(--atari-green)",
             }}
           >
             {isOwner ? "OWNER" : "APPLIER"}

@@ -4,11 +4,16 @@ import { z } from "zod";
 import {
   answerQuestion,
   checkDuplicate,
+  deleteFetchSchedule,
+  getAllFetchHistory,
+  getAllFetchSchedules,
   getAllJobs,
   getAllQuestions,
-  getJobsByStatus,
   getApplierStatsRange,
+  getFetchHistoryBySchedule,
+  getFetchScheduleById,
   getJobById,
+  getJobsByStatus,
   getKanbanJobs,
   getOrCreateApiUsage,
   getOrCreateApplierStats,
@@ -17,12 +22,17 @@ import {
   getUnansweredQuestions,
   incrementApiUsage,
   incrementApplierStats,
+  insertFetchHistory,
+  insertFetchSchedule,
   insertJob,
   insertQuestion,
+  updateApiQuota,
+  updateFetchSchedule,
   updateGamification,
   updateJobMatchScore,
   updateJobStatus,
   upsertSkillsProfile,
+  getDueFetchSchedules,
 } from "./db";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { ENV } from "./_core/env";
@@ -57,6 +67,32 @@ function getRampUpTarget(startDateKey: string | null): number {
   if (diffDays < 12) return 20;
   if (diffDays < 19) return 40;
   return 80;
+}
+
+/** Compute next run timestamp for a schedule */
+function computeNextRun(
+  intervalType: "manual" | "daily" | "weekly",
+  scheduleHour: number,
+  scheduleMinute: number,
+  scheduleDayOfWeek: number | null | undefined,
+  fromNow = false
+): Date | null {
+  if (intervalType === "manual") return null;
+  const now = new Date();
+  const next = new Date(now);
+  next.setSeconds(0, 0);
+  next.setHours(scheduleHour, scheduleMinute, 0, 0);
+  if (intervalType === "daily") {
+    if (fromNow || next <= now) next.setDate(next.getDate() + 1);
+    return next;
+  }
+  if (intervalType === "weekly") {
+    const targetDay = scheduleDayOfWeek ?? 1;
+    const diff = (targetDay - now.getDay() + 7) % 7;
+    next.setDate(now.getDate() + (diff === 0 && !fromNow ? 7 : diff));
+    return next;
+  }
+  return null;
 }
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -104,6 +140,221 @@ async function scoreJobWithLLM(jobDescription: string, skillsContent: string): P
   return 0;
 }
 
+// ─── Core Fetch Logic (shared by manual + scheduled runs) ─────────────────────
+
+const FetchFiltersSchema = z.object({
+  endpoint: z.enum(["active-ats-7d", "active-ats-24h"]).default("active-ats-7d"),
+  titleFilter: z.string().optional(),
+  advancedTitleFilter: z.string().optional(),
+  locationFilter: z.string().optional(),
+  descriptionFilter: z.string().optional(),
+  advancedDescriptionFilter: z.string().optional(),
+  organizationFilter: z.string().optional(),
+  organizationExclusionFilter: z.string().optional(),
+  advancedOrganizationFilter: z.string().optional(),
+  source: z.string().optional(),
+  sourceExclusion: z.string().optional(),
+  aiWorkArrangementFilter: z.string().optional(),
+  aiExperienceLevelFilter: z.string().optional(),
+  aiEmploymentTypeFilter: z.string().optional(),
+  aiTaxonomiesAFilter: z.string().optional(),
+  aiTaxonomiesAPrimaryFilter: z.string().optional(),
+  aiTaxonomiesAExclusionFilter: z.string().optional(),
+  aiVisaSponsorshipFilter: z.boolean().optional(),
+  aiHasSalary: z.boolean().optional(),
+  remote: z.boolean().optional(),
+  agency: z.boolean().optional(),
+  includeLi: z.boolean().optional(),
+  liOrganizationSlugFilter: z.string().optional(),
+  liOrganizationSlugExclusionFilter: z.string().optional(),
+  liIndustryFilter: z.string().optional(),
+  liOrganizationEmployeesLte: z.string().optional(),
+  liOrganizationEmployeesGte: z.string().optional(),
+  dateFilter: z.string().optional(),
+  offset: z.number().optional(),
+  limit: z.number().optional(),
+  descriptionType: z.enum(["text", "html"]).optional(),
+});
+
+type FetchFilters = z.infer<typeof FetchFiltersSchema>;
+
+async function executeFetch(
+  input: FetchFilters,
+  scheduleId?: number,
+  scheduleName?: string
+): Promise<{ jobsFetched: number; jobsIngested: number; jobsDuplicate: number; jobsRemaining?: number; requestsRemaining?: number }> {
+  const resolvedKey = ENV.rapidApiKey;
+  if (!resolvedKey) throw new Error("No RapidAPI key configured.");
+
+  const params: Record<string, string> = {};
+  params["description_type"] = input.descriptionType ?? "text";
+  params["include_ai"] = "true";
+  params["limit"] = String(input.limit ?? 100);
+  if (input.offset !== undefined) params["offset"] = String(input.offset);
+  if (input.advancedTitleFilter) params["advanced_title_filter"] = input.advancedTitleFilter;
+  else if (input.titleFilter) params["title_filter"] = input.titleFilter;
+  if (input.locationFilter) params["location_filter"] = input.locationFilter;
+  if (input.advancedDescriptionFilter) params["advanced_description_filter"] = input.advancedDescriptionFilter;
+  else if (input.descriptionFilter) params["description_filter"] = input.descriptionFilter;
+  if (input.advancedOrganizationFilter) params["advanced_organization_filter"] = input.advancedOrganizationFilter;
+  else if (input.organizationFilter) params["organization_filter"] = input.organizationFilter;
+  if (input.organizationExclusionFilter) params["organization_exclusion_filter"] = input.organizationExclusionFilter;
+  if (input.source) params["source"] = input.source;
+  if (input.sourceExclusion) params["source_exclusion"] = input.sourceExclusion;
+  if (input.aiWorkArrangementFilter) params["ai_work_arrangement_filter"] = input.aiWorkArrangementFilter;
+  if (input.aiExperienceLevelFilter) params["ai_experience_level_filter"] = input.aiExperienceLevelFilter;
+  if (input.aiEmploymentTypeFilter) params["ai_employment_type_filter"] = input.aiEmploymentTypeFilter;
+  if (input.aiTaxonomiesAFilter) params["ai_taxonomies_a_filter"] = input.aiTaxonomiesAFilter;
+  if (input.aiTaxonomiesAPrimaryFilter) params["ai_taxonomies_a_primary_filter"] = input.aiTaxonomiesAPrimaryFilter;
+  if (input.aiTaxonomiesAExclusionFilter) params["ai_taxonomies_a_exclusion_filter"] = input.aiTaxonomiesAExclusionFilter;
+  if (input.aiVisaSponsorshipFilter) params["ai_visa_sponsorship_filter"] = "true";
+  if (input.aiHasSalary) params["ai_has_salary"] = "true";
+  if (input.remote !== undefined) params["remote"] = String(input.remote);
+  if (input.agency !== undefined) params["agency"] = String(input.agency);
+  if (input.includeLi !== undefined) params["include_li"] = String(input.includeLi);
+  if (input.liOrganizationSlugFilter) params["li_organization_slug_filter"] = input.liOrganizationSlugFilter;
+  if (input.liOrganizationSlugExclusionFilter) params["li_organization_slug_exclusion_filter"] = input.liOrganizationSlugExclusionFilter;
+  if (input.liIndustryFilter) params["li_industry_filter"] = input.liIndustryFilter;
+  if (input.liOrganizationEmployeesLte) params["li_organization_employees_lte"] = input.liOrganizationEmployeesLte;
+  if (input.liOrganizationEmployeesGte) params["li_organization_employees_gte"] = input.liOrganizationEmployeesGte;
+  if (input.dateFilter) params["date_filter"] = input.dateFilter;
+
+  const endpoint = input.endpoint ?? "active-ats-7d";
+  const queryString = new URLSearchParams(params).toString();
+  const url = `https://active-jobs-db.p.rapidapi.com/${endpoint}?${queryString}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "x-rapidapi-host": "active-jobs-db.p.rapidapi.com",
+      "x-rapidapi-key": resolvedKey,
+    },
+  });
+
+  // Extract quota headers
+  const jobsRemaining = parseInt(response.headers.get("x-ratelimit-jobs-remaining") ?? "0") || undefined;
+  const jobsLimit = parseInt(response.headers.get("x-ratelimit-jobs-limit") ?? "0") || undefined;
+  const requestsRemaining = parseInt(response.headers.get("x-ratelimit-requests-remaining") ?? "0") || undefined;
+  const requestsLimit = parseInt(response.headers.get("x-ratelimit-requests-limit") ?? "0") || undefined;
+  const quotaResetSeconds = parseInt(response.headers.get("x-ratelimit-jobs-reset") ?? "0") || undefined;
+
+  // Update quota in DB
+  const monthKey = getCurrentMonthKey();
+  await incrementApiUsage(monthKey);
+  await updateApiQuota(monthKey, { jobsLimit, jobsRemaining, requestsLimit, requestsRemaining, quotaResetSeconds });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => response.statusText);
+    await insertFetchHistory({
+      scheduleId: scheduleId ?? null,
+      scheduleName: scheduleName ?? null,
+      endpoint,
+      filters: input as Record<string, unknown>,
+      jobsFetched: 0,
+      jobsIngested: 0,
+      jobsDuplicate: 0,
+      jobsRemaining: jobsRemaining ?? null,
+      requestsRemaining: requestsRemaining ?? null,
+      status: "error",
+      errorMessage: `API error ${response.status}: ${errText}`,
+    });
+    throw new Error(`API error ${response.status}: ${errText}`);
+  }
+
+  const data = await response.json();
+  const rawJobs: unknown[] = Array.isArray(data) ? data : (data?.jobs ?? data?.data ?? []);
+
+  let jobsIngested = 0;
+  let jobsDuplicate = 0;
+
+  const skills = await getSkillsProfile();
+
+  for (const job of rawJobs as Record<string, unknown>[]) {
+    const title = (job.title as string) ?? "Untitled";
+    const company = (job.organization as string) ?? (job.company as string) ?? "Unknown";
+    const isDuplicate = await checkDuplicate(title, company);
+    if (isDuplicate) { jobsDuplicate++; }
+    const descText = (job.description_text as string) ?? (job.description as string) ?? "";
+    const emailFound = extractEmailFromText(descText) ?? (job.ai_hiring_manager_email_address as string) ?? null;
+    const hasEmail = !!emailFound;
+    let matchScore = 0;
+    let status: "ingested" | "matched" = "ingested";
+    if (skills && descText) {
+      matchScore = await scoreJobWithLLM(descText, skills.content);
+      if (matchScore > 0) status = "matched";
+    }
+    const locRaw = job.locations_derived as { city?: string; admin?: string; country?: string }[] | undefined;
+    const locationStr = locRaw?.[0] ? [locRaw[0].city, locRaw[0].admin, locRaw[0].country].filter(Boolean).join(", ") : (job.location as string) ?? "";
+    await insertJob({
+      externalId: (job.id as string) ?? undefined,
+      title,
+      company,
+      location: locationStr,
+      description: descText,
+      descriptionHtml: (job.description_html as string) ?? undefined,
+      applyUrl: (job.url as string) ?? undefined,
+      source: (job.source as string) ?? undefined,
+      isDuplicate,
+      hasEmail,
+      emailFound: emailFound ?? undefined,
+      matchScore,
+      status,
+      tags: (job.ai_taxonomies_a as string[]) ?? [],
+      rawJson: job,
+    });
+    jobsIngested++;
+  }
+
+  await insertFetchHistory({
+    scheduleId: scheduleId ?? null,
+    scheduleName: scheduleName ?? null,
+    endpoint,
+    filters: input as Record<string, unknown>,
+    jobsFetched: rawJobs.length,
+    jobsIngested,
+    jobsDuplicate,
+    jobsRemaining: jobsRemaining ?? null,
+    requestsRemaining: requestsRemaining ?? null,
+    status: "success",
+    errorMessage: null,
+  });
+
+  return { jobsFetched: rawJobs.length, jobsIngested, jobsDuplicate, jobsRemaining, requestsRemaining };
+}
+
+// ─── Scheduled Fetch Runner (called on server startup and periodically) ───────
+
+let _cronInterval: ReturnType<typeof setInterval> | null = null;
+
+export function startScheduledFetchRunner() {
+  if (_cronInterval) return;
+  // Check every 5 minutes if any schedules are due
+  _cronInterval = setInterval(async () => {
+    try {
+      const due = await getDueFetchSchedules();
+      for (const schedule of due) {
+        console.log(`[Scheduler] Running scheduled fetch: ${schedule.name}`);
+        try {
+          const filters = schedule.filters as FetchFilters;
+          await executeFetch({ ...filters, endpoint: schedule.endpoint }, schedule.id, schedule.name);
+          const nextRun = computeNextRun(
+            schedule.intervalType,
+            schedule.scheduleHour ?? 9,
+            schedule.scheduleMinute ?? 0,
+            schedule.scheduleDayOfWeek,
+            true
+          );
+          await updateFetchSchedule(schedule.id, { lastRunAt: new Date(), nextRunAt: nextRun ?? undefined });
+        } catch (e) {
+          console.error(`[Scheduler] Error running schedule ${schedule.id}:`, e);
+        }
+      }
+    } catch (e) {
+      console.error("[Scheduler] Error checking due schedules:", e);
+    }
+  }, 5 * 60 * 1000); // every 5 minutes
+}
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 export const appRouter = router({
@@ -121,28 +372,18 @@ export const appRouter = router({
 
   jobs: router({
     kanban: protectedProcedure.query(async ({ ctx }) => {
-      // Applier only sees jobs in 'to_apply' status
-      if (ctx.user.role !== 'admin') {
-        return getJobsByStatus('to_apply');
-      }
+      if (ctx.user.role !== "admin") return getJobsByStatus("to_apply");
       return getKanbanJobs();
     }),
 
-    all: adminProcedure.query(async () => {
-      return getAllJobs();
-    }),
+    all: adminProcedure.query(async () => getAllJobs()),
 
-    byId: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
-      return getJobById(input.id);
-    }),
+    byId: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getJobById(input.id)),
 
     moveStatus: protectedProcedure
       .input(z.object({ id: z.number(), status: z.enum(["ingested", "matched", "to_apply", "applied", "rejected"]) }))
       .mutation(async ({ input, ctx }) => {
-        // Applier can only move to "applied"
-        if (ctx.user.role !== "admin" && input.status !== "applied") {
-          throw new TRPCError({ code: "FORBIDDEN" });
-        }
+        if (ctx.user.role !== "admin" && input.status !== "applied") throw new TRPCError({ code: "FORBIDDEN" });
         await updateJobStatus(input.id, input.status);
         return { success: true };
       }),
@@ -151,14 +392,11 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input, ctx }) => {
         await updateJobStatus(input.id, "applied");
-        // Update applier stats
         const dateKey = getCurrentDateKey();
-        const target = getRampUpTarget(null); // simplified; could track start date
+        const target = getRampUpTarget(null);
         await getOrCreateApplierStats(dateKey, target);
         await incrementApplierStats(dateKey);
-        // Update gamification
         await updateGamification(ctx.user.id, dateKey);
-        // Check if target met
         const stats = await getOrCreateApplierStats(dateKey, target);
         if (stats.appliedCount >= target) {
           await notifyOwner({
@@ -170,27 +408,17 @@ export const appRouter = router({
       }),
 
     ingest: adminProcedure
-      .input(
-        z.object({
-          title: z.string(),
-          company: z.string(),
-          location: z.string().optional(),
-          description: z.string().optional(),
-          descriptionHtml: z.string().optional(),
-          applyUrl: z.string().optional(),
-          source: z.string().optional(),
-          externalId: z.string().optional(),
-          rawJson: z.any().optional(),
-        })
-      )
+      .input(z.object({
+        title: z.string(), company: z.string(), location: z.string().optional(),
+        description: z.string().optional(), descriptionHtml: z.string().optional(),
+        applyUrl: z.string().optional(), source: z.string().optional(),
+        externalId: z.string().optional(), rawJson: z.any().optional(),
+      }))
       .mutation(async ({ input }) => {
-        // Deduplication check
         const isDuplicate = await checkDuplicate(input.title, input.company);
-        // Email extraction
         const descText = input.description ?? "";
         const emailFound = extractEmailFromText(descText);
         const hasEmail = !!emailFound;
-        // Skills-based scoring
         const skills = await getSkillsProfile();
         let matchScore = 0;
         let status: "ingested" | "matched" = "ingested";
@@ -198,181 +426,101 @@ export const appRouter = router({
           matchScore = await scoreJobWithLLM(descText, skills.content);
           if (matchScore > 0) status = "matched";
         }
-        await insertJob({
-          ...input,
-          isDuplicate,
-          hasEmail,
-          emailFound: emailFound ?? undefined,
-          matchScore,
-          status,
-          tags: [],
-        });
+        await insertJob({ ...input, isDuplicate, hasEmail, emailFound: emailFound ?? undefined, matchScore, status, tags: [] });
         return { success: true, isDuplicate, matchScore };
-      }),
-
-    batchIngest: adminProcedure
-      .input(z.object({ jobs: z.array(z.any()) }))
-      .mutation(async ({ input }) => {
-        const results = [];
-        for (const job of input.jobs) {
-          const isDuplicate = await checkDuplicate(job.title ?? "", job.company_name ?? "");
-          const descText = job.description ?? job.description_text ?? "";
-          const emailFound = extractEmailFromText(descText);
-          const hasEmail = !!emailFound;
-          const skills = await getSkillsProfile();
-          let matchScore = 0;
-          let status: "ingested" | "matched" = "ingested";
-          if (skills && descText) {
-            matchScore = await scoreJobWithLLM(descText, skills.content);
-            if (matchScore > 0) status = "matched";
-          }
-          await insertJob({
-            externalId: job.id ?? job.job_id,
-            title: job.title ?? "Untitled",
-            company: job.company_name ?? job.company ?? "Unknown",
-            location: job.location ?? job.location_text,
-            description: descText,
-            descriptionHtml: job.description_html ?? job.description,
-            applyUrl: job.apply_url ?? job.url,
-            source: job.source ?? job.ats_source,
-            isDuplicate,
-            hasEmail,
-            emailFound: emailFound ?? undefined,
-            matchScore,
-            status,
-            tags: [],
-            rawJson: job,
-          });
-          results.push({ title: job.title, isDuplicate, matchScore });
-        }
-        return { success: true, count: results.length, results };
       }),
   }),
 
   // ─── API Ingestion (Active Jobs DB) ──────────────────────────────────────────
 
   ingestion: router({
+    // Manual fetch (ad-hoc)
     fetchJobs: adminProcedure
-      .input(
-        z.object({
-          // Title filters
-          titleFilter: z.string().optional(),
-          advancedTitleFilter: z.string().optional(),
-          // Location
-          locationFilter: z.string().optional(),
-          // Description filters
-          descriptionFilter: z.string().optional(),
-          advancedDescriptionFilter: z.string().optional(),
-          // Organization filters
-          organizationFilter: z.string().optional(),
-          organizationExclusionFilter: z.string().optional(),
-          advancedOrganizationFilter: z.string().optional(),
-          // ATS source
-          source: z.string().optional(),
-          sourceExclusion: z.string().optional(),
-          // AI filters
-          aiWorkArrangementFilter: z.string().optional(),
-          aiExperienceLevelFilter: z.string().optional(),
-          aiEmploymentTypeFilter: z.string().optional(),
-          aiTaxonomiesAFilter: z.string().optional(),
-          aiTaxonomiesAPrimaryFilter: z.string().optional(),
-          aiTaxonomiesAExclusionFilter: z.string().optional(),
-          aiVisaSponsorshipFilter: z.boolean().optional(),
-          aiHasSalary: z.boolean().optional(),
-          // Boolean flags
-          remote: z.boolean().optional(),
-          agency: z.boolean().optional(),
-          includeLi: z.boolean().optional(),
-          // LinkedIn org filters
-          liOrganizationSlugFilter: z.string().optional(),
-          liOrganizationSlugExclusionFilter: z.string().optional(),
-          liIndustryFilter: z.string().optional(),
-          liOrganizationEmployeesLte: z.string().optional(),
-          liOrganizationEmployeesGte: z.string().optional(),
-          // Pagination
-          offset: z.number().optional(),
-          limit: z.number().optional(),
-          // Description type
-          descriptionType: z.enum(["text", "html"]).optional(),
-        })
-      )
+      .input(FetchFiltersSchema)
       .mutation(async ({ input }) => {
-        const monthKey = getCurrentMonthKey();
-        await incrementApiUsage(monthKey);
-        const resolvedKey = ENV.rapidApiKey;
-        if (!resolvedKey) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "No RapidAPI key configured. Please set RAPIDAPI_KEY in secrets." });
+        try {
+          return await executeFetch(input);
+        } catch (e: unknown) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: (e as Error).message });
         }
-        const params: Record<string, string> = {};
-        // Always include description text and AI fields
-        params["description_type"] = input.descriptionType ?? "text";
-        params["include_ai"] = "true";
-        params["limit"] = String(input.limit ?? 100);
-        if (input.offset !== undefined) params["offset"] = String(input.offset);
-        // Title
-        if (input.advancedTitleFilter) params["advanced_title_filter"] = input.advancedTitleFilter;
-        else if (input.titleFilter) params["title_filter"] = input.titleFilter;
-        // Location
-        if (input.locationFilter) params["location_filter"] = input.locationFilter;
-        // Description
-        if (input.advancedDescriptionFilter) params["advanced_description_filter"] = input.advancedDescriptionFilter;
-        else if (input.descriptionFilter) params["description_filter"] = input.descriptionFilter;
-        // Organization
-        if (input.advancedOrganizationFilter) params["advanced_organization_filter"] = input.advancedOrganizationFilter;
-        else if (input.organizationFilter) params["organization_filter"] = input.organizationFilter;
-        if (input.organizationExclusionFilter) params["organization_exclusion_filter"] = input.organizationExclusionFilter;
-        // ATS Source
-        if (input.source) params["source"] = input.source;
-        if (input.sourceExclusion) params["source_exclusion"] = input.sourceExclusion;
-        // AI filters
-        if (input.aiWorkArrangementFilter) params["ai_work_arrangement_filter"] = input.aiWorkArrangementFilter;
-        if (input.aiExperienceLevelFilter) params["ai_experience_level_filter"] = input.aiExperienceLevelFilter;
-        if (input.aiEmploymentTypeFilter) params["ai_employment_type_filter"] = input.aiEmploymentTypeFilter;
-        if (input.aiTaxonomiesAFilter) params["ai_taxonomies_a_filter"] = input.aiTaxonomiesAFilter;
-        if (input.aiTaxonomiesAPrimaryFilter) params["ai_taxonomies_a_primary_filter"] = input.aiTaxonomiesAPrimaryFilter;
-        if (input.aiTaxonomiesAExclusionFilter) params["ai_taxonomies_a_exclusion_filter"] = input.aiTaxonomiesAExclusionFilter;
-        if (input.aiVisaSponsorshipFilter) params["ai_visa_sponsorship_filter"] = "true";
-        if (input.aiHasSalary) params["ai_has_salary"] = "true";
-        // Boolean flags
-        if (input.remote !== undefined) params["remote"] = String(input.remote);
-        if (input.agency !== undefined) params["agency"] = String(input.agency);
-        if (input.includeLi !== undefined) params["include_li"] = String(input.includeLi);
-        // LinkedIn org filters
-        if (input.liOrganizationSlugFilter) params["li_organization_slug_filter"] = input.liOrganizationSlugFilter;
-        if (input.liOrganizationSlugExclusionFilter) params["li_organization_slug_exclusion_filter"] = input.liOrganizationSlugExclusionFilter;
-        if (input.liIndustryFilter) params["li_industry_filter"] = input.liIndustryFilter;
-        if (input.liOrganizationEmployeesLte) params["li_organization_employees_lte"] = input.liOrganizationEmployeesLte;
-        if (input.liOrganizationEmployeesGte) params["li_organization_employees_gte"] = input.liOrganizationEmployeesGte;
-
-        const queryString = new URLSearchParams(params).toString();
-        const url = `https://active-jobs-db.p.rapidapi.com/active-ats-7d?${queryString}`;
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            "x-rapidapi-host": "active-jobs-db.p.rapidapi.com",
-            "x-rapidapi-key": resolvedKey,
-          },
-        });
-        if (!response.ok) {
-          const errText = await response.text().catch(() => response.statusText);
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `API error ${response.status}: ${errText}` });
-        }
-        const data = await response.json();
-        return data;
       }),
 
     getUsage: adminProcedure.query(async () => {
       const monthKey = getCurrentMonthKey();
       return getOrCreateApiUsage(monthKey);
     }),
+
+    // Fetch Schedules CRUD
+    listSchedules: adminProcedure.query(async () => getAllFetchSchedules()),
+
+    createSchedule: adminProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        endpoint: z.enum(["active-ats-7d", "active-ats-24h"]).default("active-ats-7d"),
+        filters: FetchFiltersSchema,
+        intervalType: z.enum(["manual", "daily", "weekly"]).default("manual"),
+        scheduleHour: z.number().min(0).max(23).default(9),
+        scheduleMinute: z.number().min(0).max(59).default(0),
+        scheduleDayOfWeek: z.number().min(0).max(6).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const nextRun = computeNextRun(input.intervalType, input.scheduleHour, input.scheduleMinute, input.scheduleDayOfWeek);
+        await insertFetchSchedule({
+          name: input.name,
+          endpoint: input.endpoint,
+          filters: input.filters as Record<string, unknown>,
+          intervalType: input.intervalType,
+          scheduleHour: input.scheduleHour,
+          scheduleMinute: input.scheduleMinute,
+          scheduleDayOfWeek: input.scheduleDayOfWeek ?? null,
+          enabled: true,
+          nextRunAt: nextRun ?? undefined,
+        });
+        return { success: true };
+      }),
+
+    toggleSchedule: adminProcedure
+      .input(z.object({ id: z.number(), enabled: z.boolean() }))
+      .mutation(async ({ input }) => {
+        await updateFetchSchedule(input.id, { enabled: input.enabled });
+        return { success: true };
+      }),
+
+    deleteSchedule: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteFetchSchedule(input.id);
+        return { success: true };
+      }),
+
+    runScheduleNow: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const schedule = await getFetchScheduleById(input.id);
+        if (!schedule) throw new TRPCError({ code: "NOT_FOUND", message: "Schedule not found" });
+        try {
+          const filters = schedule.filters as FetchFilters;
+          const result = await executeFetch({ ...filters, endpoint: schedule.endpoint }, schedule.id, schedule.name);
+          const nextRun = computeNextRun(schedule.intervalType, schedule.scheduleHour ?? 9, schedule.scheduleMinute ?? 0, schedule.scheduleDayOfWeek, true);
+          await updateFetchSchedule(schedule.id, { lastRunAt: new Date(), nextRunAt: nextRun ?? undefined });
+          return { success: true, ...result };
+        } catch (e: unknown) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: (e as Error).message });
+        }
+      }),
+
+    // Fetch History
+    listHistory: adminProcedure.query(async () => getAllFetchHistory()),
+
+    historyBySchedule: adminProcedure
+      .input(z.object({ scheduleId: z.number() }))
+      .query(async ({ input }) => getFetchHistoryBySchedule(input.scheduleId)),
   }),
 
   // ─── Skills Profile ─────────────────────────────────────────────────────────
 
   skills: router({
-    get: protectedProcedure.query(async () => {
-      return getSkillsProfile();
-    }),
+    get: protectedProcedure.query(async () => getSkillsProfile()),
 
     upsert: adminProcedure
       .input(z.object({ content: z.string().min(1) }))
@@ -390,9 +538,7 @@ export const appRouter = router({
         if (job.description) {
           const score = await scoreJobWithLLM(job.description, skills.content);
           await updateJobMatchScore(job.id, score);
-          if (score > 0 && job.status === "ingested") {
-            await updateJobStatus(job.id, "matched");
-          }
+          if (score > 0 && job.status === "ingested") await updateJobStatus(job.id, "matched");
           updated++;
         }
       }
@@ -404,14 +550,11 @@ export const appRouter = router({
 
   questions: router({
     all: protectedProcedure.query(async ({ ctx }) => {
-      // Owner sees all questions; Applier sees only their own
-      if (ctx.user.role === 'admin') return getAllQuestions();
-      return getAllQuestions(); // Applier sees all for now (filtered by UI)
+      if (ctx.user.role === "admin") return getAllQuestions();
+      return getAllQuestions();
     }),
 
-    unanswered: adminProcedure.query(async () => {
-      return getUnansweredQuestions();
-    }),
+    unanswered: adminProcedure.query(async () => getUnansweredQuestions()),
 
     ask: protectedProcedure
       .input(z.object({ jobId: z.number(), jobTitle: z.string().optional(), jobCompany: z.string().optional(), question: z.string().min(1) }))
@@ -447,19 +590,13 @@ export const appRouter = router({
       return getOrCreateApplierStats(dateKey, target);
     }),
 
-    recent: protectedProcedure.query(async () => {
-      return getApplierStatsRange(30);
-    }),
+    recent: protectedProcedure.query(async () => getApplierStatsRange(30)),
 
-    gamification: protectedProcedure.query(async ({ ctx }) => {
-      return getOrCreateGamification(ctx.user.id);
-    }),
+    gamification: protectedProcedure.query(async ({ ctx }) => getOrCreateGamification(ctx.user.id)),
 
     getRampTarget: protectedProcedure
       .input(z.object({ startDate: z.string().optional() }))
-      .query(({ input }) => {
-        return { target: getRampUpTarget(input.startDate ?? null) };
-      }),
+      .query(({ input }) => ({ target: getRampUpTarget(input.startDate ?? null) })),
   }),
 });
 

@@ -17,6 +17,10 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      {/* /dashboard is the canonical route; /kanban kept for backward compat */}
+      <Route path="/dashboard">
+        {() => <AppLayout><KanbanBoard /></AppLayout>}
+      </Route>
       <Route path="/kanban">
         {() => <AppLayout><KanbanBoard /></AppLayout>}
       </Route>
@@ -50,14 +54,14 @@ function App() {
             theme="dark"
             toastOptions={{
               style: {
-                background: "oklch(0.07 0 0)",
-                border: "1.5px solid oklch(0.5 0.22 27)",
-                color: "oklch(0.98 0 0)",
-                fontFamily: "Barlow Condensed, sans-serif",
-                fontWeight: "700",
+                background: "var(--atari-panel, #14141f)",
+                border: "2px solid var(--atari-amber, #ffb000)",
+                color: "var(--atari-white, #e0e0f0)",
+                fontFamily: "Share Tech Mono, monospace",
+                fontSize: "12px",
                 letterSpacing: "0.05em",
-                textTransform: "uppercase",
                 borderRadius: "0",
+                boxShadow: "0 0 12px rgba(255,176,0,0.2)",
               },
             }}
           />

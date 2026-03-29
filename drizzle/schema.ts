@@ -95,10 +95,59 @@ export const apiUsage = mysqlTable("api_usage", {
   id: int("id").autoincrement().primaryKey(),
   monthKey: varchar("monthKey", { length: 7 }).notNull().unique(), // "YYYY-MM"
   callCount: int("callCount").default(0).notNull(),
+  // Quota fields from API response headers
+  jobsLimit: int("jobsLimit"),
+  jobsRemaining: int("jobsRemaining"),
+  requestsLimit: int("requestsLimit"),
+  requestsRemaining: int("requestsRemaining"),
+  quotaResetSeconds: int("quotaResetSeconds"), // x-ratelimit-jobs-reset
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type ApiUsage = typeof apiUsage.$inferSelect;
+
+// ─── Fetch Schedules ──────────────────────────────────────────────────────────
+
+export const fetchSchedules = mysqlTable("fetch_schedules", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  endpoint: mysqlEnum("endpoint", ["active-ats-7d", "active-ats-24h"]).default("active-ats-7d").notNull(),
+  filters: json("filters").notNull(), // full filter object
+  // Schedule: interval type and time-of-day
+  intervalType: mysqlEnum("intervalType", ["manual", "daily", "weekly"]).default("manual").notNull(),
+  scheduleHour: int("scheduleHour").default(9), // 0-23 UTC
+  scheduleMinute: int("scheduleMinute").default(0), // 0-59
+  scheduleDayOfWeek: int("scheduleDayOfWeek"), // 0=Sun, 1=Mon... null for daily
+  enabled: boolean("enabled").default(true).notNull(),
+  lastRunAt: timestamp("lastRunAt"),
+  nextRunAt: timestamp("nextRunAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type FetchSchedule = typeof fetchSchedules.$inferSelect;
+export type InsertFetchSchedule = typeof fetchSchedules.$inferInsert;
+
+// ─── Fetch History ────────────────────────────────────────────────────────────
+
+export const fetchHistory = mysqlTable("fetch_history", {
+  id: int("id").autoincrement().primaryKey(),
+  scheduleId: int("scheduleId"), // null = ad-hoc manual run
+  scheduleName: varchar("scheduleName", { length: 255 }),
+  endpoint: varchar("endpoint", { length: 64 }).notNull(),
+  filters: json("filters"), // snapshot of filters used
+  jobsFetched: int("jobsFetched").default(0).notNull(),
+  jobsIngested: int("jobsIngested").default(0).notNull(),
+  jobsDuplicate: int("jobsDuplicate").default(0).notNull(),
+  jobsRemaining: int("jobsRemaining"), // from API header
+  requestsRemaining: int("requestsRemaining"), // from API header
+  status: mysqlEnum("status", ["success", "error", "partial"]).default("success").notNull(),
+  errorMessage: text("errorMessage"),
+  ranAt: timestamp("ranAt").defaultNow().notNull(),
+});
+
+export type FetchHistoryEntry = typeof fetchHistory.$inferSelect;
+export type InsertFetchHistory = typeof fetchHistory.$inferInsert;
 
 // ─── Applier Stats ────────────────────────────────────────────────────────────
 

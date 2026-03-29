@@ -99,3 +99,25 @@
 - [x] Add new filter fields: title_filter, advanced_title_filter, description_filter, advanced_description_filter, organization_filter, organization_exclusion_filter, remote, source_exclusion, ai_employment_type_filter, ai_taxonomies_a_primary_filter, ai_taxonomies_a_exclusion_filter, ai_has_salary, include_li, li_organization_slug_filter, li_organization_slug_exclusion_filter, li_industry_filter, li_organization_employees_lte, li_organization_employees_gte, offset (pagination)
 - [x] Update Ingestion UI with all new filter fields
 - [x] Update tests for new API configuration
+
+## v1.2 Feature Update
+- [x] Rename "Kanban Board" nav item to "Dashboard"
+- [x] DB: fetch_schedules table (name, filters JSON, endpoint, interval, next_run, enabled)
+- [x] DB: fetch_history table (schedule_id, ran_at, jobs_fetched, jobs_remaining, requests_remaining, status, error)
+- [x] Backend: read x-ratelimit-jobs-remaining and x-ratelimit-requests-remaining headers from API response
+- [x] Backend: store quota info in api_usage table (jobs_remaining, requests_remaining, jobs_limit, requests_limit)
+- [x] Backend: fetchSchedules CRUD (create, list, toggle, delete, runNow)
+- [x] Backend: fetchHistory list per schedule
+- [x] Backend: server-side cron runner for scheduled fetches
+- [x] Ingestion UI: endpoint selector dropdown (7d / 24h)
+- [x] Ingestion UI: all filter fields as proper dropdowns per API spec
+- [x] Ingestion UI: date_filter field
+- [x] Ingestion UI: schedule builder (name, interval: hourly/daily/weekly, time)
+- [x] Ingestion UI: fetch history panel with results count
+- [x] Ingestion UI: quota warning banner (jobs remaining / requests remaining)
+- [x] Atari retro gaming design system (scanlines, pixel font, green/amber phosphor palette, CRT glow)
+- [x] Apply retro theme to all pages: AppLayout, KanbanBoard/Dashboard, Skills, QuestionBank, Performance, ApplierView
+
+## v1.2 Gap Fixes
+- [x] Update Skills, QuestionBank, Performance, ApplierView to use Atari CSS variables
+- [x] Verify cron runner bootstrap is wired in server startup

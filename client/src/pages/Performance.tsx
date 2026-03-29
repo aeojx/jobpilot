@@ -3,10 +3,10 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { BarChart2, Flame, Star, Trophy, Zap } from "lucide-react";
 
 const TIERS = [
-  { name: "Rookie", minXp: 0, color: "oklch(0.55 0 0)" },
-  { name: "Grinder", minXp: 100, color: "oklch(0.75 0.18 65)" },
-  { name: "Machine", minXp: 500, color: "oklch(0.6 0.15 200)" },
-  { name: "Legend", minXp: 2000, color: "oklch(0.5 0.22 27)" },
+  { name: "Rookie", minXp: 0, color: "var(--atari-gray)" },
+  { name: "Grinder", minXp: 100, color: "var(--atari-amber)" },
+  { name: "Machine", minXp: 500, color: "var(--atari-cyan)" },
+  { name: "Legend", minXp: 2000, color: "var(--atari-amber)" },
 ];
 
 function getTier(xp: number) {
@@ -47,12 +47,12 @@ export default function Performance() {
         <div className="flex items-center justify-between mb-1">
           <h2
             className="text-2xl font-black text-foreground"
-            style={{ fontFamily: "var(--font-condensed)", letterSpacing: "0.05em" }}
+            style={{ fontFamily: "Press Start 2P, monospace", letterSpacing: "0.05em" }}
           >
             Performance
           </h2>
         </div>
-        <div className="brutal-divider" />
+        <div className="atari-divider" />
       </div>
 
       <div className="flex-1 px-5 pb-5 space-y-5">
@@ -60,14 +60,14 @@ export default function Performance() {
         <div
           className="p-5"
           style={{
-            background: "oklch(0.07 0 0)",
-            border: `2px solid ${isComplete ? "oklch(0.65 0.18 145)" : "oklch(0.2 0 0)"}`,
+            background: "var(--atari-panel)",
+            border: `2px solid ${isComplete ? "var(--atari-green)" : "var(--atari-border)"}`,
           }}
         >
           <div className="flex items-center justify-between mb-3">
             <p
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Press Start 2P, monospace",
                 fontSize: "0.7rem",
                 letterSpacing: "0.15em",
                 color: "oklch(0.45 0 0)",
@@ -79,7 +79,7 @@ export default function Performance() {
             {isComplete && (
               <span
                 className="brutal-tag"
-                style={{ borderColor: "oklch(0.65 0.18 145)", color: "oklch(0.65 0.18 145)" }}
+                style={{ borderColor: "var(--atari-green)", color: "var(--atari-green)" }}
               >
                 <Trophy size={9} /> Target Met!
               </span>
@@ -89,17 +89,17 @@ export default function Performance() {
             <span
               className="font-black"
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Press Start 2P, monospace",
                 fontSize: "3.5rem",
                 lineHeight: 1,
-                color: isComplete ? "oklch(0.65 0.18 145)" : "oklch(0.98 0 0)",
+                color: isComplete ? "var(--atari-green)" : "var(--atari-white)",
               }}
             >
               {today}
             </span>
             <span
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Press Start 2P, monospace",
                 fontSize: "1.5rem",
                 color: "oklch(0.35 0 0)",
                 marginBottom: 4,
@@ -109,10 +109,10 @@ export default function Performance() {
             </span>
             <span
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Press Start 2P, monospace",
                 fontSize: "0.75rem",
                 letterSpacing: "0.1em",
-                color: "oklch(0.4 0 0)",
+                color: "var(--atari-gray)",
                 textTransform: "uppercase",
                 marginBottom: 8,
               }}
@@ -142,12 +142,12 @@ export default function Performance() {
         {gami && (
           <div
             className="p-5"
-            style={{ background: "oklch(0.07 0 0)", border: "1.5px solid oklch(0.2 0 0)" }}
+            style={{ background: "var(--atari-panel)", border: "1.5px solid var(--atari-border)" }}
           >
             <p
               className="mb-4"
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Press Start 2P, monospace",
                 fontSize: "0.7rem",
                 letterSpacing: "0.15em",
                 color: "oklch(0.45 0 0)",
@@ -166,7 +166,7 @@ export default function Performance() {
                 <Trophy size={18} style={{ color: tier.color, margin: "0 auto 4px" }} />
                 <p
                   style={{
-                    fontFamily: "var(--font-condensed)",
+                    fontFamily: "Press Start 2P, monospace",
                     fontSize: "1.1rem",
                     fontWeight: 800,
                     color: tier.color,
@@ -177,7 +177,7 @@ export default function Performance() {
                 </p>
                 <p
                   style={{
-                    fontFamily: "var(--font-condensed)",
+                    fontFamily: "Press Start 2P, monospace",
                     fontSize: "0.6rem",
                     color: "oklch(0.35 0 0)",
                     textTransform: "uppercase",
@@ -191,15 +191,15 @@ export default function Performance() {
               {/* XP */}
               <div
                 className="p-3 text-center"
-                style={{ background: "oklch(0.1 0 0)", border: "1.5px solid oklch(0.5 0.22 27)" }}
+                style={{ background: "oklch(0.1 0 0)", border: "1.5px solid var(--atari-amber)" }}
               >
-                <Zap size={18} style={{ color: "oklch(0.5 0.22 27)", margin: "0 auto 4px" }} />
+                <Zap size={18} style={{ color: "var(--atari-amber)", margin: "0 auto 4px" }} />
                 <p
                   style={{
-                    fontFamily: "var(--font-condensed)",
+                    fontFamily: "Press Start 2P, monospace",
                     fontSize: "1.1rem",
                     fontWeight: 800,
-                    color: "oklch(0.98 0 0)",
+                    color: "var(--atari-white)",
                     letterSpacing: "0.02em",
                   }}
                 >
@@ -207,7 +207,7 @@ export default function Performance() {
                 </p>
                 <p
                   style={{
-                    fontFamily: "var(--font-condensed)",
+                    fontFamily: "Press Start 2P, monospace",
                     fontSize: "0.6rem",
                     color: "oklch(0.35 0 0)",
                     textTransform: "uppercase",
@@ -221,22 +221,22 @@ export default function Performance() {
               {/* Streak */}
               <div
                 className="p-3 text-center"
-                style={{ background: "oklch(0.1 0 0)", border: "1.5px solid oklch(0.75 0.18 65)" }}
+                style={{ background: "oklch(0.1 0 0)", border: "1.5px solid var(--atari-amber)" }}
               >
-                <Flame size={18} style={{ color: "oklch(0.75 0.18 65)", margin: "0 auto 4px" }} />
+                <Flame size={18} style={{ color: "var(--atari-amber)", margin: "0 auto 4px" }} />
                 <p
                   style={{
-                    fontFamily: "var(--font-condensed)",
+                    fontFamily: "Press Start 2P, monospace",
                     fontSize: "1.1rem",
                     fontWeight: 800,
-                    color: "oklch(0.98 0 0)",
+                    color: "var(--atari-white)",
                   }}
                 >
                   {gami.currentStreak}
                 </p>
                 <p
                   style={{
-                    fontFamily: "var(--font-condensed)",
+                    fontFamily: "Press Start 2P, monospace",
                     fontSize: "0.6rem",
                     color: "oklch(0.35 0 0)",
                     textTransform: "uppercase",
@@ -250,22 +250,22 @@ export default function Performance() {
               {/* Best Streak */}
               <div
                 className="p-3 text-center"
-                style={{ background: "oklch(0.1 0 0)", border: "1.5px solid oklch(0.6 0.15 200)" }}
+                style={{ background: "oklch(0.1 0 0)", border: "1.5px solid var(--atari-cyan)" }}
               >
-                <Star size={18} style={{ color: "oklch(0.6 0.15 200)", margin: "0 auto 4px" }} />
+                <Star size={18} style={{ color: "var(--atari-cyan)", margin: "0 auto 4px" }} />
                 <p
                   style={{
-                    fontFamily: "var(--font-condensed)",
+                    fontFamily: "Press Start 2P, monospace",
                     fontSize: "1.1rem",
                     fontWeight: 800,
-                    color: "oklch(0.98 0 0)",
+                    color: "var(--atari-white)",
                   }}
                 >
                   {gami.longestStreak}
                 </p>
                 <p
                   style={{
-                    fontFamily: "var(--font-condensed)",
+                    fontFamily: "Press Start 2P, monospace",
                     fontSize: "0.6rem",
                     color: "oklch(0.35 0 0)",
                     textTransform: "uppercase",
@@ -283,10 +283,10 @@ export default function Performance() {
                 <div className="flex items-center justify-between mb-1">
                   <p
                     style={{
-                      fontFamily: "var(--font-condensed)",
+                      fontFamily: "Press Start 2P, monospace",
                       fontSize: "0.65rem",
                       letterSpacing: "0.1em",
-                      color: "oklch(0.4 0 0)",
+                      color: "var(--atari-gray)",
                       textTransform: "uppercase",
                     }}
                   >
@@ -296,7 +296,7 @@ export default function Performance() {
                     style={{
                       fontFamily: "var(--font-mono)",
                       fontSize: "0.65rem",
-                      color: "oklch(0.4 0 0)",
+                      color: "var(--atari-gray)",
                     }}
                   >
                     {xpToNext} XP needed
@@ -321,7 +321,7 @@ export default function Performance() {
           <p
             className="mb-3"
             style={{
-              fontFamily: "var(--font-condensed)",
+              fontFamily: "Press Start 2P, monospace",
               fontSize: "0.7rem",
               letterSpacing: "0.12em",
               color: "oklch(0.45 0 0)",
@@ -339,15 +339,15 @@ export default function Performance() {
                   className="p-3 text-center"
                   style={{
                     background: isCurrent ? "oklch(0.1 0 0)" : "oklch(0.06 0 0)",
-                    border: `1.5px solid ${isCurrent ? "oklch(0.5 0.22 27)" : "oklch(0.15 0 0)"}`,
+                    border: `1.5px solid ${isCurrent ? "var(--atari-amber)" : "var(--atari-border)"}`,
                   }}
                 >
                   <p
                     style={{
-                      fontFamily: "var(--font-condensed)",
+                      fontFamily: "Press Start 2P, monospace",
                       fontSize: "1.6rem",
                       fontWeight: 800,
-                      color: isCurrent ? "oklch(0.5 0.22 27)" : "oklch(0.5 0 0)",
+                      color: isCurrent ? "var(--atari-amber)" : "oklch(0.5 0 0)",
                       lineHeight: 1,
                     }}
                   >
@@ -355,9 +355,9 @@ export default function Performance() {
                   </p>
                   <p
                     style={{
-                      fontFamily: "var(--font-condensed)",
+                      fontFamily: "Press Start 2P, monospace",
                       fontSize: "0.6rem",
-                      color: isCurrent ? "oklch(0.98 0 0)" : "oklch(0.35 0 0)",
+                      color: isCurrent ? "var(--atari-white)" : "oklch(0.35 0 0)",
                       textTransform: "uppercase",
                       letterSpacing: "0.08em",
                       marginTop: 2,
@@ -368,7 +368,7 @@ export default function Performance() {
                   {isCurrent && (
                     <span
                       className="brutal-tag mt-1"
-                      style={{ borderColor: "oklch(0.5 0.22 27)", color: "oklch(0.5 0.22 27)", fontSize: "0.55rem" }}
+                      style={{ borderColor: "var(--atari-amber)", color: "var(--atari-amber)", fontSize: "0.55rem" }}
                     >
                       Current
                     </span>
@@ -385,7 +385,7 @@ export default function Performance() {
             <p
               className="mb-3"
               style={{
-                fontFamily: "var(--font-condensed)",
+                fontFamily: "Press Start 2P, monospace",
                 fontSize: "0.7rem",
                 letterSpacing: "0.12em",
                 color: "oklch(0.45 0 0)",
@@ -404,7 +404,7 @@ export default function Performance() {
                       style={{
                         fontFamily: "var(--font-mono)",
                         fontSize: "0.7rem",
-                        color: "oklch(0.4 0 0)",
+                        color: "var(--atari-gray)",
                         width: 90,
                         flexShrink: 0,
                       }}
@@ -421,7 +421,7 @@ export default function Performance() {
                       style={{
                         fontFamily: "var(--font-mono)",
                         fontSize: "0.7rem",
-                        color: met ? "oklch(0.65 0.18 145)" : "oklch(0.5 0 0)",
+                        color: met ? "var(--atari-green)" : "oklch(0.5 0 0)",
                         width: 50,
                         textAlign: "right",
                         flexShrink: 0,
