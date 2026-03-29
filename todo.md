@@ -91,3 +91,11 @@
 - [x] Vitest: stats procedures (today, recent, gamification)
 - [x] Vitest: ingestion procedures (getUsage, access control)
 - [x] 24 tests passing
+
+## API Update (Active Jobs DB)
+- [x] Update RAPIDAPI_KEY secret to correct key (af953bfb6emsh...)
+- [x] Update API host to active-jobs-db.p.rapidapi.com
+- [x] Update all parameter names to match Active Jobs DB API spec
+- [x] Add new filter fields: title_filter, advanced_title_filter, description_filter, advanced_description_filter, organization_filter, organization_exclusion_filter, remote, source_exclusion, ai_employment_type_filter, ai_taxonomies_a_primary_filter, ai_taxonomies_a_exclusion_filter, ai_has_salary, include_li, li_organization_slug_filter, li_organization_slug_exclusion_filter, li_industry_filter, li_organization_employees_lte, li_organization_employees_gte, offset (pagination)
+- [x] Update Ingestion UI with all new filter fields
+- [x] Update tests for new API configuration

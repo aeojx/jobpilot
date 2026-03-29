@@ -249,56 +249,113 @@ export const appRouter = router({
       }),
   }),
 
-  // ─── API Ingestion (Fantastic Jobs) ────────────────────────────────────────
+  // ─── API Ingestion (Active Jobs DB) ──────────────────────────────────────────
 
   ingestion: router({
     fetchJobs: adminProcedure
       .input(
         z.object({
-          jobTitle: z.string().optional(),
-          location: z.string().optional(),
-          industry: z.string().optional(),
-          workArrangement: z.string().optional(),
-          experienceLevel: z.string().optional(),
-          atsSource: z.string().optional(),
-          excludeAgency: z.boolean().optional(),
-          visaSponsorship: z.boolean().optional(),
-          excludeLinkedIn: z.boolean().optional(),
-          apiKey: z.string().optional(),
+          // Title filters
+          titleFilter: z.string().optional(),
+          advancedTitleFilter: z.string().optional(),
+          // Location
+          locationFilter: z.string().optional(),
+          // Description filters
+          descriptionFilter: z.string().optional(),
+          advancedDescriptionFilter: z.string().optional(),
+          // Organization filters
+          organizationFilter: z.string().optional(),
+          organizationExclusionFilter: z.string().optional(),
+          advancedOrganizationFilter: z.string().optional(),
+          // ATS source
+          source: z.string().optional(),
+          sourceExclusion: z.string().optional(),
+          // AI filters
+          aiWorkArrangementFilter: z.string().optional(),
+          aiExperienceLevelFilter: z.string().optional(),
+          aiEmploymentTypeFilter: z.string().optional(),
+          aiTaxonomiesAFilter: z.string().optional(),
+          aiTaxonomiesAPrimaryFilter: z.string().optional(),
+          aiTaxonomiesAExclusionFilter: z.string().optional(),
+          aiVisaSponsorshipFilter: z.boolean().optional(),
+          aiHasSalary: z.boolean().optional(),
+          // Boolean flags
+          remote: z.boolean().optional(),
+          agency: z.boolean().optional(),
+          includeLi: z.boolean().optional(),
+          // LinkedIn org filters
+          liOrganizationSlugFilter: z.string().optional(),
+          liOrganizationSlugExclusionFilter: z.string().optional(),
+          liIndustryFilter: z.string().optional(),
+          liOrganizationEmployeesLte: z.string().optional(),
+          liOrganizationEmployeesGte: z.string().optional(),
+          // Pagination
+          offset: z.number().optional(),
+          limit: z.number().optional(),
+          // Description type
+          descriptionType: z.enum(["text", "html"]).optional(),
         })
       )
       .mutation(async ({ input }) => {
         const monthKey = getCurrentMonthKey();
         await incrementApiUsage(monthKey);
-        const resolvedKey = input.apiKey || ENV.rapidApiKey;
+        const resolvedKey = ENV.rapidApiKey;
         if (!resolvedKey) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "No RapidAPI key configured. Please set RAPIDAPI_KEY in secrets." });
         }
-        const params: Record<string, string> = {
-          limit: "100",
-          include_ai: "true",
-        };
-        if (input.jobTitle) params["advanced_title_filter"] = input.jobTitle;
-        if (input.location) params["location_filter"] = input.location;
-        if (input.industry) params["ai_taxonomies_a_filter"] = input.industry;
-        if (input.workArrangement) params["ai_work_arrangement_filter"] = input.workArrangement;
-        if (input.experienceLevel) params["ai_experience_level_filter"] = input.experienceLevel;
-        if (input.atsSource) params["source"] = input.atsSource;
-        if (input.excludeAgency) params["agency"] = "false";
-        if (input.visaSponsorship) params["ai_visa_sponsorship_filter"] = "true";
-        if (input.excludeLinkedIn) params["exclude_source"] = "linkedin";
-        params["description_type"] = "text";
+        const params: Record<string, string> = {};
+        // Always include description text and AI fields
+        params["description_type"] = input.descriptionType ?? "text";
+        params["include_ai"] = "true";
+        params["limit"] = String(input.limit ?? 100);
+        if (input.offset !== undefined) params["offset"] = String(input.offset);
+        // Title
+        if (input.advancedTitleFilter) params["advanced_title_filter"] = input.advancedTitleFilter;
+        else if (input.titleFilter) params["title_filter"] = input.titleFilter;
+        // Location
+        if (input.locationFilter) params["location_filter"] = input.locationFilter;
+        // Description
+        if (input.advancedDescriptionFilter) params["advanced_description_filter"] = input.advancedDescriptionFilter;
+        else if (input.descriptionFilter) params["description_filter"] = input.descriptionFilter;
+        // Organization
+        if (input.advancedOrganizationFilter) params["advanced_organization_filter"] = input.advancedOrganizationFilter;
+        else if (input.organizationFilter) params["organization_filter"] = input.organizationFilter;
+        if (input.organizationExclusionFilter) params["organization_exclusion_filter"] = input.organizationExclusionFilter;
+        // ATS Source
+        if (input.source) params["source"] = input.source;
+        if (input.sourceExclusion) params["source_exclusion"] = input.sourceExclusion;
+        // AI filters
+        if (input.aiWorkArrangementFilter) params["ai_work_arrangement_filter"] = input.aiWorkArrangementFilter;
+        if (input.aiExperienceLevelFilter) params["ai_experience_level_filter"] = input.aiExperienceLevelFilter;
+        if (input.aiEmploymentTypeFilter) params["ai_employment_type_filter"] = input.aiEmploymentTypeFilter;
+        if (input.aiTaxonomiesAFilter) params["ai_taxonomies_a_filter"] = input.aiTaxonomiesAFilter;
+        if (input.aiTaxonomiesAPrimaryFilter) params["ai_taxonomies_a_primary_filter"] = input.aiTaxonomiesAPrimaryFilter;
+        if (input.aiTaxonomiesAExclusionFilter) params["ai_taxonomies_a_exclusion_filter"] = input.aiTaxonomiesAExclusionFilter;
+        if (input.aiVisaSponsorshipFilter) params["ai_visa_sponsorship_filter"] = "true";
+        if (input.aiHasSalary) params["ai_has_salary"] = "true";
+        // Boolean flags
+        if (input.remote !== undefined) params["remote"] = String(input.remote);
+        if (input.agency !== undefined) params["agency"] = String(input.agency);
+        if (input.includeLi !== undefined) params["include_li"] = String(input.includeLi);
+        // LinkedIn org filters
+        if (input.liOrganizationSlugFilter) params["li_organization_slug_filter"] = input.liOrganizationSlugFilter;
+        if (input.liOrganizationSlugExclusionFilter) params["li_organization_slug_exclusion_filter"] = input.liOrganizationSlugExclusionFilter;
+        if (input.liIndustryFilter) params["li_industry_filter"] = input.liIndustryFilter;
+        if (input.liOrganizationEmployeesLte) params["li_organization_employees_lte"] = input.liOrganizationEmployeesLte;
+        if (input.liOrganizationEmployeesGte) params["li_organization_employees_gte"] = input.liOrganizationEmployeesGte;
+
         const queryString = new URLSearchParams(params).toString();
-        const url = `https://fantastic-jobs.p.rapidapi.com/jobs?${queryString}`;
+        const url = `https://active-jobs-db.p.rapidapi.com/active-ats-7d?${queryString}`;
         const response = await fetch(url, {
           method: "GET",
           headers: {
-            "x-rapidapi-host": "fantastic-jobs.p.rapidapi.com",
+            "x-rapidapi-host": "active-jobs-db.p.rapidapi.com",
             "x-rapidapi-key": resolvedKey,
           },
         });
         if (!response.ok) {
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `API error: ${response.status} ${response.statusText}` });
+          const errText = await response.text().catch(() => response.statusText);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `API error ${response.status}: ${errText}` });
         }
         const data = await response.json();
         return data;
