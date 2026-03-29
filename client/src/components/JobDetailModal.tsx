@@ -1,0 +1,336 @@
+import { trpc } from "@/lib/trpc";
+import { Job } from "../../../drizzle/schema";
+import { AtSign, Copy, ExternalLink, HelpCircle, X, CheckCircle, XCircle, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+type KanbanStatus = "ingested" | "matched" | "to_apply" | "applied" | "rejected";
+
+export default function JobDetailModal({
+  job,
+  isOwner,
+  onClose,
+  onStatusChange,
+}: {
+  job: Job;
+  isOwner: boolean;
+  onClose: () => void;
+  onStatusChange: (status: KanbanStatus) => void;
+}) {
+  const [question, setQuestion] = useState("");
+  const utils = trpc.useUtils();
+
+  const askQuestion = trpc.questions.ask.useMutation({
+    onSuccess: () => {
+      toast.success("Question submitted to owner");
+      setQuestion("");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const markApplied = trpc.jobs.markApplied.useMutation({
+    onSuccess: () => {
+      toast.success("Marked as applied! +10 XP");
+      utils.jobs.kanban.invalidate();
+      utils.stats.today.invalidate();
+      utils.stats.gamification.invalidate();
+      onClose();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const score = Math.round(job.matchScore ?? 0);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.85)" }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className="w-full max-w-2xl max-h-[90vh] flex flex-col"
+        style={{
+          background: "oklch(0.07 0 0)",
+          border: "2px solid oklch(0.2 0 0)",
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between p-5 border-b" style={{ borderColor: "oklch(0.15 0 0)" }}>
+          <div className="flex-1 min-w-0 pr-4">
+            <h2
+              className="text-xl font-black text-foreground leading-tight"
+              style={{ fontFamily: "var(--font-condensed)", letterSpacing: "0.03em" }}
+            >
+              {job.title}
+            </h2>
+            <p
+              className="mt-1"
+              style={{
+                fontFamily: "var(--font-condensed)",
+                fontSize: "0.8rem",
+                letterSpacing: "0.08em",
+                color: "oklch(0.55 0 0)",
+                textTransform: "uppercase",
+              }}
+            >
+              {job.company}
+              {job.location && ` · ${job.location}`}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-foreground/40 hover:text-foreground transition-colors flex-shrink-0"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Red divider */}
+        <div className="brutal-divider flex-shrink-0" />
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          {/* Tags & Score */}
+          <div className="flex flex-wrap items-center gap-2">
+            {score > 0 && (
+              <span
+                className="brutal-tag"
+                style={{
+                  borderColor: score >= 70 ? "oklch(0.65 0.18 145)" : score >= 40 ? "oklch(0.75 0.18 65)" : "oklch(0.5 0.22 27)",
+                  color: score >= 70 ? "oklch(0.65 0.18 145)" : score >= 40 ? "oklch(0.75 0.18 65)" : "oklch(0.5 0.22 27)",
+                  fontSize: "0.75rem",
+                  padding: "3px 8px",
+                }}
+              >
+                {score}% Match
+              </span>
+            )}
+            {job.source && (
+              <span className="brutal-tag" style={{ borderColor: "oklch(0.6 0.15 200)", color: "oklch(0.6 0.15 200)" }}>
+                {job.source}
+              </span>
+            )}
+            {job.hasEmail && (
+              <span className="brutal-tag" style={{ borderColor: "oklch(0.75 0.18 65)", color: "oklch(0.75 0.18 65)" }}>
+                <AtSign size={9} /> Email Outreach
+              </span>
+            )}
+            {job.isDuplicate && (
+              <span className="brutal-tag" style={{ borderColor: "oklch(0.5 0.22 27)", color: "oklch(0.5 0.22 27)" }}>
+                <Copy size={9} /> Duplicated
+              </span>
+            )}
+          </div>
+
+          {/* Email found */}
+          {job.emailFound && (
+            <div
+              className="p-3"
+              style={{ background: "oklch(0.1 0 0)", border: "1px solid oklch(0.75 0.18 65 / 0.3)" }}
+            >
+              <p
+                style={{
+                  fontFamily: "var(--font-condensed)",
+                  fontSize: "0.7rem",
+                  letterSpacing: "0.1em",
+                  color: "oklch(0.75 0.18 65)",
+                  textTransform: "uppercase",
+                  marginBottom: 4,
+                }}
+              >
+                Email Found
+              </p>
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", color: "oklch(0.98 0 0)" }}>
+                {job.emailFound}
+              </p>
+            </div>
+          )}
+
+          {/* Apply URL */}
+          {job.applyUrl && (
+            <a
+              href={job.applyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm transition-colors"
+              style={{
+                fontFamily: "var(--font-condensed)",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "oklch(0.6 0.15 200)",
+                fontSize: "0.8rem",
+              }}
+            >
+              <ExternalLink size={13} />
+              Open Application Link
+            </a>
+          )}
+
+          {/* Description */}
+          {job.description && (
+            <div>
+              <p
+                className="mb-2"
+                style={{
+                  fontFamily: "var(--font-condensed)",
+                  fontSize: "0.7rem",
+                  letterSpacing: "0.1em",
+                  color: "oklch(0.4 0 0)",
+                  textTransform: "uppercase",
+                }}
+              >
+                Description
+              </p>
+              <div
+                className="text-sm leading-relaxed"
+                style={{
+                  color: "oklch(0.7 0 0)",
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "0.82rem",
+                  maxHeight: "200px",
+                  overflowY: "auto",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {job.description.slice(0, 1500)}
+                {job.description.length > 1500 && "..."}
+              </div>
+            </div>
+          )}
+
+          {/* Applier: Ask Question */}
+          {!isOwner && job.status === "to_apply" && (
+            <div>
+              <p
+                className="mb-2"
+                style={{
+                  fontFamily: "var(--font-condensed)",
+                  fontSize: "0.7rem",
+                  letterSpacing: "0.1em",
+                  color: "oklch(0.4 0 0)",
+                  textTransform: "uppercase",
+                }}
+              >
+                Ask Owner a Question
+              </p>
+              <div className="flex gap-2">
+                <input
+                  className="brutal-input flex-1 text-sm"
+                  placeholder="Type your question..."
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && question.trim()) {
+                      askQuestion.mutate({
+                        jobId: job.id,
+                        jobTitle: job.title,
+                        jobCompany: job.company,
+                        question: question.trim(),
+                      });
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    if (question.trim()) {
+                      askQuestion.mutate({
+                        jobId: job.id,
+                        jobTitle: job.title,
+                        jobCompany: job.company,
+                        question: question.trim(),
+                      });
+                    }
+                  }}
+                  disabled={!question.trim() || askQuestion.isPending}
+                  className="px-3 py-2 text-xs font-bold uppercase tracking-widest transition-all"
+                  style={{
+                    fontFamily: "var(--font-condensed)",
+                    background: "oklch(0.12 0 0)",
+                    border: "1.5px solid oklch(0.3 0 0)",
+                    color: "oklch(0.7 0 0)",
+                  }}
+                >
+                  <HelpCircle size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="p-5 border-t flex items-center gap-3" style={{ borderColor: "oklch(0.15 0 0)" }}>
+          {/* Applier: Mark as Complete */}
+          {!isOwner && job.status === "to_apply" && (
+            <button
+              onClick={() => markApplied.mutate({ id: job.id })}
+              disabled={markApplied.isPending}
+              className="flex-1 py-3 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 transition-all"
+              style={{
+                fontFamily: "var(--font-condensed)",
+                background: "oklch(0.65 0.18 145)",
+                color: "oklch(0.04 0 0)",
+                border: "2px solid oklch(0.65 0.18 145)",
+                letterSpacing: "0.15em",
+              }}
+            >
+              <CheckCircle size={16} />
+              {markApplied.isPending ? "Marking..." : "Mark as Applied"}
+            </button>
+          )}
+
+          {/* Owner: Quick move actions */}
+          {isOwner && (
+            <>
+              {job.status !== "to_apply" && job.status !== "applied" && job.status !== "rejected" && (
+                <button
+                  onClick={() => onStatusChange("to_apply")}
+                  className="flex-1 py-3 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 transition-all"
+                  style={{
+                    fontFamily: "var(--font-condensed)",
+                    background: "oklch(0.98 0 0)",
+                    color: "oklch(0.04 0 0)",
+                    border: "2px solid oklch(0.98 0 0)",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  <ArrowRight size={14} />
+                  Assign to Applier
+                </button>
+              )}
+              {job.status !== "rejected" && (
+                <button
+                  onClick={() => onStatusChange("rejected")}
+                  className="py-3 px-4 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 transition-all"
+                  style={{
+                    fontFamily: "var(--font-condensed)",
+                    background: "transparent",
+                    color: "oklch(0.5 0.22 27)",
+                    border: "2px solid oklch(0.5 0.22 27)",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  <XCircle size={14} />
+                  Reject
+                </button>
+              )}
+            </>
+          )}
+
+          <button
+            onClick={onClose}
+            className="py-3 px-4 font-bold text-xs tracking-widest uppercase transition-all"
+            style={{
+              fontFamily: "var(--font-condensed)",
+              background: "transparent",
+              color: "oklch(0.4 0 0)",
+              border: "1.5px solid oklch(0.2 0 0)",
+              letterSpacing: "0.1em",
+            }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
