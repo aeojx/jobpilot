@@ -124,3 +124,10 @@
 
 ## Bug Fixes
 - [x] Fix Dashboard jobs query error: created missing jobs, skills_profile, question_bank tables; fixed TiDB-incompatible JSON default ('[]' → NULL)
+
+## Password Gate
+- [x] Store SITE_PASSWORD as env secret ("JobPortal")
+- [x] Add tRPC publicProcedure: gate.check (reads cookie) and gate.unlock (validates password, sets 30-day cookie)
+- [x] Build PasswordGate.tsx page with Atari retro styling
+- [x] Wrap all routes in App.tsx with a GateGuard component that redirects to /gate if not unlocked
+- [x] Add vitest for gate.unlock procedure (5 tests passing)

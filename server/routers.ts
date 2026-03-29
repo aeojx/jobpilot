@@ -357,8 +357,45 @@ export function startScheduledFetchRunner() {
 
 // ─── Router ───────────────────────────────────────────────────────────────────
 
+// ─── Gate Cookie Name ────────────────────────────────────────────────────────
+const GATE_COOKIE = "jp_gate";
+const GATE_COOKIE_MAX_AGE = 1000 * 60 * 60 * 24 * 30; // 30 days in milliseconds (Express uses ms)
+
 export const appRouter = router({
   system: systemRouter,
+
+  // ─── Password Gate ────────────────────────────────────────────────────────
+  gate: router({
+    check: publicProcedure.query(({ ctx }) => {
+      if (!ENV.sitePassword) return { unlocked: true }; // no password set = open
+      // Parse cookie from raw header (no cookie-parser middleware)
+      const cookieHeader = ctx.req.headers.cookie ?? "";
+      const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${GATE_COOKIE}=([^;]*)`))
+      const token = match ? decodeURIComponent(match[1]!) : null;
+      return { unlocked: token === ENV.sitePassword };
+    }),
+    unlock: publicProcedure
+      .input(z.object({ password: z.string() }))
+      .mutation(({ input, ctx }) => {
+        if (!ENV.sitePassword || input.password !== ENV.sitePassword) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Incorrect password" });
+        }
+        const isSecure = ENV.isProduction || ctx.req.protocol === "https";
+        ctx.res.cookie(GATE_COOKIE, ENV.sitePassword, {
+          httpOnly: true,
+          secure: isSecure,
+          sameSite: isSecure ? "none" : "lax",
+          maxAge: GATE_COOKIE_MAX_AGE,
+          path: "/",
+        });
+        return { success: true };
+      }),
+    lock: publicProcedure.mutation(({ ctx }) => {
+      ctx.res.clearCookie(GATE_COOKIE, { path: "/" });
+      return { success: true };
+    }),
+  }),
+
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

@@ -12,6 +12,51 @@ import QuestionBank from "./pages/QuestionBank";
 import Performance from "./pages/Performance";
 import ApplierView from "./pages/ApplierView";
 import AppLayout from "./components/AppLayout";
+import PasswordGate from "./pages/PasswordGate";
+import { trpc } from "@/lib/trpc";
+import { useState } from "react";
+
+// ─── Gate Guard ───────────────────────────────────────────────────────────────
+// Checks the server-side cookie. If not unlocked, renders the password gate.
+// Once unlocked, re-renders the full app without a page reload.
+
+function GateGuard({ children }: { children: React.ReactNode }) {
+  const [forceUnlocked, setForceUnlocked] = useState(false);
+
+  const { data, isLoading } = trpc.gate.check.useQuery(undefined, {
+    retry: false,
+    staleTime: 1000 * 60 * 5, // re-check every 5 minutes
+  });
+
+  // While checking, show a minimal loading screen in Atari style
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "var(--atari-black)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "'Press Start 2P', monospace",
+          fontSize: "10px",
+          color: "var(--atari-amber)",
+          letterSpacing: "0.15em",
+        }}
+      >
+        LOADING...
+      </div>
+    );
+  }
+
+  const isUnlocked = forceUnlocked || data?.unlocked;
+
+  if (!isUnlocked) {
+    return <PasswordGate onUnlocked={() => setForceUnlocked(true)} />;
+  }
+
+  return <>{children}</>;
+}
 
 function Router() {
   return (
@@ -65,7 +110,9 @@ function App() {
               },
             }}
           />
-          <Router />
+          <GateGuard>
+            <Router />
+          </GateGuard>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
