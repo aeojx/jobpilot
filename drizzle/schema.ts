@@ -51,7 +51,7 @@ export const jobs = mysqlTable("jobs", {
   isDuplicate: boolean("isDuplicate").default(false).notNull(),
   hasEmail: boolean("hasEmail").default(false).notNull(),
   emailFound: varchar("emailFound", { length: 320 }),
-  tags: json("tags").$type<string[]>().default([]),
+  tags: json("tags").$type<string[]>(),
   rawJson: json("rawJson"),
   ingestedAt: timestamp("ingestedAt").defaultNow().notNull(),
   appliedAt: timestamp("appliedAt"),

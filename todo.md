@@ -121,3 +121,6 @@
 ## v1.2 Gap Fixes
 - [x] Update Skills, QuestionBank, Performance, ApplierView to use Atari CSS variables
 - [x] Verify cron runner bootstrap is wired in server startup
+
+## Bug Fixes
+- [x] Fix Dashboard jobs query error: created missing jobs, skills_profile, question_bank tables; fixed TiDB-incompatible JSON default ('[]' → NULL)

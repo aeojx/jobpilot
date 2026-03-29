@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `question_bank` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `jobId` int NOT NULL,\n  `jobTitle` varchar(512),\n  `jobCompany` varchar(512),\n  `question` text NOT NULL,\n  `answer` text,\n  `askedByName` varchar(255),\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `answeredAt` timestamp NULL,\n  CONSTRAINT `question_bank_id` PRIMARY KEY(`id`)\n);\n\nCREATE TABLE IF NOT EXISTS `skills_profile` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `content` text NOT NULL,\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `skills_profile_id` PRIMARY KEY(`id`)\n)",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user WN3xd22ei9epifv.e8f98a17fdb7 --database 8xw3YDHLEcZPc6Z4gxVxDS --execute CREATE TABLE IF NOT EXISTS `question_bank` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `jobId` int NOT NULL,\n  `jobTitle` varchar(512),\n  `jobCompany` varchar(512),\n  `question` text NOT NULL,\n  `answer` text,\n  `askedByName` varchar(255),\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `answeredAt` timestamp NULL,\n  CONSTRAINT `question_bank_id` PRIMARY KEY(`id`)\n);\n\nCREATE TABLE IF NOT EXISTS `skills_profile` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `content` text NOT NULL,\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `skills_profile_id` PRIMARY KEY(`id`)\n)",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1863
+}

@@ -1,0 +1,8 @@
+{
+  "query": "DESCRIBE jobs;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user WN3xd22ei9epifv.e8f98a17fdb7 --database 8xw3YDHLEcZPc6Z4gxVxDS --execute DESCRIBE jobs;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table '8xw3ydhleczpc6z4gxvxds.jobs' doesn't exist"
+  ]
+}
