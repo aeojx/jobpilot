@@ -1,17 +1,22 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { trpc } from "@/lib/trpc";
 import {
   AlertTriangle,
   Calendar,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   Clock,
+  ChevronsUpDown,
   Play,
   Plus,
   RefreshCw,
+  Timer,
   Trash2,
   XCircle,
   Zap,
@@ -44,35 +49,109 @@ const TAXONOMIES = [
 ];
 const DAYS_OF_WEEK = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
+// Common location suggestions for autocomplete
+const LOCATION_SUGGESTIONS = [
+  "United States","United Kingdom","Canada","Australia","Germany","France","Netherlands",
+  "Singapore","India","Ireland","New Zealand","Switzerland","Sweden","Norway","Denmark",
+  "Remote","New York","San Francisco","London","Toronto","Sydney","Berlin","Amsterdam",
+  "Dubai","Austin","Seattle","Chicago","Boston","Los Angeles","Atlanta","Miami",
+];
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 type TriState = true | false | undefined;
 
-function TriToggle({ label, value, onChange }: { label: string; value: TriState; onChange: (v: TriState) => void }) {
-  const cycle = () => {
-    if (value === undefined) onChange(true);
-    else if (value === true) onChange(false);
-    else onChange(undefined);
-  };
+function formatDuration(ms: number | null | undefined): string {
+  if (ms == null) return "—";
+  if (ms < 1000) return `${ms}ms`;
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+  return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
+}
+
+/** Autocomplete combobox for text fields with suggestions */
+function AutocompleteInput({
+  label,
+  value,
+  onChange,
+  suggestions,
+  placeholder,
+  disabled,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  suggestions: string[];
+  placeholder?: string;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const filtered = value
+    ? suggestions.filter((s) => s.toLowerCase().includes(value.toLowerCase()))
+    : suggestions;
+
   return (
-    <button
-      type="button"
-      onClick={cycle}
-      className={`px-3 py-1.5 text-xs font-mono border-2 transition-all ${
-        value === true ? "border-green-400 text-green-400 bg-green-400/10" :
-        value === false ? "border-red-400 text-red-400 bg-red-400/10" :
-        "border-gray-600 text-gray-500"
-      }`}
-    >
-      {label}: {value === true ? "YES" : value === false ? "NO" : "ANY"}
-    </button>
+    <div>
+      <label className="block text-xs font-mono text-amber-400 mb-1">{label}</label>
+      <Popover open={open && !disabled} onOpenChange={(o) => !disabled && setOpen(o)}>
+        <PopoverTrigger asChild>
+          <div className="relative">
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+              onFocus={() => !disabled && setOpen(true)}
+              placeholder={placeholder}
+              disabled={disabled}
+              className="w-full px-3 py-2 pr-8 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none transition-colors text-white disabled:opacity-40 disabled:cursor-not-allowed"
+            />
+            <ChevronsUpDown
+              size={12}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+            />
+          </div>
+        </PopoverTrigger>
+        {filtered.length > 0 && (
+          <PopoverContent
+            className="p-0 bg-black border-2 border-amber-400"
+            style={{ width: "var(--radix-popover-trigger-width)" }}
+            onOpenAutoFocus={(e) => e.preventDefault()}
+          >
+            <Command>
+              <CommandList>
+                <CommandEmpty>
+                  <span className="text-xs font-mono text-gray-500 px-3 py-2 block">No matches</span>
+                </CommandEmpty>
+                <CommandGroup>
+                  {filtered.slice(0, 12).map((s) => (
+                    <CommandItem
+                      key={s}
+                      value={s}
+                      onSelect={() => { onChange(s); setOpen(false); }}
+                      className="text-xs font-mono text-gray-300 hover:text-amber-400 hover:bg-amber-400/10 cursor-pointer"
+                    >
+                      <Check
+                        size={10}
+                        className={`mr-2 ${value === s ? "opacity-100 text-amber-400" : "opacity-0"}`}
+                      />
+                      {s}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        )}
+      </Popover>
+    </div>
   );
 }
 
+/** Multi-select dropdown with search */
 function MultiSelect({
-  label, options, selected, onChange, placeholder,
+  label, options, selected, onChange, placeholder, disabled,
 }: {
-  label: string; options: string[]; selected: string[]; onChange: (v: string[]) => void; placeholder?: string;
+  label: string; options: string[]; selected: string[]; onChange: (v: string[]) => void;
+  placeholder?: string; disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const toggle = (opt: string) => {
@@ -80,40 +159,97 @@ function MultiSelect({
     else onChange([...selected, opt]);
   };
   return (
-    <div className="relative">
+    <div>
       <label className="block text-xs font-mono text-amber-400 mb-1">{label}</label>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full px-3 py-2 text-xs font-mono text-left bg-black border-2 border-gray-700 hover:border-amber-400 transition-colors flex items-center justify-between"
-      >
-        <span className={selected.length ? "text-white" : "text-gray-500"}>
-          {selected.length ? selected.join(", ").slice(0, 50) + (selected.join(", ").length > 50 ? "…" : "") : placeholder ?? "Select…"}
-        </span>
-        {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-      </button>
-      {open && (
-        <div className="absolute z-50 w-full max-h-48 overflow-y-auto bg-black border-2 border-amber-400 mt-0.5">
-          {options.map((opt) => (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => toggle(opt)}
-              className={`w-full px-3 py-1.5 text-xs font-mono text-left hover:bg-amber-400/10 transition-colors ${
-                selected.includes(opt) ? "text-amber-400" : "text-gray-300"
-              }`}
-            >
-              {selected.includes(opt) ? "▶ " : "  "}{opt}
-            </button>
-          ))}
-        </div>
-      )}
+      <Popover open={open && !disabled} onOpenChange={(o) => !disabled && setOpen(o)}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            disabled={disabled}
+            className="w-full px-3 py-2 text-xs font-mono text-left bg-black border-2 border-gray-700 hover:border-amber-400 transition-colors flex items-center justify-between disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <span className={selected.length ? "text-white truncate max-w-[80%]" : "text-gray-500"}>
+              {selected.length
+                ? selected.length === 1 ? selected[0] : `${selected.length} selected`
+                : placeholder ?? "Select…"}
+            </span>
+            <ChevronDown size={12} className="shrink-0 ml-1 text-gray-500" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="p-0 bg-black border-2 border-amber-400"
+          style={{ width: "var(--radix-popover-trigger-width)" }}
+        >
+          <Command>
+            <CommandInput placeholder="Search…" className="text-xs font-mono h-8 border-b border-gray-700" />
+            <CommandList className="max-h-52">
+              <CommandEmpty>
+                <span className="text-xs font-mono text-gray-500 px-3 py-2 block">No results</span>
+              </CommandEmpty>
+              <CommandGroup>
+                {options.map((opt) => (
+                  <CommandItem
+                    key={opt}
+                    value={opt}
+                    onSelect={() => toggle(opt)}
+                    className="text-xs font-mono cursor-pointer"
+                  >
+                    <div
+                      className={`w-3 h-3 border mr-2 shrink-0 flex items-center justify-center ${
+                        selected.includes(opt) ? "border-amber-400 bg-amber-400" : "border-gray-600"
+                      }`}
+                    >
+                      {selected.includes(opt) && <Check size={8} className="text-black" />}
+                    </div>
+                    <span className={selected.includes(opt) ? "text-amber-400" : "text-gray-300"}>{opt}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+          {selected.length > 0 && (
+            <div className="border-t border-gray-700 px-3 py-1.5 flex justify-between items-center">
+              <span className="text-xs text-amber-400 font-mono">{selected.length} selected</span>
+              <button
+                type="button"
+                onClick={() => onChange([])}
+                className="text-xs text-gray-500 hover:text-red-400 font-mono transition-colors"
+              >
+                CLEAR
+              </button>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
 
-function TextInput({ label, value, onChange, placeholder, mono = true }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder?: string; mono?: boolean;
+/** Single-select dropdown */
+function SelectInput({
+  label, options, value, onChange, placeholder, disabled,
+}: {
+  label: string; options: { value: string; label: string }[]; value: string;
+  onChange: (v: string) => void; placeholder?: string; disabled?: boolean;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-mono text-amber-400 mb-1">{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className="w-full px-3 py-2 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none text-white disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function TextInput({ label, value, onChange, placeholder, disabled }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string; disabled?: boolean;
 }) {
   return (
     <div>
@@ -123,9 +259,35 @@ function TextInput({ label, value, onChange, placeholder, mono = true }: {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`w-full px-3 py-2 text-xs bg-black border-2 border-gray-700 focus:border-amber-400 outline-none transition-colors text-white ${mono ? "font-mono" : ""}`}
+        disabled={disabled}
+        className="w-full px-3 py-2 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none transition-colors text-white disabled:opacity-40 disabled:cursor-not-allowed"
       />
     </div>
+  );
+}
+
+function TriToggle({ label, value, onChange, disabled }: {
+  label: string; value: TriState; onChange: (v: TriState) => void; disabled?: boolean;
+}) {
+  const cycle = () => {
+    if (disabled) return;
+    if (value === undefined) onChange(true);
+    else if (value === true) onChange(false);
+    else onChange(undefined);
+  };
+  return (
+    <button
+      type="button"
+      onClick={cycle}
+      disabled={disabled}
+      className={`px-3 py-1.5 text-xs font-mono border-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+        value === true ? "border-green-400 text-green-400 bg-green-400/10" :
+        value === false ? "border-red-400 text-red-400 bg-red-400/10" :
+        "border-gray-600 text-gray-500"
+      }`}
+    >
+      {label}: {value === true ? "YES" : value === false ? "NO" : "ANY"}
+    </button>
   );
 }
 
@@ -200,13 +362,23 @@ function filtersToInput(f: Filters) {
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function Ingestion() {
-  const { user } = useAuth();
+  useAuth();
   const utils = trpc.useUtils();
 
   const [filters, setFilters] = useState<Filters>(defaultFilters());
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [activeTab, setActiveTab] = useState<"fetch" | "schedules" | "history">("fetch");
+
+  // Convert-to-schedule modal state
+  const [convertingHistory, setConvertingHistory] = useState<{
+    id: number; name: string; filters: Filters;
+  } | null>(null);
+  const [convertName, setConvertName] = useState("");
+  const [convertInterval, setConvertInterval] = useState<"manual" | "daily" | "weekly">("daily");
+  const [convertHour, setConvertHour] = useState(9);
+  const [convertMinute, setConvertMinute] = useState(0);
+  const [convertDayOfWeek, setConvertDayOfWeek] = useState(1);
 
   // Schedule form state
   const [scheduleName, setScheduleName] = useState("");
@@ -239,6 +411,8 @@ export default function Ingestion() {
       toast.success("Schedule created");
       setShowScheduleForm(false);
       setScheduleName("");
+      setConvertingHistory(null);
+      setConvertName("");
       refetchSchedules();
     },
     onError: (e) => toast.error(e.message),
@@ -262,6 +436,8 @@ export default function Ingestion() {
     },
     onError: (e) => toast.error(e.message),
   });
+
+  const isFetching = fetchJobsMut.isPending || runNowMut.isPending;
 
   // Quota calculations
   const jobsRemaining = apiUsage && 'jobsRemaining' in apiUsage ? apiUsage.jobsRemaining : undefined;
@@ -287,6 +463,20 @@ export default function Ingestion() {
     });
   };
 
+  const handleConvertToSchedule = () => {
+    if (!convertingHistory) return;
+    if (!convertName.trim()) { toast.error("Schedule name required"); return; }
+    createScheduleMut.mutate({
+      name: convertName,
+      endpoint: convertingHistory.filters.endpoint,
+      filters: filtersToInput(convertingHistory.filters),
+      intervalType: convertInterval,
+      scheduleHour: convertHour,
+      scheduleMinute: convertMinute,
+      scheduleDayOfWeek: convertInterval === "weekly" ? convertDayOfWeek : undefined,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-black text-white font-mono p-4 md:p-6">
       {/* Header */}
@@ -296,7 +486,7 @@ export default function Ingestion() {
           <h1 className="text-2xl font-black tracking-widest text-amber-400 uppercase">INGEST JOBS</h1>
         </div>
         <div className="h-0.5 w-full bg-amber-400 mb-3" />
-        <p className="text-xs text-gray-400">ACTIVE JOBS DB · active-jobs-db.p.rapidapi.com · HOURLY REFRESH · 175K+ ORGS</p>
+        <p className="text-xs text-gray-400">ACTIVE JOBS DB · active-jobs-db.p.rapidapi.com · 175K+ ORGS</p>
       </div>
 
       {/* Quota Warning Banner */}
@@ -329,21 +519,27 @@ export default function Ingestion() {
                 <span className="text-white font-bold">{apiUsage.callCount}</span>
               </span>
             </div>
-            {quotaCritical && <p className="text-red-400 text-xs mt-1 font-bold">⚠ CRITICAL: Less than 5% of job credits remaining this month!</p>}
-            {quotaWarning && !quotaCritical && <p className="text-yellow-400 text-xs mt-1">Warning: Less than 20% of job credits remaining. Consider reducing fetch size.</p>}
+            {quotaCritical && <p className="text-red-400 text-xs mt-1 font-bold">⚠ CRITICAL: Less than 5% of job credits remaining!</p>}
+            {quotaWarning && !quotaCritical && <p className="text-yellow-400 text-xs mt-1">Warning: Less than 20% of job credits remaining.</p>}
           </div>
-          {/* Quota bar */}
           {jobsPct !== null && (
             <div className="w-24 shrink-0">
               <div className="h-2 bg-gray-800 border border-gray-600">
-                <div
-                  className={`h-full transition-all ${quotaCritical ? "bg-red-500" : quotaWarning ? "bg-yellow-500" : "bg-green-500"}`}
-                  style={{ width: `${jobsPct}%` }}
-                />
+                <div className={`h-full transition-all ${quotaCritical ? "bg-red-500" : quotaWarning ? "bg-yellow-500" : "bg-green-500"}`} style={{ width: `${jobsPct}%` }} />
               </div>
               <p className="text-xs text-gray-500 text-right mt-0.5">{jobsPct}%</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Fetch-in-progress banner */}
+      {isFetching && (
+        <div className="mb-4 p-3 border-2 border-amber-400 bg-amber-400/10 flex items-center gap-3 animate-pulse">
+          <RefreshCw size={16} className="text-amber-400 animate-spin shrink-0" />
+          <p className="text-xs font-mono text-amber-400 font-bold tracking-widest">
+            FETCH IN PROGRESS — FIELDS LOCKED UNTIL COMPLETE…
+          </p>
         </div>
       )}
 
@@ -366,41 +562,36 @@ export default function Ingestion() {
 
       {/* ── FETCH TAB ──────────────────────────────────────────────────────── */}
       {activeTab === "fetch" && (
-        <div className="space-y-6">
-          {/* Endpoint + Limit */}
+        <div className={`space-y-6 transition-opacity ${isFetching ? "opacity-50 pointer-events-none" : ""}`}>
+          {/* Endpoint + Limit + Offset */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-mono text-amber-400 mb-1">ENDPOINT</label>
-              <select
-                value={filters.endpoint}
-                onChange={(e) => setFilter("endpoint", e.target.value as "active-ats-7d" | "active-ats-24h")}
-                className="w-full px-3 py-2 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none text-white"
-              >
-                <option value="active-ats-7d">active-ats-7d (Last 7 days)</option>
-                <option value="active-ats-24h">active-ats-24h (Last 24 hours)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-mono text-amber-400 mb-1">LIMIT (10–100)</label>
-              <select
-                value={filters.limit}
-                onChange={(e) => setFilter("limit", e.target.value)}
-                className="w-full px-3 py-2 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none text-white"
-              >
-                {[10, 25, 50, 75, 100].map((n) => (
-                  <option key={n} value={String(n)}>{n} jobs</option>
-                ))}
-              </select>
-            </div>
+            <SelectInput
+              label="ENDPOINT"
+              value={filters.endpoint}
+              onChange={(v) => setFilter("endpoint", v as "active-ats-7d" | "active-ats-24h")}
+              options={[
+                { value: "active-ats-7d", label: "active-ats-7d (Last 7 days)" },
+                { value: "active-ats-24h", label: "active-ats-24h (Last 24 hours)" },
+              ]}
+              disabled={isFetching}
+            />
+            <SelectInput
+              label="LIMIT (10–100 per call)"
+              value={filters.limit}
+              onChange={(v) => setFilter("limit", v)}
+              options={[10, 25, 50, 75, 100].map((n) => ({ value: String(n), label: `${n} jobs` }))}
+              disabled={isFetching}
+            />
             <div>
               <label className="block text-xs font-mono text-amber-400 mb-1">OFFSET (pagination)</label>
               <input
                 type="number"
                 min={0}
-                step={filters.limit ? parseInt(filters.limit) : 100}
+                step={parseInt(filters.limit) || 100}
                 value={filters.offset}
                 onChange={(e) => setFilter("offset", e.target.value)}
-                className="w-full px-3 py-2 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none text-white"
+                disabled={isFetching}
+                className="w-full px-3 py-2 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none text-white disabled:opacity-40"
               />
             </div>
           </div>
@@ -409,10 +600,38 @@ export default function Ingestion() {
           <div className="border-2 border-gray-800 p-4 space-y-4">
             <p className="text-xs font-mono text-amber-400 font-bold tracking-widest">▌ CORE FILTERS</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <TextInput label="TITLE FILTER" value={filters.titleFilter} onChange={(v) => setFilter("titleFilter", v)} placeholder='e.g. "Software Engineer" OR Developer' />
-              <TextInput label="LOCATION FILTER" value={filters.locationFilter} onChange={(v) => setFilter("locationFilter", v)} placeholder='e.g. "United States" OR "United Kingdom"' />
-              <TextInput label="DESCRIPTION FILTER" value={filters.descriptionFilter} onChange={(v) => setFilter("descriptionFilter", v)} placeholder="Keywords in job description" />
-              <TextInput label="DATE FILTER (YYYY-MM-DD)" value={filters.dateFilter} onChange={(v) => setFilter("dateFilter", v)} placeholder="e.g. 2025-01-01" />
+              <TextInput
+                label="TITLE FILTER"
+                value={filters.titleFilter}
+                onChange={(v) => setFilter("titleFilter", v)}
+                placeholder='e.g. "Software Engineer" OR Developer'
+                disabled={isFetching}
+              />
+              <AutocompleteInput
+                label="LOCATION FILTER"
+                value={filters.locationFilter}
+                onChange={(v) => setFilter("locationFilter", v)}
+                suggestions={LOCATION_SUGGESTIONS}
+                placeholder='e.g. "United States" OR "United Kingdom"'
+                disabled={isFetching}
+              />
+              <TextInput
+                label="DESCRIPTION FILTER"
+                value={filters.descriptionFilter}
+                onChange={(v) => setFilter("descriptionFilter", v)}
+                placeholder="Keywords in job description"
+                disabled={isFetching}
+              />
+              <div>
+                <label className="block text-xs font-mono text-amber-400 mb-1">DATE FILTER</label>
+                <input
+                  type="date"
+                  value={filters.dateFilter}
+                  onChange={(e) => setFilter("dateFilter", e.target.value)}
+                  disabled={isFetching}
+                  className="w-full px-3 py-2 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none text-white disabled:opacity-40"
+                />
+              </div>
             </div>
           </div>
 
@@ -420,27 +639,76 @@ export default function Ingestion() {
           <div className="border-2 border-gray-800 p-4 space-y-4">
             <p className="text-xs font-mono text-amber-400 font-bold tracking-widest">▌ ATS SOURCE</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <MultiSelect label="SOURCE (include)" options={ATS_SOURCES} selected={filters.source} onChange={(v) => setFilter("source", v)} placeholder="All ATS sources" />
-              <MultiSelect label="SOURCE EXCLUSION" options={ATS_SOURCES} selected={filters.sourceExclusion} onChange={(v) => setFilter("sourceExclusion", v)} placeholder="None excluded" />
+              <MultiSelect
+                label="SOURCE (include)"
+                options={ATS_SOURCES}
+                selected={filters.source}
+                onChange={(v) => setFilter("source", v)}
+                placeholder="All ATS sources"
+                disabled={isFetching}
+              />
+              <MultiSelect
+                label="SOURCE EXCLUSION"
+                options={ATS_SOURCES}
+                selected={filters.sourceExclusion}
+                onChange={(v) => setFilter("sourceExclusion", v)}
+                placeholder="None excluded"
+                disabled={isFetching}
+              />
             </div>
           </div>
 
           {/* AI Filters */}
           <div className="border-2 border-gray-800 p-4 space-y-4">
-            <p className="text-xs font-mono text-amber-400 font-bold tracking-widest">▌ AI FILTERS (BETA)</p>
+            <p className="text-xs font-mono text-amber-400 font-bold tracking-widest">▌ AI FILTERS</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <MultiSelect label="WORK ARRANGEMENT" options={WORK_ARRANGEMENTS} selected={filters.aiWorkArrangementFilter} onChange={(v) => setFilter("aiWorkArrangementFilter", v)} placeholder="Any arrangement" />
-              <MultiSelect label="EXPERIENCE LEVEL (years)" options={EXPERIENCE_LEVELS} selected={filters.aiExperienceLevelFilter} onChange={(v) => setFilter("aiExperienceLevelFilter", v)} placeholder="Any level" />
-              <MultiSelect label="EMPLOYMENT TYPE" options={EMPLOYMENT_TYPES} selected={filters.aiEmploymentTypeFilter} onChange={(v) => setFilter("aiEmploymentTypeFilter", v)} placeholder="Any type" />
-              <MultiSelect label="TAXONOMY (include)" options={TAXONOMIES} selected={filters.aiTaxonomiesAFilter} onChange={(v) => setFilter("aiTaxonomiesAFilter", v)} placeholder="Any taxonomy" />
-              <MultiSelect label="TAXONOMY EXCLUSION" options={TAXONOMIES} selected={filters.aiTaxonomiesAExclusionFilter} onChange={(v) => setFilter("aiTaxonomiesAExclusionFilter", v)} placeholder="None excluded" />
+              <MultiSelect
+                label="WORK ARRANGEMENT"
+                options={WORK_ARRANGEMENTS}
+                selected={filters.aiWorkArrangementFilter}
+                onChange={(v) => setFilter("aiWorkArrangementFilter", v)}
+                placeholder="Any arrangement"
+                disabled={isFetching}
+              />
+              <MultiSelect
+                label="EXPERIENCE LEVEL (years)"
+                options={EXPERIENCE_LEVELS}
+                selected={filters.aiExperienceLevelFilter}
+                onChange={(v) => setFilter("aiExperienceLevelFilter", v)}
+                placeholder="Any level"
+                disabled={isFetching}
+              />
+              <MultiSelect
+                label="EMPLOYMENT TYPE"
+                options={EMPLOYMENT_TYPES}
+                selected={filters.aiEmploymentTypeFilter}
+                onChange={(v) => setFilter("aiEmploymentTypeFilter", v)}
+                placeholder="Any type"
+                disabled={isFetching}
+              />
+              <MultiSelect
+                label="TAXONOMY (include)"
+                options={TAXONOMIES}
+                selected={filters.aiTaxonomiesAFilter}
+                onChange={(v) => setFilter("aiTaxonomiesAFilter", v)}
+                placeholder="Any taxonomy"
+                disabled={isFetching}
+              />
+              <MultiSelect
+                label="TAXONOMY EXCLUSION"
+                options={TAXONOMIES}
+                selected={filters.aiTaxonomiesAExclusionFilter}
+                onChange={(v) => setFilter("aiTaxonomiesAExclusionFilter", v)}
+                placeholder="None excluded"
+                disabled={isFetching}
+              />
             </div>
             <div className="flex flex-wrap gap-2 pt-2">
-              <TriToggle label="REMOTE" value={filters.remote} onChange={(v) => setFilter("remote", v)} />
-              <TriToggle label="AGENCY" value={filters.agency} onChange={(v) => setFilter("agency", v)} />
-              <TriToggle label="VISA SPONSORSHIP" value={filters.aiVisaSponsorshipFilter} onChange={(v) => setFilter("aiVisaSponsorshipFilter", v)} />
-              <TriToggle label="HAS SALARY" value={filters.aiHasSalary} onChange={(v) => setFilter("aiHasSalary", v)} />
-              <TriToggle label="INCLUDE LINKEDIN" value={filters.includeLi} onChange={(v) => setFilter("includeLi", v)} />
+              <TriToggle label="REMOTE" value={filters.remote} onChange={(v) => setFilter("remote", v)} disabled={isFetching} />
+              <TriToggle label="AGENCY" value={filters.agency} onChange={(v) => setFilter("agency", v)} disabled={isFetching} />
+              <TriToggle label="VISA SPONSORSHIP" value={filters.aiVisaSponsorshipFilter} onChange={(v) => setFilter("aiVisaSponsorshipFilter", v)} disabled={isFetching} />
+              <TriToggle label="HAS SALARY" value={filters.aiHasSalary} onChange={(v) => setFilter("aiHasSalary", v)} disabled={isFetching} />
+              <TriToggle label="INCLUDE LINKEDIN" value={filters.includeLi} onChange={(v) => setFilter("includeLi", v)} disabled={isFetching} />
             </div>
           </div>
 
@@ -449,7 +717,7 @@ export default function Ingestion() {
             <button
               type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="w-full flex items-center justify-between px-4 py-3 text-xs font-mono text-gray-400 hover:text-amber-400 transition-colors"
+              className="w-full px-4 py-3 text-xs font-mono text-gray-400 hover:text-amber-400 flex items-center justify-between transition-colors"
             >
               <span className="font-bold tracking-widest">▌ ADVANCED FILTERS (ORG / LINKEDIN)</span>
               {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -457,16 +725,15 @@ export default function Ingestion() {
             {showAdvanced && (
               <div className="px-4 pb-4 space-y-4 border-t-2 border-gray-800 pt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <TextInput label="ORGANIZATION FILTER (exact, comma-separated)" value={filters.organizationFilter} onChange={(v) => setFilter("organizationFilter", v)} placeholder="e.g. NVIDIA,Walmart" />
-                  <TextInput label="ORGANIZATION EXCLUSION" value={filters.organizationExclusionFilter} onChange={(v) => setFilter("organizationExclusionFilter", v)} placeholder="e.g. Staffing Inc" />
-                  <TextInput label="ADVANCED TITLE FILTER" value={filters.advancedTitleFilter} onChange={(v) => setFilter("advancedTitleFilter", v)} placeholder="e.g. (AI | 'Machine Learning') & ! Junior" />
-                  <TextInput label="ADVANCED DESCRIPTION FILTER" value={filters.descriptionFilter} onChange={(v) => setFilter("descriptionFilter", v)} placeholder="Advanced boolean search" />
-                  <TextInput label="LI INDUSTRY FILTER" value={filters.liIndustryFilter} onChange={(v) => setFilter("liIndustryFilter", v)} placeholder="e.g. Software Development" />
-                  <TextInput label="LI ORG SLUG FILTER" value={filters.liOrganizationSlugFilter} onChange={(v) => setFilter("liOrganizationSlugFilter", v)} placeholder="e.g. netflix,walmart" />
-                  <TextInput label="LI ORG SLUG EXCLUSION" value={filters.liOrganizationSlugExclusionFilter} onChange={(v) => setFilter("liOrganizationSlugExclusionFilter", v)} placeholder="Slugs to exclude" />
+                  <TextInput label="ORGANIZATION FILTER (exact, comma-separated)" value={filters.organizationFilter} onChange={(v) => setFilter("organizationFilter", v)} placeholder="e.g. NVIDIA,Walmart" disabled={isFetching} />
+                  <TextInput label="ORGANIZATION EXCLUSION" value={filters.organizationExclusionFilter} onChange={(v) => setFilter("organizationExclusionFilter", v)} placeholder="e.g. Staffing Inc" disabled={isFetching} />
+                  <TextInput label="ADVANCED TITLE FILTER" value={filters.advancedTitleFilter} onChange={(v) => setFilter("advancedTitleFilter", v)} placeholder="e.g. (AI | 'Machine Learning') & ! Junior" disabled={isFetching} />
+                  <TextInput label="LI INDUSTRY FILTER" value={filters.liIndustryFilter} onChange={(v) => setFilter("liIndustryFilter", v)} placeholder="e.g. Software Development" disabled={isFetching} />
+                  <TextInput label="LI ORG SLUG FILTER" value={filters.liOrganizationSlugFilter} onChange={(v) => setFilter("liOrganizationSlugFilter", v)} placeholder="e.g. netflix,walmart" disabled={isFetching} />
+                  <TextInput label="LI ORG SLUG EXCLUSION" value={filters.liOrganizationSlugExclusionFilter} onChange={(v) => setFilter("liOrganizationSlugExclusionFilter", v)} placeholder="Slugs to exclude" disabled={isFetching} />
                   <div className="grid grid-cols-2 gap-2">
-                    <TextInput label="EMPLOYEES ≥" value={filters.liOrganizationEmployeesGte} onChange={(v) => setFilter("liOrganizationEmployeesGte", v)} placeholder="e.g. 50" />
-                    <TextInput label="EMPLOYEES ≤" value={filters.liOrganizationEmployeesLte} onChange={(v) => setFilter("liOrganizationEmployeesLte", v)} placeholder="e.g. 5000" />
+                    <TextInput label="EMPLOYEES ≥" value={filters.liOrganizationEmployeesGte} onChange={(v) => setFilter("liOrganizationEmployeesGte", v)} placeholder="e.g. 50" disabled={isFetching} />
+                    <TextInput label="EMPLOYEES ≤" value={filters.liOrganizationEmployeesLte} onChange={(v) => setFilter("liOrganizationEmployeesLte", v)} placeholder="e.g. 5000" disabled={isFetching} />
                   </div>
                 </div>
               </div>
@@ -477,10 +744,10 @@ export default function Ingestion() {
           <div className="flex flex-wrap gap-3 pt-2">
             <Button
               onClick={handleFetch}
-              disabled={fetchJobsMut.isPending}
+              disabled={isFetching}
               className="bg-amber-400 text-black hover:bg-amber-300 font-mono font-bold text-xs tracking-widest px-6 py-2 border-0"
             >
-              {fetchJobsMut.isPending ? (
+              {isFetching ? (
                 <><RefreshCw size={14} className="animate-spin mr-2" />FETCHING…</>
               ) : (
                 <><Play size={14} className="mr-2" />FETCH NOW</>
@@ -488,7 +755,8 @@ export default function Ingestion() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => { setShowScheduleForm(!showScheduleForm); setActiveTab("schedules"); }}
+              onClick={() => { setShowScheduleForm(true); setActiveTab("schedules"); }}
+              disabled={isFetching}
               className="border-2 border-amber-400 text-amber-400 hover:bg-amber-400/10 font-mono text-xs tracking-widest"
             >
               <Calendar size={14} className="mr-2" />SAVE AS SCHEDULE
@@ -496,6 +764,7 @@ export default function Ingestion() {
             <Button
               variant="outline"
               onClick={() => setFilters(defaultFilters())}
+              disabled={isFetching}
               className="border-2 border-gray-600 text-gray-400 hover:border-gray-400 font-mono text-xs tracking-widest"
             >
               RESET FILTERS
@@ -507,7 +776,6 @@ export default function Ingestion() {
       {/* ── SCHEDULES TAB ──────────────────────────────────────────────────── */}
       {activeTab === "schedules" && (
         <div className="space-y-6">
-          {/* Create Schedule Form */}
           <div className="border-2 border-amber-400/50 p-4 space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-xs font-mono text-amber-400 font-bold tracking-widest">▌ CREATE SCHEDULE</p>
@@ -523,52 +791,34 @@ export default function Ingestion() {
               <div className="space-y-4">
                 <TextInput label="SCHEDULE NAME" value={scheduleName} onChange={setScheduleName} placeholder="e.g. Daily Remote React Jobs" />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-mono text-amber-400 mb-1">INTERVAL</label>
-                    <select
-                      value={scheduleInterval}
-                      onChange={(e) => setScheduleInterval(e.target.value as "manual" | "daily" | "weekly")}
-                      className="w-full px-3 py-2 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none text-white"
-                    >
-                      <option value="manual">Manual only</option>
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                    </select>
-                  </div>
+                  <SelectInput
+                    label="INTERVAL"
+                    value={scheduleInterval}
+                    onChange={(v) => setScheduleInterval(v as "manual" | "daily" | "weekly")}
+                    options={[
+                      { value: "manual", label: "Manual only" },
+                      { value: "daily", label: "Daily" },
+                      { value: "weekly", label: "Weekly" },
+                    ]}
+                  />
                   {scheduleInterval !== "manual" && (
                     <>
                       {scheduleInterval === "weekly" && (
-                        <div>
-                          <label className="block text-xs font-mono text-amber-400 mb-1">DAY OF WEEK</label>
-                          <select
-                            value={scheduleDayOfWeek}
-                            onChange={(e) => setScheduleDayOfWeek(parseInt(e.target.value))}
-                            className="w-full px-3 py-2 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none text-white"
-                          >
-                            {DAYS_OF_WEEK.map((d, i) => <option key={d} value={i}>{d}</option>)}
-                          </select>
-                        </div>
+                        <SelectInput
+                          label="DAY OF WEEK"
+                          value={String(scheduleDayOfWeek)}
+                          onChange={(v) => setScheduleDayOfWeek(parseInt(v))}
+                          options={DAYS_OF_WEEK.map((d, i) => ({ value: String(i), label: d }))}
+                        />
                       )}
                       <div>
                         <label className="block text-xs font-mono text-amber-400 mb-1">TIME (UTC)</label>
                         <div className="flex gap-2">
-                          <select
-                            value={scheduleHour}
-                            onChange={(e) => setScheduleHour(parseInt(e.target.value))}
-                            className="flex-1 px-2 py-2 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none text-white"
-                          >
-                            {Array.from({ length: 24 }, (_, i) => (
-                              <option key={i} value={i}>{String(i).padStart(2, "0")}h</option>
-                            ))}
+                          <select value={scheduleHour} onChange={(e) => setScheduleHour(parseInt(e.target.value))} className="flex-1 px-2 py-2 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none text-white">
+                            {Array.from({ length: 24 }, (_, i) => <option key={i} value={i}>{String(i).padStart(2, "0")}h</option>)}
                           </select>
-                          <select
-                            value={scheduleMinute}
-                            onChange={(e) => setScheduleMinute(parseInt(e.target.value))}
-                            className="flex-1 px-2 py-2 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none text-white"
-                          >
-                            {[0, 15, 30, 45].map((m) => (
-                              <option key={m} value={m}>{String(m).padStart(2, "0")}m</option>
-                            ))}
+                          <select value={scheduleMinute} onChange={(e) => setScheduleMinute(parseInt(e.target.value))} className="flex-1 px-2 py-2 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none text-white">
+                            {[0, 15, 30, 45].map((m) => <option key={m} value={m}>{String(m).padStart(2, "0")}m</option>)}
                           </select>
                         </div>
                       </div>
@@ -576,19 +826,13 @@ export default function Ingestion() {
                   )}
                 </div>
                 <p className="text-xs text-gray-500">Uses the current filter configuration from the Fetch Now tab.</p>
-                <Button
-                  onClick={handleCreateSchedule}
-                  disabled={createScheduleMut.isPending}
-                  className="bg-amber-400 text-black hover:bg-amber-300 font-mono font-bold text-xs tracking-widest"
-                >
-                  <Plus size={14} className="mr-2" />
-                  {createScheduleMut.isPending ? "SAVING…" : "SAVE SCHEDULE"}
+                <Button onClick={handleCreateSchedule} disabled={createScheduleMut.isPending} className="bg-amber-400 text-black hover:bg-amber-300 font-mono font-bold text-xs tracking-widest">
+                  <Plus size={14} className="mr-2" />{createScheduleMut.isPending ? "SAVING…" : "SAVE SCHEDULE"}
                 </Button>
               </div>
             )}
           </div>
 
-          {/* Schedule List */}
           <div className="space-y-3">
             {!schedules?.length && (
               <div className="border-2 border-dashed border-gray-700 p-8 text-center">
@@ -606,12 +850,11 @@ export default function Ingestion() {
                       <Badge className={`text-xs font-mono ${s.enabled ? "bg-green-500/20 text-green-400 border-green-500" : "bg-gray-700 text-gray-400 border-gray-600"}`}>
                         {s.enabled ? "ACTIVE" : "PAUSED"}
                       </Badge>
-                      <Badge className="text-xs font-mono bg-amber-400/10 text-amber-400 border-amber-400/50">
-                        {s.endpoint}
-                      </Badge>
+                      <Badge className="text-xs font-mono bg-amber-400/10 text-amber-400 border-amber-400/50">{s.endpoint}</Badge>
                     </div>
                     <div className="flex flex-wrap gap-3 text-xs text-gray-400">
-                      <span><Clock size={10} className="inline mr-1" />
+                      <span>
+                        <Clock size={10} className="inline mr-1" />
                         {s.intervalType === "manual" ? "Manual only" :
                          s.intervalType === "daily" ? `Daily at ${String(s.scheduleHour ?? 9).padStart(2,"0")}:${String(s.scheduleMinute ?? 0).padStart(2,"0")} UTC` :
                          `Weekly ${DAYS_OF_WEEK[s.scheduleDayOfWeek ?? 1]} at ${String(s.scheduleHour ?? 9).padStart(2,"0")}:${String(s.scheduleMinute ?? 0).padStart(2,"0")} UTC`}
@@ -621,26 +864,13 @@ export default function Ingestion() {
                     </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <button
-                      onClick={() => runNowMut.mutate({ id: s.id })}
-                      disabled={runNowMut.isPending}
-                      title="Run now"
-                      className="p-1.5 border border-amber-400 text-amber-400 hover:bg-amber-400/10 transition-colors"
-                    >
+                    <button onClick={() => runNowMut.mutate({ id: s.id })} disabled={runNowMut.isPending} title="Run now" className="p-1.5 border border-amber-400 text-amber-400 hover:bg-amber-400/10 transition-colors">
                       <Play size={12} />
                     </button>
-                    <button
-                      onClick={() => toggleScheduleMut.mutate({ id: s.id, enabled: !s.enabled })}
-                      title={s.enabled ? "Pause" : "Resume"}
-                      className={`p-1.5 border transition-colors ${s.enabled ? "border-yellow-500 text-yellow-500 hover:bg-yellow-500/10" : "border-green-500 text-green-500 hover:bg-green-500/10"}`}
-                    >
+                    <button onClick={() => toggleScheduleMut.mutate({ id: s.id, enabled: !s.enabled })} title={s.enabled ? "Pause" : "Resume"} className={`p-1.5 border transition-colors ${s.enabled ? "border-yellow-500 text-yellow-500 hover:bg-yellow-500/10" : "border-green-500 text-green-500 hover:bg-green-500/10"}`}>
                       {s.enabled ? <XCircle size={12} /> : <CheckCircle2 size={12} />}
                     </button>
-                    <button
-                      onClick={() => deleteScheduleMut.mutate({ id: s.id })}
-                      title="Delete"
-                      className="p-1.5 border border-red-500 text-red-500 hover:bg-red-500/10 transition-colors"
-                    >
+                    <button onClick={() => deleteScheduleMut.mutate({ id: s.id })} title="Delete" className="p-1.5 border border-red-500 text-red-500 hover:bg-red-500/10 transition-colors">
                       <Trash2 size={12} />
                     </button>
                   </div>
@@ -670,6 +900,10 @@ export default function Ingestion() {
                       {h.status === "success" ? "✓" : "✗"} {h.scheduleName ?? "AD-HOC FETCH"}
                     </span>
                     <Badge className="text-xs font-mono bg-gray-800 text-gray-400 border-gray-600">{h.endpoint}</Badge>
+                    {/* Show "AD-HOC" badge for manual fetches */}
+                    {!h.scheduleId && (
+                      <Badge className="text-xs font-mono bg-cyan-400/10 text-cyan-400 border-cyan-400/50">AD-HOC</Badge>
+                    )}
                   </div>
                   {h.status === "success" ? (
                     <div className="flex flex-wrap gap-4 text-xs">
@@ -679,15 +913,113 @@ export default function Ingestion() {
                       {h.jobsRemaining !== null && h.jobsRemaining !== undefined && (
                         <span className="text-gray-400">{h.jobsRemaining.toLocaleString()} credits left</span>
                       )}
+                      {/* Duration */}
+                      {'durationMs' in h && h.durationMs != null && (
+                        <span className="text-purple-400 flex items-center gap-1">
+                          <Timer size={10} />
+                          {formatDuration(h.durationMs as number)}
+                        </span>
+                      )}
                     </div>
                   ) : (
                     <p className="text-xs text-red-400">{h.errorMessage}</p>
                   )}
                 </div>
-                <span className="text-xs text-gray-500 shrink-0">{new Date(h.ranAt).toLocaleString()}</span>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <span className="text-xs text-gray-500">{new Date(h.ranAt).toLocaleString()}</span>
+                  {/* Convert to Schedule button — only for ad-hoc fetches */}
+                  {!h.scheduleId && h.status === "success" && (
+                    <button
+                      onClick={() => {
+                        // Reconstruct filters from the history snapshot
+                        const snap = (h.filters ?? {}) as Record<string, unknown>;
+                        const reconstructed: Filters = {
+                          ...defaultFilters(),
+                          endpoint: (snap.endpoint as Filters["endpoint"]) ?? "active-ats-7d",
+                          titleFilter: (snap.titleFilter as string) ?? "",
+                          locationFilter: (snap.locationFilter as string) ?? "",
+                          descriptionFilter: (snap.descriptionFilter as string) ?? "",
+                          organizationFilter: (snap.organizationFilter as string) ?? "",
+                          limit: String(snap.limit ?? 100),
+                          offset: String(snap.offset ?? 0),
+                        };
+                        setConvertingHistory({ id: h.id, name: `Schedule from ${new Date(h.ranAt).toLocaleDateString()}`, filters: reconstructed });
+                        setConvertName(`Schedule from ${new Date(h.ranAt).toLocaleDateString()}`);
+                      }}
+                      className="text-xs font-mono text-amber-400 border border-amber-400/50 hover:bg-amber-400/10 px-2 py-1 transition-colors flex items-center gap-1"
+                    >
+                      <Calendar size={10} />
+                      CONVERT TO SCHEDULE
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Convert-to-Schedule Modal ─────────────────────────────────────── */}
+      {convertingHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-black border-2 border-amber-400 p-6 w-full max-w-md space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-mono font-bold text-amber-400 tracking-widest">▌ CONVERT TO SCHEDULE</h3>
+              <button onClick={() => setConvertingHistory(null)} className="text-gray-500 hover:text-white transition-colors text-lg leading-none">×</button>
+            </div>
+            <p className="text-xs text-gray-400">Create a recurring schedule using the same filters as this ad-hoc fetch.</p>
+            <TextInput label="SCHEDULE NAME" value={convertName} onChange={setConvertName} placeholder="e.g. Daily Remote Jobs" />
+            <SelectInput
+              label="INTERVAL"
+              value={convertInterval}
+              onChange={(v) => setConvertInterval(v as "manual" | "daily" | "weekly")}
+              options={[
+                { value: "manual", label: "Manual only" },
+                { value: "daily", label: "Daily" },
+                { value: "weekly", label: "Weekly" },
+              ]}
+            />
+            {convertInterval !== "manual" && (
+              <div className="grid grid-cols-2 gap-3">
+                {convertInterval === "weekly" && (
+                  <SelectInput
+                    label="DAY OF WEEK"
+                    value={String(convertDayOfWeek)}
+                    onChange={(v) => setConvertDayOfWeek(parseInt(v))}
+                    options={DAYS_OF_WEEK.map((d, i) => ({ value: String(i), label: d }))}
+                  />
+                )}
+                <div>
+                  <label className="block text-xs font-mono text-amber-400 mb-1">TIME (UTC)</label>
+                  <div className="flex gap-2">
+                    <select value={convertHour} onChange={(e) => setConvertHour(parseInt(e.target.value))} className="flex-1 px-2 py-2 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none text-white">
+                      {Array.from({ length: 24 }, (_, i) => <option key={i} value={i}>{String(i).padStart(2, "0")}h</option>)}
+                    </select>
+                    <select value={convertMinute} onChange={(e) => setConvertMinute(parseInt(e.target.value))} className="flex-1 px-2 py-2 text-xs font-mono bg-black border-2 border-gray-700 focus:border-amber-400 outline-none text-white">
+                      {[0, 15, 30, 45].map((m) => <option key={m} value={m}>{String(m).padStart(2, "0")}m</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="flex gap-3 pt-2">
+              <Button
+                onClick={handleConvertToSchedule}
+                disabled={createScheduleMut.isPending}
+                className="flex-1 bg-amber-400 text-black hover:bg-amber-300 font-mono font-bold text-xs tracking-widest"
+              >
+                <Calendar size={14} className="mr-2" />
+                {createScheduleMut.isPending ? "SAVING…" : "CREATE SCHEDULE"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setConvertingHistory(null)}
+                className="border-2 border-gray-600 text-gray-400 hover:border-gray-400 font-mono text-xs"
+              >
+                CANCEL
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

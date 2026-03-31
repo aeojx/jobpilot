@@ -2,27 +2,25 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Job } from "../../../drizzle/schema";
 import {
-  AlertCircle,
   AtSign,
+  CheckCircle,
   Copy,
-  ExternalLink,
   Loader2,
-  MoreHorizontal,
-  Plus,
-  RefreshCw,
+  XCircle,
 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import JobDetailModal from "@/components/JobDetailModal";
 
-type KanbanStatus = "ingested" | "matched" | "to_apply" | "applied" | "rejected";
+type KanbanStatus = "ingested" | "matched" | "to_apply" | "applied" | "rejected" | "expired";
 
 const COLUMNS: { id: KanbanStatus; label: string; color: string }[] = [
-  { id: "ingested", label: "Ingested", color: "var(--atari-gray)" },
-  { id: "matched", label: "Matched", color: "var(--atari-green)" },
-  { id: "to_apply", label: "To Apply", color: "var(--atari-amber)" },
-  { id: "applied", label: "Applied", color: "var(--atari-cyan)" },
-  { id: "rejected", label: "Rejected", color: "var(--atari-red)" },
+  { id: "ingested",  label: "Ingested",     color: "var(--atari-gray)" },
+  { id: "matched",   label: "Matched",      color: "var(--atari-green)" },
+  { id: "to_apply",  label: "To Apply",     color: "var(--atari-amber)" },
+  { id: "applied",   label: "Applied",      color: "var(--atari-cyan)" },
+  { id: "rejected",  label: "Rejected",     color: "var(--atari-red)" },
+  { id: "expired",   label: "Expired Jobs", color: "#6b6b6b" },
 ];
 
 function getScoreColor(score: number) {
@@ -37,15 +35,18 @@ function JobCard({
   onDragStart,
   onDragEnd,
   onClick,
+  onQuickAction,
 }: {
   job: Job;
   isOwner: boolean;
   onDragStart: (e: React.DragEvent, job: Job) => void;
   onDragEnd: () => void;
   onClick: (job: Job) => void;
+  onQuickAction?: (id: number, status: KanbanStatus) => void;
 }) {
   const score = Math.round(job.matchScore ?? 0);
   const scoreColor = getScoreColor(score);
+  const isToApply = job.status === "to_apply";
 
   return (
     <div
@@ -54,6 +55,7 @@ function JobCard({
       onDragStart={(e) => onDragStart(e, job)}
       onDragEnd={onDragEnd}
       onClick={() => onClick(job)}
+      style={{ cursor: isOwner ? "grab" : "pointer" }}
     >
       {/* Title */}
       <p
@@ -80,23 +82,8 @@ function JobCard({
       {score > 0 && (
         <div className="mb-2">
           <div className="flex items-center justify-between mb-1">
-            <span
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.65rem",
-                color: scoreColor,
-              }}
-            >
-              MATCH
-            </span>
-            <span
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.65rem",
-                color: scoreColor,
-                fontWeight: "bold",
-              }}
-            >
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: scoreColor }}>MATCH</span>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: scoreColor, fontWeight: "bold" }}>
               {score}%
             </span>
           </div>
@@ -112,32 +99,63 @@ function JobCard({
       {/* Tags */}
       <div className="flex flex-wrap gap-1 mt-2">
         {job.source && (
-          <span
-            className="brutal-tag"
-            style={{ borderColor: "var(--atari-cyan)", color: "var(--atari-cyan)" }}
-          >
+          <span className="brutal-tag" style={{ borderColor: "var(--atari-cyan)", color: "var(--atari-cyan)" }}>
             {job.source}
           </span>
         )}
         {job.hasEmail && (
-          <span
-            className="brutal-tag"
-            style={{ borderColor: "var(--atari-green)", color: "var(--atari-green)" }}
-          >
-            <AtSign size={8} />
-            Email
+          <span className="brutal-tag" style={{ borderColor: "var(--atari-green)", color: "var(--atari-green)" }}>
+            <AtSign size={8} />Email
           </span>
         )}
         {job.isDuplicate && (
-          <span
-            className="brutal-tag"
-            style={{ borderColor: "var(--atari-magenta)", color: "var(--atari-magenta)" }}
-          >
-            <Copy size={8} />
-            Dupe
+          <span className="brutal-tag" style={{ borderColor: "var(--atari-magenta)", color: "var(--atari-magenta)" }}>
+            <Copy size={8} />Dupe
           </span>
         )}
       </div>
+
+      {/* Quick action buttons — only on To Apply cards */}
+      {isToApply && onQuickAction && (
+        <div
+          className="flex gap-2 mt-3 pt-2"
+          style={{ borderTop: "1px solid var(--atari-border)" }}
+          onClick={(e) => e.stopPropagation()} // prevent opening modal
+        >
+          <button
+            className="flex items-center gap-1 flex-1 justify-center py-1 px-2 text-xs font-pixel transition-all"
+            style={{
+              background: "transparent",
+              border: "1px solid var(--atari-cyan)",
+              color: "var(--atari-cyan)",
+              fontSize: "7px",
+              cursor: "pointer",
+              letterSpacing: "0.05em",
+            }}
+            onClick={() => onQuickAction(job.id, "applied")}
+            title="Mark as Applied"
+          >
+            <CheckCircle size={10} />
+            APPLIED
+          </button>
+          <button
+            className="flex items-center gap-1 flex-1 justify-center py-1 px-2 text-xs font-pixel transition-all"
+            style={{
+              background: "transparent",
+              border: "1px solid #6b6b6b",
+              color: "#9b9b9b",
+              fontSize: "7px",
+              cursor: "pointer",
+              letterSpacing: "0.05em",
+            }}
+            onClick={() => onQuickAction(job.id, "expired")}
+            title="Job no longer available"
+          >
+            <XCircle size={10} />
+            EXPIRED
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -150,6 +168,7 @@ function KanbanColumn({
   onDragEnd,
   onDrop,
   onCardClick,
+  onQuickAction,
 }: {
   column: (typeof COLUMNS)[0];
   jobs: Job[];
@@ -158,24 +177,20 @@ function KanbanColumn({
   onDragEnd: () => void;
   onDrop: (status: KanbanStatus) => void;
   onCardClick: (job: Job) => void;
+  onQuickAction?: (id: number, status: KanbanStatus) => void;
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
 
   return (
     <div
       className="kanban-column"
-      onDragOver={(e) => {
-        e.preventDefault();
-        setIsDragOver(true);
-      }}
+      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
       onDragLeave={() => setIsDragOver(false)}
-      onDrop={() => {
-        setIsDragOver(false);
-        onDrop(column.id);
-      }}
+      onDrop={() => { setIsDragOver(false); onDrop(column.id); }}
       style={{
         borderColor: isDragOver ? column.color : undefined,
         boxShadow: isDragOver ? `0 0 0 1px ${column.color}` : undefined,
+        opacity: column.id === "expired" ? 0.8 : 1,
       }}
     >
       <div className="kanban-column-header" style={{ borderBottomColor: column.color }}>
@@ -221,6 +236,7 @@ function KanbanColumn({
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
             onClick={onCardClick}
+            onQuickAction={column.id === "to_apply" ? onQuickAction : undefined}
           />
         ))}
       </div>
@@ -247,9 +263,7 @@ export default function KanbanBoard() {
     e.dataTransfer.effectAllowed = "move";
   }, []);
 
-  const handleDragEnd = useCallback(() => {
-    setDraggingJob(null);
-  }, []);
+  const handleDragEnd = useCallback(() => setDraggingJob(null), []);
 
   const handleDrop = useCallback(
     (status: KanbanStatus) => {
@@ -258,6 +272,22 @@ export default function KanbanBoard() {
       setDraggingJob(null);
     },
     [draggingJob, moveStatus]
+  );
+
+  const handleQuickAction = useCallback(
+    (id: number, status: KanbanStatus) => {
+      const label = status === "applied" ? "APPLIED" : "EXPIRED";
+      moveStatus.mutate(
+        { id, status },
+        {
+          onSuccess: () => {
+            toast.success(`Job marked as ${label}`);
+            utils.jobs.kanban.invalidate();
+          },
+        }
+      );
+    },
+    [moveStatus, utils]
   );
 
   const jobsByStatus = COLUMNS.reduce(
@@ -273,17 +303,11 @@ export default function KanbanBoard() {
       {/* Header */}
       <div className="flex-shrink-0 px-5 pt-5 pb-3">
         <div className="flex items-center justify-between mb-1">
-          <h2
-            className="font-pixel glow-amber"
-            style={{ color: "var(--atari-amber)", fontSize: "12px" }}
-          >
+          <h2 className="font-pixel glow-amber" style={{ color: "var(--atari-amber)", fontSize: "12px" }}>
             DASHBOARD
           </h2>
           <div className="flex items-center gap-3">
-            <span
-              className="font-pixel"
-              style={{ fontSize: "8px", color: "var(--atari-cyan)" }}
-            >
+            <span className="font-pixel" style={{ fontSize: "8px", color: "var(--atari-cyan)" }}>
               {jobs.length} JOBS
             </span>
             {isLoading && <Loader2 size={14} className="animate-spin" style={{ color: "var(--atari-amber)" }} />}
@@ -301,7 +325,7 @@ export default function KanbanBoard() {
               textTransform: "uppercase",
             }}
           >
-            ▶ DRAG CARDS TO MOVE BETWEEN STAGES
+            ▶ DRAG CARDS TO MOVE · USE BUTTONS ON "TO APPLY" CARDS FOR QUICK ACTIONS
           </p>
         )}
       </div>
@@ -319,6 +343,7 @@ export default function KanbanBoard() {
               onDragEnd={handleDragEnd}
               onDrop={handleDrop}
               onCardClick={setSelectedJob}
+              onQuickAction={handleQuickAction}
             />
           ))}
         </div>

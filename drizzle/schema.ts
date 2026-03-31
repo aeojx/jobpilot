@@ -45,6 +45,7 @@ export const jobs = mysqlTable("jobs", {
     "to_apply",
     "applied",
     "rejected",
+    "expired",
   ])
     .default("ingested")
     .notNull(),
@@ -143,6 +144,7 @@ export const fetchHistory = mysqlTable("fetch_history", {
   requestsRemaining: int("requestsRemaining"), // from API header
   status: mysqlEnum("status", ["success", "error", "partial"]).default("success").notNull(),
   errorMessage: text("errorMessage"),
+  durationMs: int("durationMs"), // how long the fetch took in milliseconds
   ranAt: timestamp("ranAt").defaultNow().notNull(),
 });
 

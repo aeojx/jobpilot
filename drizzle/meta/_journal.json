@@ -22,6 +22,13 @@
       "when": 1774787598881,
       "tag": "0002_gigantic_molecule_man",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1774950143569,
+      "tag": "0003_jazzy_mercury",
+      "breakpoints": true
     }
   ]
 }

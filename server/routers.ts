@@ -185,6 +185,7 @@ async function executeFetch(
 ): Promise<{ jobsFetched: number; jobsIngested: number; jobsDuplicate: number; jobsRemaining?: number; requestsRemaining?: number }> {
   const resolvedKey = ENV.rapidApiKey;
   if (!resolvedKey) throw new Error("No RapidAPI key configured.");
+  const fetchStartTime = Date.now();
 
   const params: Record<string, string> = {};
   params["description_type"] = input.descriptionType ?? "text";
@@ -255,6 +256,7 @@ async function executeFetch(
       jobsDuplicate: 0,
       jobsRemaining: jobsRemaining ?? null,
       requestsRemaining: requestsRemaining ?? null,
+      durationMs: Date.now() - fetchStartTime,
       status: "error",
       errorMessage: `API error ${response.status}: ${errText}`,
     });
@@ -323,6 +325,7 @@ async function executeFetch(
     jobsDuplicate,
     jobsRemaining: jobsRemaining ?? null,
     requestsRemaining: requestsRemaining ?? null,
+    durationMs: Date.now() - fetchStartTime,
     status: "success",
     errorMessage: null,
   });
@@ -426,7 +429,7 @@ export const appRouter = router({
     byId: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getJobById(input.id)),
 
     moveStatus: protectedProcedure
-      .input(z.object({ id: z.number(), status: z.enum(["ingested", "matched", "to_apply", "applied", "rejected"]) }))
+      .input(z.object({ id: z.number(), status: z.enum(["ingested", "matched", "to_apply", "applied", "rejected", "expired"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "admin" && input.status !== "applied") throw new TRPCError({ code: "FORBIDDEN" });
         await updateJobStatus(input.id, input.status);

@@ -139,3 +139,15 @@
 ## Bug Fix: Fetch Jobs "No values to set"
 - [x] Diagnose root cause of "No values to set" error in fetchJobs / ingest procedure
 - [x] Fix the bug: updateApiQuota now strips undefined fields before Drizzle update; per-job loop wrapped in try/catch; tags uses null instead of [] for TiDB compatibility
+
+## v1.3 UX Improvements
+- [x] Add "expired" status to jobs table enum (DB migration)
+- [x] Add "Expired Jobs" column to Dashboard Kanban board (6th column)
+- [x] Add "Job no longer available" button on To Apply cards → moves to Expired Jobs
+- [x] Add "Job Applied" button on To Apply cards → moves to Applied
+- [x] Autocomplete/dropdown for Location filter in Ingest Jobs (country/city suggestions)
+- [x] Dropdowns for all enum-style API parameters (remote, employment type, industry, etc.)
+- [x] Grey out all Ingest Jobs form fields while a fetch is in progress
+- [x] Add durationMs column to fetch_history table (DB migration)
+- [x] Show fetch duration in Fetch History panel
+- [x] Add "Convert to Schedule" button on ad-hoc fetch history rows

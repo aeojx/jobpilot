@@ -4,7 +4,7 @@ import { AtSign, Copy, ExternalLink, HelpCircle, X, CheckCircle, XCircle, ArrowR
 import { useState } from "react";
 import { toast } from "sonner";
 
-type KanbanStatus = "ingested" | "matched" | "to_apply" | "applied" | "rejected";
+type KanbanStatus = "ingested" | "matched" | "to_apply" | "applied" | "rejected" | "expired";
 
 export default function JobDetailModal({
   job,
@@ -311,6 +311,22 @@ export default function JobDetailModal({
                 >
                   <XCircle size={14} />
                   Reject
+                </button>
+              )}
+              {job.status === "to_apply" && (
+                <button
+                  onClick={() => onStatusChange("expired")}
+                  className="py-3 px-4 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 transition-all"
+                  style={{
+                    fontFamily: "Press Start 2P, monospace",
+                    background: "transparent",
+                    color: "#6b6b6b",
+                    border: "2px solid #6b6b6b",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  <XCircle size={14} />
+                  No Longer Available
                 </button>
               )}
             </>
