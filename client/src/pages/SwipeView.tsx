@@ -424,16 +424,16 @@ export default function SwipeView() {
           style={{
             display: "flex",
             justifyContent: "space-between",
+            alignItems: "center",
             marginTop: "0.5rem",
             fontFamily: "var(--font-mono)",
-            fontSize: "0.65rem",
-            color: "var(--atari-gray)",
-            letterSpacing: "0.08em",
+            fontSize: "0.6rem",
+            letterSpacing: "0.06em",
           }}
         >
-          <span style={{ color: "var(--atari-red)" }}>← REJECT</span>
-          <span style={{ color: "var(--atari-gray)" }}>SORTED BY MATCH SCORE</span>
-          <span style={{ color: "var(--atari-green)" }}>TO APPLY →</span>
+          <span style={{ color: "var(--atari-red)", flexShrink: 0 }}>← REJECT</span>
+          <span style={{ color: "var(--atari-border)", fontSize: "0.55rem", textAlign: "center", padding: "0 0.5rem" }}>MATCH SCORE ORDER</span>
+          <span style={{ color: "var(--atari-green)", flexShrink: 0 }}>TO APPLY →</span>
         </div>
       </div>
 
@@ -613,37 +613,38 @@ export default function SwipeView() {
 
               {/* Card content — scrollable when desc is expanded */}
               <div style={{ flex: 1, overflowY: showDesc ? "auto" : "hidden", padding: "1.25rem 1.25rem 0.75rem" }}>
-                {/* Match score badge */}
-                {(currentJob.matchScore ?? 0) > 0 && (
-                  <div style={{ marginBottom: "0.6rem" }}>
+                {/* Title + match score on same row */}
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                  <h2
+                    style={{
+                      fontFamily: "var(--font-pixel)",
+                      fontSize: "clamp(0.6rem, 2.2vw, 0.8rem)",
+                      color: "var(--atari-white)",
+                      lineHeight: 1.6,
+                      letterSpacing: "0.05em",
+                      flex: 1,
+                      minWidth: 0,
+                    }}
+                  >
+                    {currentJob.title}
+                  </h2>
+                  {(currentJob.matchScore ?? 0) > 0 && (
                     <span
                       style={{
                         fontFamily: "var(--font-pixel)",
-                        fontSize: "0.65rem",
+                        fontSize: "0.6rem",
                         color: getScoreColor(Math.round(currentJob.matchScore ?? 0)),
                         border: `1px solid ${getScoreColor(Math.round(currentJob.matchScore ?? 0))}`,
-                        padding: "2px 8px",
-                        letterSpacing: "0.1em",
+                        padding: "2px 6px",
+                        letterSpacing: "0.08em",
+                        flexShrink: 0,
+                        whiteSpace: "nowrap",
                       }}
                     >
-                      MATCH: {Math.round(currentJob.matchScore ?? 0)}%
+                      {Math.round(currentJob.matchScore ?? 0)}%
                     </span>
-                  </div>
-                )}
-
-                {/* Title */}
-                <h2
-                  style={{
-                    fontFamily: "var(--font-pixel)",
-                    fontSize: "clamp(0.65rem, 2.5vw, 0.85rem)",
-                    color: "var(--atari-white)",
-                    lineHeight: 1.6,
-                    marginBottom: "0.5rem",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  {currentJob.title}
-                </h2>
+                  )}
+                </div>
 
                 {/* Company */}
                 <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.35rem" }}>
@@ -705,19 +706,7 @@ export default function SwipeView() {
                       <Copy size={8} />DUPE
                     </span>
                   )}
-                  {currentJob.applyUrl && (
-                    <a
-                      href={currentJob.applyUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={(e) => e.stopPropagation()}
-                      className="brutal-tag"
-                      style={{ borderColor: "var(--atari-amber)", color: "var(--atari-amber)", fontSize: "0.6rem", display: "flex", alignItems: "center", gap: "3px", textDecoration: "none" }}
-                    >
-                      <ExternalLink size={8} />APPLY
-                    </a>
-                  )}
+
                 </div>
 
                 {/* Red divider */}
