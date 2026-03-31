@@ -78,26 +78,34 @@ function JobCard({
         {job.company}
       </p>
 
-      {/* Score bar */}
+      {/* Location */}
+      {job.location && (
+        <p
+          className="mb-2"
+          style={{
+            fontFamily: "Share Tech Mono, monospace",
+            fontSize: "0.65rem",
+            letterSpacing: "0.05em",
+            color: "var(--atari-gray)",
+            textTransform: "uppercase",
+          }}
+        >
+          📍 {job.location}
+        </p>
+      )}
+
+      {/* Match Score — numerical only */}
       {score > 0 && (
-        <div className="mb-2">
-          <div className="flex items-center justify-between mb-1">
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: scoreColor }}>MATCH</span>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: scoreColor, fontWeight: "bold" }}>
-              {score}%
-            </span>
-          </div>
-          <div className="score-bar-track">
-            <div
-              className={`score-bar-fill ${score >= 70 ? "high" : score >= 40 ? "mid" : ""}`}
-              style={{ width: `${score}%` }}
-            />
-          </div>
+        <div className="mb-2 flex items-center gap-2">
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--atari-gray)" }}>MATCH:</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", color: scoreColor, fontWeight: "bold" }}>
+            {score}%
+          </span>
         </div>
       )}
 
       {/* Tags */}
-      <div className="flex flex-wrap gap-1 mt-2">
+      <div className="flex flex-wrap gap-1 mt-3">
         {job.source && (
           <span className="brutal-tag" style={{ borderColor: "var(--atari-cyan)", color: "var(--atari-cyan)" }}>
             {job.source}
@@ -118,8 +126,8 @@ function JobCard({
       {/* Quick action buttons — only on To Apply cards */}
       {isToApply && onQuickAction && (
         <div
-          className="flex gap-2 mt-3 pt-2"
-          style={{ borderTop: "1px solid var(--atari-border)" }}
+          className="flex gap-2 mt-4 pt-2"
+          style={{ borderTop: "1px solid var(--atari-border)", paddingTop: "0.5rem" }}
           onClick={(e) => e.stopPropagation()} // prevent opening modal
         >
           <button

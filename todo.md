@@ -153,10 +153,14 @@
 - [x] Add "Convert to Schedule" button on ad-hoc fetch history rows
 
 ## v1.4 API Error Logging
-- [ ] Add errorDetail column to fetch_history table (TEXT, nullable) for full error info
-- [ ] Harden server fetchJobs: detect HTML responses, capture HTTP status + raw response snippet + error type
-- [ ] Store structured error JSON in errorDetail (status, type, message, rawSnippet, url, timestamp)
-- [ ] Add API Error Log panel to Ingestion UI: show failed history rows with expandable error detail
-- [ ] Show inline error badge on failed history rows with HTTP status code
-- [ ] Add "Copy Error" button for easy sharing/debugging
-- [ ] Surface actionable error messages: 403 = not subscribed, 429 = quota exceeded, HTML = proxy/network issue
+- [x] Add errorDetail column to fetch_history table (TEXT, nullable) for full error info
+- [x] Harden server fetchJobs: detect HTML responses, capture HTTP status + raw response snippet + error type
+- [x] Store structured error JSON in errorDetail (status, type, message, rawSnippet, url, timestamp)
+- [x] Add API Error Log panel to Ingestion UI: show failed history rows with expandable error detail
+- [x] Show inline error badge on failed history rows with HTTP status code
+- [x] Add "Copy Error" button for easy sharing/debugging
+- [x] Surface actionable error messages: 403 = not subscribed, 429 = quota exceeded, HTML = proxy/network issue
+
+## v1.5 Job Card Display
+- [x] Update job cards: show match score as numerical value only (remove progress bar)
+- [x] Add job location display on job cards
