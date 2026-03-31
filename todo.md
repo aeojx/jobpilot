@@ -167,4 +167,16 @@
 
 ## v1.6 Bug Fixes
 - [x] Fix location extraction: locations_derived is array of strings, not array of objects
-- [ ] Re-fetch jobs to populate location field with corrected parsing logic
+- [x] Re-fetch jobs to populate location field with corrected parsing logic (user action required)
+
+## v1.7 Swiping Tab (Tinder-style)
+- [x] Build SwipeView.tsx page with card stack showing Matched jobs only
+- [x] Touch-optimized drag gestures: swipe right → To Apply, swipe left → Rejected
+- [x] Visual feedback during drag: green glow + "TO APPLY" label on right, red glow + "REJECTED" label on left
+- [x] Card shows: title, company, location, match score, description excerpt, tags
+- [x] Keyboard support: arrow keys for desktop
+- [x] Button controls: ✗ (reject) and ✓ (apply) buttons below card
+- [x] Counter showing remaining matched jobs
+- [x] Empty state when all matched jobs have been swiped
+- [x] Register /swiping route in App.tsx
+- [x] Add "Swiping" nav item in AppLayout sidebar

@@ -496,6 +496,10 @@ export const appRouter = router({
 
     byId: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getJobById(input.id)),
 
+    byStatus: adminProcedure
+      .input(z.object({ status: z.enum(["ingested", "matched", "to_apply", "applied", "rejected", "expired"]) }))
+      .query(async ({ input }) => getJobsByStatus(input.status)),
+
     moveStatus: protectedProcedure
       .input(z.object({ id: z.number(), status: z.enum(["ingested", "matched", "to_apply", "applied", "rejected", "expired"]) }))
       .mutation(async ({ input, ctx }) => {

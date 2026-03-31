@@ -12,6 +12,7 @@ import Performance from "./pages/Performance";
 import ApplierView from "./pages/ApplierView";
 import AppLayout from "./components/AppLayout";
 import PasswordGate from "./pages/PasswordGate";
+import SwipeView from "./pages/SwipeView";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 
@@ -93,6 +94,9 @@ function Router() {
       </Route>
       <Route path="/apply">
         {() => <AppLayout><ApplierView /></AppLayout>}
+      </Route>
+      <Route path="/swiping">
+        {() => <AppLayout><SwipeView /></AppLayout>}
       </Route>
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

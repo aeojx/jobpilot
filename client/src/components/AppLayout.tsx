@@ -9,6 +9,7 @@ import {
   LogOut,
   Menu,
   Radar,
+  Shuffle,
   X,
   Zap,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import { Link, useLocation } from "wouter";
 
 const ownerNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
+  { href: "/swiping", label: "Swiping", icon: Shuffle },
   { href: "/ingest", label: "Ingest Jobs", icon: Radar },
   { href: "/skills", label: "Skills Profile", icon: BookOpen },
   { href: "/questions", label: "Question Bank", icon: HelpCircle },
