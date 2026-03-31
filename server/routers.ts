@@ -244,8 +244,33 @@ async function executeFetch(
   await incrementApiUsage(monthKey);
   await updateApiQuota(monthKey, { jobsLimit, jobsRemaining, requestsLimit, requestsRemaining, quotaResetSeconds });
 
+  const contentType = response.headers.get("content-type") ?? "";
+  const rawBodyText = await response.text().catch(() => "");
+
   if (!response.ok) {
-    const errText = await response.text().catch(() => response.statusText);
+    // Detect HTML error pages (e.g. proxy/gateway errors)
+    const isHtml = contentType.includes("text/html") || rawBodyText.trimStart().startsWith("<");
+    const errorType = isHtml ? "html_response" : response.status === 403 ? "not_subscribed" : response.status === 429 ? "quota_exceeded" : response.status === 401 ? "invalid_api_key" : "api_error";
+    const rawSnippet = rawBodyText.slice(0, 500);
+    const friendlyMessage = isHtml
+      ? `API returned an HTML page instead of JSON (HTTP ${response.status}) — likely a network/proxy issue or incorrect endpoint`
+      : response.status === 403
+      ? `Not subscribed to this API. Visit rapidapi.com to subscribe to the Active Jobs DB API.`
+      : response.status === 429
+      ? `Monthly quota exceeded. Check your RapidAPI plan limits.`
+      : response.status === 401
+      ? `Invalid API key. Check your RAPIDAPI_KEY secret.`
+      : `API error ${response.status}: ${rawBodyText.slice(0, 200)}`;
+
+    const errorDetail = JSON.stringify({
+      httpStatus: response.status,
+      contentType,
+      errorType,
+      rawSnippet,
+      url,
+      timestamp: new Date().toISOString(),
+    });
+
     await insertFetchHistory({
       scheduleId: scheduleId ?? null,
       scheduleName: scheduleName ?? null,
@@ -258,13 +283,49 @@ async function executeFetch(
       requestsRemaining: requestsRemaining ?? null,
       durationMs: Date.now() - fetchStartTime,
       status: "error",
-      errorMessage: `API error ${response.status}: ${errText}`,
+      errorMessage: friendlyMessage,
+      errorDetail,
     });
-    throw new Error(`API error ${response.status}: ${errText}`);
+    throw new Error(friendlyMessage);
   }
 
-  const data = await response.json();
-  const rawJobs: unknown[] = Array.isArray(data) ? data : (data?.jobs ?? data?.data ?? []);
+  // Guard against non-JSON success responses (e.g. HTML from a proxy)
+  let data: unknown;
+  try {
+    data = JSON.parse(rawBodyText);
+  } catch {
+    const isHtml = contentType.includes("text/html") || rawBodyText.trimStart().startsWith("<");
+    const friendlyMessage = isHtml
+      ? `API returned an HTML page instead of JSON — likely a network/proxy issue. Check the endpoint URL.`
+      : `API returned non-JSON content (content-type: ${contentType}). Raw: ${rawBodyText.slice(0, 200)}`;
+    const errorDetail = JSON.stringify({
+      httpStatus: response.status,
+      contentType,
+      errorType: isHtml ? "html_response" : "non_json_response",
+      rawSnippet: rawBodyText.slice(0, 500),
+      url,
+      timestamp: new Date().toISOString(),
+    });
+    await insertFetchHistory({
+      scheduleId: scheduleId ?? null,
+      scheduleName: scheduleName ?? null,
+      endpoint,
+      filters: input as Record<string, unknown>,
+      jobsFetched: 0,
+      jobsIngested: 0,
+      jobsDuplicate: 0,
+      jobsRemaining: jobsRemaining ?? null,
+      requestsRemaining: requestsRemaining ?? null,
+      durationMs: Date.now() - fetchStartTime,
+      status: "error",
+      errorMessage: friendlyMessage,
+      errorDetail,
+    });
+    throw new Error(friendlyMessage);
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dataAny = data as any;
+  const rawJobs: unknown[] = Array.isArray(data) ? data : (dataAny?.jobs ?? dataAny?.data ?? []);
 
   let jobsIngested = 0;
   let jobsDuplicate = 0;

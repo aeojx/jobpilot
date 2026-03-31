@@ -13,9 +13,11 @@ import {
   ChevronUp,
   Clock,
   ChevronsUpDown,
+  Copy,
   Play,
   Plus,
   RefreshCw,
+  Terminal,
   Timer,
   Trash2,
   XCircle,
@@ -357,6 +359,179 @@ function filtersToInput(f: Filters) {
     offset: parseInt(f.offset) || 0,
     descriptionType: f.descriptionType,
   };
+}
+
+// ── History Row Component ───────────────────────────────────────────────────
+
+type HistoryEntry = {
+  id: number;
+  scheduleId?: number | null;
+  scheduleName?: string | null;
+  endpoint: string;
+  filters?: unknown;
+  jobsFetched: number;
+  jobsIngested: number;
+  jobsDuplicate: number;
+  jobsRemaining?: number | null;
+  requestsRemaining?: number | null;
+  status: "success" | "error" | "partial";
+  errorMessage?: string | null;
+  errorDetail?: string | null;
+  durationMs?: number | null;
+  ranAt: Date;
+};
+
+function HistoryRow({
+  h,
+  onConvert,
+}: {
+  h: HistoryEntry;
+  onConvert: (h: HistoryEntry) => void;
+}) {
+  const [expandedError, setExpandedError] = useState(false);
+
+  let parsedDetail: { httpStatus?: number; contentType?: string; errorType?: string; rawSnippet?: string; url?: string; timestamp?: string } | null = null;
+  if (h.errorDetail) {
+    try { parsedDetail = JSON.parse(h.errorDetail); } catch { /* ignore */ }
+  }
+
+  return (
+    <div className={`border-2 p-4 ${h.status === "success" ? "border-green-500/30" : "border-red-500/40 bg-red-950/10"}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            {h.status === "success" ? (
+              <CheckCircle2 size={12} className="text-green-400 shrink-0" />
+            ) : (
+              <XCircle size={12} className="text-red-400 shrink-0" />
+            )}
+            <span className={`text-xs font-bold ${h.status === "success" ? "text-green-400" : "text-red-400"}`}>
+              {h.scheduleName ?? "AD-HOC FETCH"}
+            </span>
+            <Badge className="text-xs font-mono bg-gray-800 text-gray-400 border-gray-600">{h.endpoint}</Badge>
+            {!h.scheduleId && (
+              <Badge className="text-xs font-mono bg-cyan-400/10 text-cyan-400 border-cyan-400/50">AD-HOC</Badge>
+            )}
+            {h.status === "error" && parsedDetail?.httpStatus && (
+              <Badge className="text-xs font-mono bg-red-500/20 text-red-400 border-red-500/50">HTTP {parsedDetail.httpStatus}</Badge>
+            )}
+            {h.status === "error" && parsedDetail?.errorType && (
+              <Badge className="text-xs font-mono bg-orange-500/20 text-orange-400 border-orange-500/50">
+                {parsedDetail.errorType.replace(/_/g, " ").toUpperCase()}
+              </Badge>
+            )}
+          </div>
+          {h.status === "success" ? (
+            <div className="flex flex-wrap gap-4 text-xs">
+              <span className="text-white font-bold">{h.jobsFetched} fetched</span>
+              <span className="text-green-400">{h.jobsIngested} ingested</span>
+              <span className="text-yellow-400">{h.jobsDuplicate} duplicates</span>
+              {h.jobsRemaining !== null && h.jobsRemaining !== undefined && (
+                <span className="text-gray-400">{h.jobsRemaining.toLocaleString()} credits left</span>
+              )}
+              {h.durationMs != null && (
+                <span className="text-purple-400 flex items-center gap-1">
+                  <Timer size={10} />
+                  {formatDuration(h.durationMs)}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-red-300 font-medium">{h.errorMessage}</p>
+              {h.durationMs != null && (
+                <span className="text-purple-400 text-xs flex items-center gap-1">
+                  <Timer size={10} />
+                  {formatDuration(h.durationMs)}
+                </span>
+              )}
+              {parsedDetail && (
+                <div>
+                  <button
+                    onClick={() => setExpandedError(!expandedError)}
+                    className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 transition-colors mt-1"
+                  >
+                    <Terminal size={10} />
+                    {expandedError ? "HIDE" : "SHOW"} TECHNICAL DETAILS
+                    {expandedError ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                  </button>
+                  {expandedError && (
+                    <div className="mt-2 border border-red-500/30 bg-black/60 p-3 space-y-2">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        {parsedDetail.httpStatus && (
+                          <><span className="text-gray-500">HTTP Status:</span><span className="text-red-400 font-mono">{parsedDetail.httpStatus}</span></>
+                        )}
+                        {parsedDetail.errorType && (
+                          <><span className="text-gray-500">Error Type:</span><span className="text-orange-400 font-mono">{parsedDetail.errorType}</span></>
+                        )}
+                        {parsedDetail.contentType && (
+                          <><span className="text-gray-500">Content-Type:</span><span className="text-yellow-400 font-mono">{parsedDetail.contentType}</span></>
+                        )}
+                        {parsedDetail.timestamp && (
+                          <><span className="text-gray-500">Timestamp:</span><span className="text-gray-400 font-mono">{new Date(parsedDetail.timestamp).toLocaleString()}</span></>
+                        )}
+                      </div>
+                      {parsedDetail.url && (
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Request URL:</p>
+                          <p className="text-xs font-mono text-cyan-400 break-all bg-gray-900 p-2">{parsedDetail.url}</p>
+                        </div>
+                      )}
+                      {parsedDetail.rawSnippet && (
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-xs text-gray-500">Raw Response (first 500 chars):</p>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(JSON.stringify(parsedDetail, null, 2));
+                                toast.success("Error details copied to clipboard");
+                              }}
+                              className="text-xs text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
+                            >
+                              <Copy size={10} />
+                              COPY
+                            </button>
+                          </div>
+                          <pre className="text-xs font-mono text-red-300/80 bg-gray-900 p-2 overflow-x-auto max-h-32 overflow-y-auto whitespace-pre-wrap break-all">{parsedDetail.rawSnippet}</pre>
+                        </div>
+                      )}
+                      <div className="border-t border-gray-700 pt-2">
+                        <p className="text-xs text-gray-500 mb-1">▶ SUGGESTED FIX:</p>
+                        {parsedDetail.errorType === "not_subscribed" && (
+                          <p className="text-xs text-amber-400">Visit <span className="underline">rapidapi.com</span> → search "Active Jobs DB" → click Subscribe on the Basic (free) or Pro plan.</p>
+                        )}
+                        {parsedDetail.errorType === "quota_exceeded" && (
+                          <p className="text-xs text-amber-400">Your monthly quota is exhausted. Upgrade your RapidAPI plan or wait for the monthly reset.</p>
+                        )}
+                        {parsedDetail.errorType === "invalid_api_key" && (
+                          <p className="text-xs text-amber-400">Check your RAPIDAPI_KEY in the Secrets panel — it may be expired or incorrect.</p>
+                        )}
+                        {(parsedDetail.errorType === "html_response" || parsedDetail.errorType === "non_json_response") && (
+                          <p className="text-xs text-amber-400">The API returned a non-JSON page. This usually means a network/proxy issue or the endpoint URL is incorrect. Try again in a few minutes.</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <span className="text-xs text-gray-500">{new Date(h.ranAt).toLocaleString()}</span>
+          {!h.scheduleId && h.status === "success" && (
+            <button
+              onClick={() => onConvert(h)}
+              className="text-xs font-mono text-amber-400 border border-amber-400/50 hover:bg-amber-400/10 px-2 py-1 transition-colors flex items-center gap-1"
+            >
+              <Calendar size={10} />
+              CONVERT TO SCHEDULE
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -892,69 +1067,25 @@ export default function Ingestion() {
             </div>
           )}
           {history?.map((h) => (
-            <div key={h.id} className={`border-2 p-4 ${h.status === "success" ? "border-green-500/30" : "border-red-500/30"}`}>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className={`text-xs font-bold ${h.status === "success" ? "text-green-400" : "text-red-400"}`}>
-                      {h.status === "success" ? "✓" : "✗"} {h.scheduleName ?? "AD-HOC FETCH"}
-                    </span>
-                    <Badge className="text-xs font-mono bg-gray-800 text-gray-400 border-gray-600">{h.endpoint}</Badge>
-                    {/* Show "AD-HOC" badge for manual fetches */}
-                    {!h.scheduleId && (
-                      <Badge className="text-xs font-mono bg-cyan-400/10 text-cyan-400 border-cyan-400/50">AD-HOC</Badge>
-                    )}
-                  </div>
-                  {h.status === "success" ? (
-                    <div className="flex flex-wrap gap-4 text-xs">
-                      <span className="text-white font-bold">{h.jobsFetched} fetched</span>
-                      <span className="text-green-400">{h.jobsIngested} ingested</span>
-                      <span className="text-yellow-400">{h.jobsDuplicate} duplicates</span>
-                      {h.jobsRemaining !== null && h.jobsRemaining !== undefined && (
-                        <span className="text-gray-400">{h.jobsRemaining.toLocaleString()} credits left</span>
-                      )}
-                      {/* Duration */}
-                      {'durationMs' in h && h.durationMs != null && (
-                        <span className="text-purple-400 flex items-center gap-1">
-                          <Timer size={10} />
-                          {formatDuration(h.durationMs as number)}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-red-400">{h.errorMessage}</p>
-                  )}
-                </div>
-                <div className="flex flex-col items-end gap-2 shrink-0">
-                  <span className="text-xs text-gray-500">{new Date(h.ranAt).toLocaleString()}</span>
-                  {/* Convert to Schedule button — only for ad-hoc fetches */}
-                  {!h.scheduleId && h.status === "success" && (
-                    <button
-                      onClick={() => {
-                        // Reconstruct filters from the history snapshot
-                        const snap = (h.filters ?? {}) as Record<string, unknown>;
-                        const reconstructed: Filters = {
-                          ...defaultFilters(),
-                          endpoint: (snap.endpoint as Filters["endpoint"]) ?? "active-ats-7d",
-                          titleFilter: (snap.titleFilter as string) ?? "",
-                          locationFilter: (snap.locationFilter as string) ?? "",
-                          descriptionFilter: (snap.descriptionFilter as string) ?? "",
-                          organizationFilter: (snap.organizationFilter as string) ?? "",
-                          limit: String(snap.limit ?? 100),
-                          offset: String(snap.offset ?? 0),
-                        };
-                        setConvertingHistory({ id: h.id, name: `Schedule from ${new Date(h.ranAt).toLocaleDateString()}`, filters: reconstructed });
-                        setConvertName(`Schedule from ${new Date(h.ranAt).toLocaleDateString()}`);
-                      }}
-                      className="text-xs font-mono text-amber-400 border border-amber-400/50 hover:bg-amber-400/10 px-2 py-1 transition-colors flex items-center gap-1"
-                    >
-                      <Calendar size={10} />
-                      CONVERT TO SCHEDULE
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
+            <HistoryRow
+              key={h.id}
+              h={h as HistoryEntry}
+              onConvert={(entry) => {
+                const snap = (entry.filters ?? {}) as Record<string, unknown>;
+                const reconstructed: Filters = {
+                  ...defaultFilters(),
+                  endpoint: (snap.endpoint as Filters["endpoint"]) ?? "active-ats-7d",
+                  titleFilter: (snap.titleFilter as string) ?? "",
+                  locationFilter: (snap.locationFilter as string) ?? "",
+                  descriptionFilter: (snap.descriptionFilter as string) ?? "",
+                  organizationFilter: (snap.organizationFilter as string) ?? "",
+                  limit: String(snap.limit ?? 100),
+                  offset: String(snap.offset ?? 0),
+                };
+                setConvertingHistory({ id: entry.id, name: `Schedule from ${new Date(entry.ranAt).toLocaleDateString()}`, filters: reconstructed });
+                setConvertName(`Schedule from ${new Date(entry.ranAt).toLocaleDateString()}`);
+              }}
+            />
           ))}
         </div>
       )}

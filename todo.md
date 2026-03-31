@@ -151,3 +151,12 @@
 - [x] Add durationMs column to fetch_history table (DB migration)
 - [x] Show fetch duration in Fetch History panel
 - [x] Add "Convert to Schedule" button on ad-hoc fetch history rows
+
+## v1.4 API Error Logging
+- [ ] Add errorDetail column to fetch_history table (TEXT, nullable) for full error info
+- [ ] Harden server fetchJobs: detect HTML responses, capture HTTP status + raw response snippet + error type
+- [ ] Store structured error JSON in errorDetail (status, type, message, rawSnippet, url, timestamp)
+- [ ] Add API Error Log panel to Ingestion UI: show failed history rows with expandable error detail
+- [ ] Show inline error badge on failed history rows with HTTP status code
+- [ ] Add "Copy Error" button for easy sharing/debugging
+- [ ] Surface actionable error messages: 403 = not subscribed, 429 = quota exceeded, HTML = proxy/network issue

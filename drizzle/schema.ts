@@ -144,6 +144,7 @@ export const fetchHistory = mysqlTable("fetch_history", {
   requestsRemaining: int("requestsRemaining"), // from API header
   status: mysqlEnum("status", ["success", "error", "partial"]).default("success").notNull(),
   errorMessage: text("errorMessage"),
+  errorDetail: text("errorDetail"), // JSON: { httpStatus, contentType, rawSnippet, url, errorType }
   durationMs: int("durationMs"), // how long the fetch took in milliseconds
   ranAt: timestamp("ranAt").defaultNow().notNull(),
 });
