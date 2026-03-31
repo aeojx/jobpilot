@@ -164,3 +164,7 @@
 ## v1.5 Job Card Display
 - [x] Update job cards: show match score as numerical value only (remove progress bar)
 - [x] Add job location display on job cards
+
+## v1.6 Bug Fixes
+- [x] Fix location extraction: locations_derived is array of strings, not array of objects
+- [ ] Re-fetch jobs to populate location field with corrected parsing logic

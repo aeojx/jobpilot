@@ -347,11 +347,18 @@ async function executeFetch(
         matchScore = await scoreJobWithLLM(descText, skills.content);
         if (matchScore > 0) status = "matched";
       }
-      const locRaw = job.locations_derived as { city?: string; admin?: string; country?: string }[] | undefined;
-      const locationStr = locRaw?.[0] ? [locRaw[0].city, locRaw[0].admin, locRaw[0].country].filter(Boolean).join(", ") : (job.location as string) ?? "";
+      // locations_derived is an array of strings like ["Abu Dhabi, Abu Dhabi, United Arab Emirates"]
+      const locRaw = job.locations_derived as string[] | undefined;
+      const locationStr = locRaw?.[0] ?? (job.location as string) ?? "";
+      // Alternative: if locations_derived is an array of objects, use this:
+      // const locationStr = locRaw?.[0] ? [locRaw[0].city, locRaw[0].admin, locRaw[0].country].filter(Boolean).join(", ") : (job.location as string) ?? "";
       // Ensure tags is null (not []) when empty — TiDB JSON columns accept null
       const tagsRaw = (job.ai_taxonomies_a as string[]) ?? null;
       const tags = Array.isArray(tagsRaw) && tagsRaw.length > 0 ? tagsRaw : null;
+      // Log location extraction for debugging
+      if (!locationStr) {
+        console.log("[fetchJobs] Warning: No location extracted for job", job.id, "locations_derived:", locRaw, "location:", job.location);
+      }
       await insertJob({
         externalId: (job.id as string) ?? undefined,
         title,
