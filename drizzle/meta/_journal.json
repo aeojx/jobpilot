@@ -36,6 +36,13 @@
       "when": 1774955283847,
       "tag": "0004_strange_bloodaxe",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1774959936518,
+      "tag": "0005_lowly_bedlam",
+      "breakpoints": true
     }
   ]
 }

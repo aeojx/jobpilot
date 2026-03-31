@@ -33,6 +33,8 @@ import {
   updateJobStatus,
   upsertSkillsProfile,
   getDueFetchSchedules,
+  recordSwipe,
+  getSwipeStatsRange,
 } from "./db";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { ENV } from "./_core/env";
@@ -501,11 +503,44 @@ export const appRouter = router({
       .query(async ({ input }) => getJobsByStatus(input.status)),
 
     moveStatus: protectedProcedure
-      .input(z.object({ id: z.number(), status: z.enum(["ingested", "matched", "to_apply", "applied", "rejected", "expired"]) }))
+      .input(z.object({ id: z.number(), status: z.enum(["ingested", "matched", "to_apply", "applied", "rejected", "expired"]), fromSwipe: z.boolean().optional() }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "admin" && input.status !== "applied") throw new TRPCError({ code: "FORBIDDEN" });
         await updateJobStatus(input.id, input.status);
+        // Track swipe stats when swiping from the swipe view
+        if (input.fromSwipe) {
+          const dateKey = getCurrentDateKey();
+          if (input.status === "to_apply") await recordSwipe(dateKey, "approved");
+          else if (input.status === "rejected") await recordSwipe(dateKey, "rejected");
+        }
         return { success: true };
+      }),
+
+    swipeStats: adminProcedure
+      .input(z.object({ days: z.number().min(1).max(30).default(7) }))
+      .query(async ({ input }) => {
+        const rows = await getSwipeStatsRange(input.days);
+        const today = getCurrentDateKey();
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - 6);
+        const weekStartKey = weekStart.toISOString().split("T")[0]!;
+        let todayApproved = 0, todayRejected = 0;
+        let weekApproved = 0, weekRejected = 0;
+        for (const row of rows) {
+          if (row.dateKey === today) {
+            todayApproved = row.approved;
+            todayRejected = row.rejected;
+          }
+          if (row.dateKey >= weekStartKey) {
+            weekApproved += row.approved;
+            weekRejected += row.rejected;
+          }
+        }
+        return {
+          today: { approved: todayApproved, rejected: todayRejected, total: todayApproved + todayRejected },
+          week: { approved: weekApproved, rejected: weekRejected, total: weekApproved + weekRejected },
+          history: rows,
+        };
       }),
 
     markApplied: protectedProcedure

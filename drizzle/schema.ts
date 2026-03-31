@@ -177,3 +177,15 @@ export const applierGamification = mysqlTable("applier_gamification", {
 });
 
 export type ApplierGamification = typeof applierGamification.$inferSelect;
+
+// ─── Swipe Stats ─────────────────────────────────────────────────────────────
+
+export const swipeStats = mysqlTable("swipe_stats", {
+  id: int("id").autoincrement().primaryKey(),
+  dateKey: varchar("dateKey", { length: 10 }).notNull().unique(), // "YYYY-MM-DD"
+  approved: int("approved").default(0).notNull(),
+  rejected: int("rejected").default(0).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SwipeStats = typeof swipeStats.$inferSelect;

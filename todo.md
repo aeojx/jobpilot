@@ -180,3 +180,13 @@
 - [x] Empty state when all matched jobs have been swiped
 - [x] Register /swiping route in App.tsx
 - [x] Add "Swiping" nav item in AppLayout sidebar
+
+## v1.8 Swiping Enhancements
+- [x] Sort matched jobs by matchScore DESC in jobs.byStatus procedure
+- [x] Expand SwipeView card to show all available job fields: full description, applyUrl, source/ATS tag, email tag, duplicate tag, ingestedAt
+- [x] Show job location prominently on swipe card
+- [x] Add swipe_stats table: dateKey, approved, rejected, total (for daily/weekly stats)
+- [x] Backend: recordSwipe mutation (increments approved or rejected count for today)
+- [x] Backend: getSwipeStats query (returns today + last 7 days)
+- [x] SwipeView: stats panel showing today's swiped/approved/rejected counts
+- [x] SwipeView: weekly stats bar or summary (total this week, approval rate)

@@ -15,6 +15,7 @@ import {
   jobs,
   questionBank,
   skillsProfile,
+  swipeStats,
   users,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
@@ -79,7 +80,7 @@ export async function getAllJobs() {
 export async function getJobsByStatus(status: Job["status"]) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(jobs).where(eq(jobs.status, status)).orderBy(desc(jobs.createdAt));
+  return db.select().from(jobs).where(eq(jobs.status, status)).orderBy(desc(jobs.matchScore), desc(jobs.createdAt));
 }
 
 export async function getJobById(id: number) {
@@ -305,6 +306,47 @@ export async function getOrCreateGamification(userId: number) {
   await db.insert(applierGamification).values({ userId, totalXp: 0, currentStreak: 0, longestStreak: 0 });
   const created = await db.select().from(applierGamification).where(eq(applierGamification.userId, userId)).limit(1);
   return created[0]!;
+}
+
+// ─── Swipe Stats ─────────────────────────────────────────────────────────────
+
+export async function recordSwipe(dateKey: string, direction: "approved" | "rejected") {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(swipeStats).where(eq(swipeStats.dateKey, dateKey)).limit(1);
+  if (existing[0]) {
+    if (direction === "approved") {
+      await db.update(swipeStats).set({ approved: sql`${swipeStats.approved} + 1` }).where(eq(swipeStats.dateKey, dateKey));
+    } else {
+      await db.update(swipeStats).set({ rejected: sql`${swipeStats.rejected} + 1` }).where(eq(swipeStats.dateKey, dateKey));
+    }
+  } else {
+    await db.insert(swipeStats).values({
+      dateKey,
+      approved: direction === "approved" ? 1 : 0,
+      rejected: direction === "rejected" ? 1 : 0,
+    });
+  }
+}
+
+export async function getSwipeStatsRange(days: number) {
+  const db = await getDb();
+  if (!db) return [];
+  // Get last N days of swipe stats
+  const dateKeys: string[] = [];
+  for (let i = 0; i < days; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    dateKeys.push(d.toISOString().split("T")[0]!);
+  }
+  return db.select().from(swipeStats).where(sql`${swipeStats.dateKey} IN (${sql.join(dateKeys.map(k => sql`${k}`), sql`, `)})`);
+}
+
+export async function getSwipeStatsForDate(dateKey: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(swipeStats).where(eq(swipeStats.dateKey, dateKey)).limit(1);
+  return result[0] ?? null;
 }
 
 export async function updateGamification(userId: number, dateKey: string) {

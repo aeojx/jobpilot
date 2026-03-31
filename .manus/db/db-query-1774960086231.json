@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS swipe_stats (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  dateKey VARCHAR(10) NOT NULL UNIQUE,\n  approved INT NOT NULL DEFAULT 0,\n  rejected INT NOT NULL DEFAULT 0,\n  updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user WN3xd22ei9epifv.e8f98a17fdb7 --database 8xw3YDHLEcZPc6Z4gxVxDS --execute CREATE TABLE IF NOT EXISTS swipe_stats (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  dateKey VARCHAR(10) NOT NULL UNIQUE,\n  approved INT NOT NULL DEFAULT 0,\n  rejected INT NOT NULL DEFAULT 0,\n  updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1521
+}
