@@ -642,185 +642,195 @@ export default function SwipeView() {
                 </div>
               )}
 
-              {/* Card content — scrollable when desc is expanded */}
-              <div style={{ flex: 1, overflowY: showDesc ? "auto" : "hidden", padding: "1.25rem 1.25rem 0.75rem" }}>
-                {/* Title + match score on same row */}
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <h2
-                    style={{
+              {/* ── Card content: strict top-to-bottom, no overlap ── */}
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+                {/* ── ZONE 1: Match score badge (full-width top bar) ── */}
+                {(currentJob.matchScore ?? 0) > 0 && (
+                  <div style={{
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    padding: "0.5rem 1.25rem 0",
+                  }}>
+                    <span style={{
                       fontFamily: "var(--font-pixel)",
-                      fontSize: "clamp(0.75rem, 3vw, 1.05rem)",
-                      color: "var(--atari-white)",
-                      lineHeight: 1.55,
-                      letterSpacing: "0.06em",
-                      flex: 1,
-                      minWidth: 0,
-                      textShadow: "0 0 8px rgba(224,224,240,0.25)",
-                    }}
-                  >
+                      fontSize: "0.65rem",
+                      color: getScoreColor(Math.round(currentJob.matchScore ?? 0)),
+                      border: `1px solid ${getScoreColor(Math.round(currentJob.matchScore ?? 0))}`,
+                      padding: "3px 8px",
+                      letterSpacing: "0.1em",
+                    }}>
+                      MATCH: {Math.round(currentJob.matchScore ?? 0)}%
+                    </span>
+                  </div>
+                )}
+
+                {/* ── ZONE 2: Job title ── */}
+                <div style={{ flexShrink: 0, padding: "0.6rem 1.25rem 0" }}>
+                  <h2 style={{
+                    fontFamily: "var(--font-pixel)",
+                    fontSize: "clamp(0.8rem, 2.8vw, 1rem)",
+                    color: "var(--atari-white)",
+                    lineHeight: 1.5,
+                    letterSpacing: "0.05em",
+                    margin: 0,
+                    wordBreak: "break-word",
+                  }}>
                     {currentJob.title}
                   </h2>
-                  {(currentJob.matchScore ?? 0) > 0 && (
-                    <span
-                      style={{
-                        fontFamily: "var(--font-pixel)",
-                        fontSize: "0.6rem",
-                        color: getScoreColor(Math.round(currentJob.matchScore ?? 0)),
-                        border: `1px solid ${getScoreColor(Math.round(currentJob.matchScore ?? 0))}`,
-                        padding: "2px 6px",
-                        letterSpacing: "0.08em",
-                        flexShrink: 0,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {Math.round(currentJob.matchScore ?? 0)}%
-                    </span>
-                  )}
                 </div>
 
-                {/* Company */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.5rem", marginBottom: "0.4rem" }}>
-                  <Building2 size={14} color="var(--atari-amber)" />
-                  <span
-                    style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: "0.9rem",
-                      color: "var(--atari-amber)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.07em",
-                      fontWeight: "bold",
-                    }}
-                  >
+                {/* ── ZONE 3: Company ── */}
+                <div style={{
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  padding: "0.4rem 1.25rem 0",
+                }}>
+                  <Building2 size={13} color="var(--atari-amber)" style={{ flexShrink: 0 }} />
+                  <span style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.82rem",
+                    color: "var(--atari-amber)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    fontWeight: "bold",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}>
                     {currentJob.company}
                   </span>
                 </div>
 
-                {/* Location — prominently displayed, right-aligned */}
-                {currentJob.location ? (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem", marginBottom: "0.5rem" }}>
-                    <MapPin size={13} color="var(--atari-cyan)" />
-                    <span
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "0.75rem",
-                        color: "var(--atari-cyan)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.04em",
-                        fontWeight: "bold",
-                        textAlign: "right",
-                      }}
-                    >
-                      {currentJob.location}
-                    </span>
-                  </div>
-                ) : null}
+                {/* ── ZONE 4: Location ── */}
+                <div style={{
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  padding: "0.3rem 1.25rem 0",
+                }}>
+                  <MapPin size={12} color={currentJob.location ? "var(--atari-cyan)" : "var(--atari-border)"} style={{ flexShrink: 0 }} />
+                  <span style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.72rem",
+                    color: currentJob.location ? "var(--atari-cyan)" : "var(--atari-border)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}>
+                    {currentJob.location ?? "LOCATION NOT SPECIFIED"}
+                  </span>
+                </div>
 
-                {/* Tags row */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.6rem" }}>
+                {/* ── ZONE 5: Tags row ── */}
+                <div style={{
+                  flexShrink: 0,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "0.35rem",
+                  padding: "0.5rem 1.25rem 0",
+                }}>
                   {currentJob.source && (
-                    <span className="brutal-tag" style={{ borderColor: "var(--atari-cyan)", color: "var(--atari-cyan)", fontSize: "0.6rem" }}>
+                    <span className="brutal-tag" style={{ borderColor: "var(--atari-cyan)", color: "var(--atari-cyan)", fontSize: "0.58rem" }}>
                       <Briefcase size={8} style={{ display: "inline", marginRight: 3 }} />
                       {currentJob.source}
                     </span>
                   )}
                   {currentJob.hasEmail && (
-                    <span className="brutal-tag" style={{ borderColor: "var(--atari-green)", color: "var(--atari-green)", fontSize: "0.6rem", display: "flex", alignItems: "center", gap: "3px" }}>
+                    <span className="brutal-tag" style={{ borderColor: "var(--atari-green)", color: "var(--atari-green)", fontSize: "0.58rem", display: "flex", alignItems: "center", gap: "3px" }}>
                       <AtSign size={8} />EMAIL
                     </span>
                   )}
                   {currentJob.isDuplicate && (
-                    <span className="brutal-tag" style={{ borderColor: "var(--atari-magenta)", color: "var(--atari-magenta)", fontSize: "0.6rem", display: "flex", alignItems: "center", gap: "3px" }}>
+                    <span className="brutal-tag" style={{ borderColor: "var(--atari-magenta)", color: "var(--atari-magenta)", fontSize: "0.58rem", display: "flex", alignItems: "center", gap: "3px" }}>
                       <Copy size={8} />DUPE
                     </span>
                   )}
-
                 </div>
 
-                {/* Location not specified — right-aligned below tags */}
-                {!currentJob.location && (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem", marginBottom: "0.5rem" }}>
-                    <MapPin size={13} color="var(--atari-border)" />
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--atari-border)", letterSpacing: "0.04em", textAlign: "right" }}>
-                      LOCATION NOT SPECIFIED
-                    </span>
-                  </div>
-                )}
+                {/* ── Divider ── */}
+                <div style={{ flexShrink: 0, height: 1, background: "var(--atari-red)", margin: "0.6rem 1.25rem" }} />
 
-                {/* Red divider */}
-                <div style={{ height: 1, background: "var(--atari-red)", marginBottom: "0.6rem" }} />
-
-                {/* Description excerpt / full */}
-                {currentJob.description ? (
-                  <>
-                    <p
-                      style={{
+                {/* ── ZONE 6: Description (scrollable, takes remaining space) ── */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "0 1.25rem" }}>
+                  {currentJob.description ? (
+                    <>
+                      <p style={{
                         fontFamily: "var(--font-mono)",
-                        fontSize: "0.68rem",
+                        fontSize: "0.67rem",
                         color: "#ffffff",
-                        lineHeight: 1.7,
+                        lineHeight: 1.75,
+                        margin: 0,
                         overflow: showDesc ? "visible" : "hidden",
                         display: showDesc ? "block" : "-webkit-box",
-                        WebkitLineClamp: showDesc ? undefined : 6,
+                        WebkitLineClamp: showDesc ? undefined : 5,
                         WebkitBoxOrient: "vertical" as const,
                         whiteSpace: "pre-wrap",
-                      }}
-                    >
-                      {currentJob.description.slice(0, showDesc ? 3000 : 500)}
-                      {!showDesc && currentJob.description.length > 500 && "..."}
+                        wordBreak: "break-word",
+                      }}>
+                        {currentJob.description.slice(0, showDesc ? 3000 : 500)}
+                        {!showDesc && currentJob.description.length > 500 && "..."}
+                      </p>
+                      <button
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); setShowDesc((s) => !s); }}
+                        style={{
+                          marginTop: "0.4rem",
+                          background: "transparent",
+                          border: "none",
+                          color: "var(--atari-amber)",
+                          fontFamily: "var(--font-mono)",
+                          fontSize: "0.62rem",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          padding: 0,
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        {showDesc ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        {showDesc ? "SHOW LESS" : "READ MORE"}
+                      </button>
+                    </>
+                  ) : (
+                    <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.67rem", color: "var(--atari-border)", fontStyle: "italic", margin: 0 }}>
+                      No description available.
                     </p>
-                    <button
+                  )}
+                </div>
+
+                {/* ── ZONE 7: Apply link (pinned to bottom of card) ── */}
+                {currentJob.applyUrl && (
+                  <div style={{ flexShrink: 0, borderTop: "1px solid var(--atari-border)", padding: "0.5rem 1.25rem" }}>
+                    <a
+                      href={currentJob.applyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       onPointerDown={(e) => e.stopPropagation()}
-                      onClick={(e) => { e.stopPropagation(); setShowDesc((s) => !s); }}
+                      onClick={(e) => e.stopPropagation()}
                       style={{
-                        marginTop: "0.5rem",
-                        background: "transparent",
-                        border: "none",
-                        color: "var(--atari-amber)",
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "0.65rem",
-                        cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
-                        gap: "4px",
-                        padding: 0,
+                        gap: "6px",
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.63rem",
+                        color: "var(--atari-amber)",
+                        textDecoration: "none",
                         letterSpacing: "0.05em",
                       }}
                     >
-                      {showDesc ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                      {showDesc ? "SHOW LESS" : "READ MORE"}
-                    </button>
-                  </>
-                ) : (
-                  <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.68rem", color: "var(--atari-border)", fontStyle: "italic" }}>
-                    No description available.
-                  </p>
-                )}
-
-                {/* External link — full row */}
-                {currentJob.applyUrl && (
-                  <a
-                    href={currentJob.applyUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      marginTop: "0.75rem",
-                      fontFamily: "var(--font-mono)",
-                      fontSize: "0.65rem",
-                      color: "var(--atari-amber)",
-                      textDecoration: "none",
-                      letterSpacing: "0.05em",
-                      borderTop: "1px solid var(--atari-border)",
-                      paddingTop: "0.6rem",
-                    }}
-                  >
-                    <ExternalLink size={11} />
-                    VIEW FULL JOB POSTING
-                  </a>
+                      <ExternalLink size={11} />
+                      VIEW FULL JOB POSTING
+                    </a>
+                  </div>
                 )}
               </div>
 

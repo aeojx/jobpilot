@@ -211,3 +211,6 @@
 - [x] Compute dwellDays in kanban query: for matched = days since postedAt (ingestedAt fallback), for to_apply = days since statusChangedAt
 - [x] Show dwell badge on Kanban cards (Matched and To Apply columns)
 - [x] Add sort controls to dashboard Kanban: sort by Match Score, Dwell (asc/desc)
+
+## v2.3 SwipeView Card Redesign
+- [x] Completely rewrite swipe card layout to eliminate all text overlap
