@@ -41,6 +41,7 @@ import {
   getQuestionById,
   getPipelineStats,
   getAppliedTodayCount,
+  getJobsAppliedToday,
 } from "./db";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { ENV } from "./_core/env";
@@ -609,6 +610,7 @@ export async function sendDailyReport(): Promise<void> {
     const pipeline = await getPipelineStats();
     const appliedToday = await getAppliedTodayCount(dateKey);
     const weeklyStats = await getApplierStatsRange(7);
+    const appliedTodayJobs = await getJobsAppliedToday(dateKey);
 
     // Build last-7-days array (newest first → reverse for display oldest→newest)
     const weeklyData = weeklyStats
@@ -617,6 +619,11 @@ export async function sendDailyReport(): Promise<void> {
       .map((s) => ({ date: formatDateKey(s.dateKey), applied: s.appliedCount }));
 
     const weeklyApplied = weeklyStats.reduce((sum, s) => sum + s.appliedCount, 0);
+
+    // Rate projection: use 7-day average to estimate weeks to 1000
+    const remaining = Math.max(0, 1000 - pipeline.totalApplied);
+    const avgPerDay = weeklyApplied > 0 ? weeklyApplied / Math.min(weeklyStats.length, 7) : appliedToday;
+    const weeksToGoal = avgPerDay > 0 ? Math.ceil(remaining / (avgPerDay * 7)) : null;
 
     const html = buildDailyReportEmail({
       date: formatDateKey(dateKey),
@@ -628,9 +635,12 @@ export async function sendDailyReport(): Promise<void> {
       weeklyData,
       totalApplied: pipeline.totalApplied,
       targetTotal: 1000,
+      weeksToGoal,
+      appliedTodayJobs,
     });
 
-    const subject = `📊 JobPilot Daily Report — ${formatDateKey(dateKey)}`;
+    // Dynamic subject: "📊 Daily Report — 8 applied today | 63 in pipeline to apply | 981/1000 remaining"
+    const subject = `📊 Daily Report — ${appliedToday} applied today | ${pipeline.toApply} in pipeline to apply | ${pipeline.totalApplied}/1000 remaining`;
     const recipients = [APPLIER_EMAIL, "tedunt@gmail.com"];
 
     await sendEmail({ to: recipients, subject, html });

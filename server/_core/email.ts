@@ -97,6 +97,8 @@ export function buildDailyReportEmail(opts: {
   weeklyData: Array<{ date: string; applied: number }>;
   totalApplied: number;
   targetTotal: number;
+  weeksToGoal: number | null;
+  appliedTodayJobs: Array<{ title: string; company: string; location: string | null }>;
 }): string {
   const remaining = Math.max(0, opts.targetTotal - opts.totalApplied);
   const pct = Math.min(100, Math.round((opts.totalApplied / opts.targetTotal) * 100));
@@ -111,6 +113,28 @@ export function buildDailyReportEmail(opts: {
         </tr>`
     )
     .join("");
+
+  const projectionLine =
+    opts.weeksToGoal !== null
+      ? `<p style="color:#e2e8f0;font-size:14px;margin:12px 0 0 0;text-align:center;border-top:1px solid #334155;padding-top:12px;">
+          ⏱️ At the current rate of applications, you will reach 1,000 jobs in
+          <strong style="color:#00ff9f;"> ${opts.weeksToGoal} week${opts.weeksToGoal === 1 ? "" : "s"}</strong>.
+        </p>`
+      : "";
+
+  const appliedJobRows =
+    opts.appliedTodayJobs.length > 0
+      ? opts.appliedTodayJobs
+          .map(
+            (j, i) =>
+              `<tr style="background:${i % 2 === 0 ? "#0f0f1a" : "#111827"}">
+                <td style="padding:8px 12px;color:#e2e8f0;font-size:12px;">${escapeHtml(j.title)}</td>
+                <td style="padding:8px 12px;color:#94a3b8;font-size:12px;">${escapeHtml(j.company)}</td>
+                <td style="padding:8px 12px;color:#64748b;font-size:11px;">${j.location ? escapeHtml(j.location) : "—"}</td>
+              </tr>`
+          )
+          .join("")
+      : `<tr><td colspan="3" style="padding:16px 12px;color:#475569;font-size:12px;text-align:center;">No applications submitted today yet.</td></tr>`;
 
   return `<!DOCTYPE html>
 <html>
@@ -175,7 +199,19 @@ export function buildDailyReportEmail(opts: {
         <strong style="color:#fbbf24;font-size:22px;">${remaining.toLocaleString()}</strong>
         <span style="color:#64748b;font-size:12px;"> jobs remaining to reach 1,000</span>
       </p>
+      ${projectionLine}
     </div>
+
+    <!-- Today's Applied Jobs -->
+    <h2 style="color:#fbbf24;font-size:13px;letter-spacing:2px;margin:24px 0 12px 0;text-transform:uppercase;">✅ Applied Today (${opts.appliedTodayJobs.length})</h2>
+    <table style="width:100%;border-collapse:collapse;background:#0f0f1a;border-radius:6px;margin-bottom:24px;overflow:hidden;">
+      <tr style="background:#1e293b;">
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Job Title</th>
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Company</th>
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Location</th>
+      </tr>
+      ${appliedJobRows}
+    </table>
 
     <p style="color:#475569;font-size:11px;margin:24px 0 0 0;text-align:center;">JobPilot — Smart Job Application Manager · <a href="https://1000jobs.manus.space" style="color:#00ff9f;text-decoration:none;">1000jobs.manus.space</a></p>
   </div>

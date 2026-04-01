@@ -226,6 +226,31 @@ export async function getAppliedTodayCount(dateKey: string): Promise<number> {
   return result[0]?.appliedCount ?? 0;
 }
 
+/**
+ * Returns jobs that were moved to 'applied' status today (based on statusChangedAt).
+ * dateKey format: "YYYY-MM-DD" in GST (UTC+4).
+ */
+export async function getJobsAppliedToday(dateKey: string): Promise<Array<{ title: string; company: string; location: string | null }>> {
+  const db = await getDb();
+  if (!db) return [];
+  // Convert dateKey to UTC range: GST is UTC+4, so "today" in GST = UTC day minus 4 hours
+  const startUtc = new Date(dateKey + "T00:00:00.000Z");
+  startUtc.setTime(startUtc.getTime() - 4 * 60 * 60 * 1000); // subtract 4h to get UTC start of GST day
+  const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000);
+  const rows = await db
+    .select({ title: jobs.title, company: jobs.company, location: jobs.location })
+    .from(jobs)
+    .where(
+      and(
+        eq(jobs.status, "applied"),
+        gte(jobs.statusChangedAt, startUtc),
+        lte(jobs.statusChangedAt, endUtc)
+      )
+    )
+    .orderBy(desc(jobs.statusChangedAt));
+  return rows;
+}
+
 export async function getQuestionById(id: number) {
   const db = await getDb();
   if (!db) return null;

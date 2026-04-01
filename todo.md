@@ -280,13 +280,13 @@
 - [x] 75 tests passing (4 new manualAdd tests)
 
 ## v3.3 Notification Updates
-- [ ] Store RESEND_API_KEY secret
-- [ ] Install resend npm package
-- [ ] Create server/_core/email.ts helper with sendEmail(to, subject, html) using Resend
-- [ ] Update questions.answer: send email to z.hewedi@gmail.com (Applier) when question is answered
-- [ ] Add daily report cron at 11 PM GST (19:00 UTC): query matched/to_apply/applied counts, last 7 days applied stats, compute 1000-job countdown
-- [ ] Send daily report email to both Owner (via notifyOwner) and Applier (z.hewedi@gmail.com via Resend)
-- [ ] Add tests for email helper and daily report cron logic
+- [x] Store RESEND_API_KEY secret
+- [x] Install resend npm package
+- [x] Create server/_core/email.ts helper with sendEmail(to, subject, html) using Resend
+- [x] Update questions.answer: send email to z.hewedi@gmail.com (Applier) when question is answered
+- [x] Add daily report cron at 11 PM GST (19:00 UTC): query matched/to_apply/applied counts, last 7 days applied stats, compute 1000-job countdown
+- [x] Send daily report email to both Owner (via notifyOwner) and Applier (z.hewedi@gmail.com via Resend)
+- [x] Add tests for email helper and daily report cron logic
 
 ## v3.3 Email Notifications (Resend)
 - [x] Install Resend SDK and create server/_core/email.ts with sendEmail helper
@@ -303,3 +303,9 @@
 - [x] Daily report sent to both Owner (tedunt@gmail.com) and Applier (z.hewedi@gmail.com)
 - [x] Add notifications.sendTestDailyReport tRPC mutation (Owner only, for on-demand testing)
 - [x] Add email mock to test suite — 75 tests still passing
+
+## v3.4 Daily Report Email Enhancements
+- [x] Update subject to: "📊 Daily Report — X applied today | Y in pipeline to apply | Z/1000 remaining"
+- [x] Add rate projection line: "At the current rate of applications, you will reach 1000 jobs in X weeks"
+- [x] Add today's applied jobs list at the bottom (title + location)
+- [x] Add getJobsAppliedToday() DB helper to fetch jobs moved to applied status today
