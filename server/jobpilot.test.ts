@@ -206,9 +206,10 @@ describe("questions", () => {
     expect(result.success).toBe(true);
   });
 
-  it("applier cannot answer questions", async () => {
+  it("applier can now answer questions", async () => {
     const caller = appRouter.createCaller(makeApplierCtx());
-    await expect(caller.questions.answer({ id: 1, answer: "test" })).rejects.toThrow();
+    const result = await caller.questions.answer({ id: 1, answer: "test" });
+    expect(result.success).toBe(true);
   });
 
   it("both roles can view all questions", async () => {

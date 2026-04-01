@@ -730,7 +730,7 @@ export const appRouter = router({
       return getAllQuestions();
     }),
 
-    unanswered: adminProcedure.query(async () => getUnansweredQuestions()),
+    unanswered: protectedProcedure.query(async () => getUnansweredQuestions()),
 
     ask: protectedProcedure
       .input(z.object({ jobId: z.number(), jobTitle: z.string().optional(), jobCompany: z.string().optional(), question: z.string().min(1) }))
@@ -749,10 +749,15 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    answer: adminProcedure
+    // All authenticated users can answer questions
+    answer: protectedProcedure
       .input(z.object({ id: z.number(), answer: z.string().min(1) }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         await answerQuestion(input.id, input.answer);
+        await notifyOwner({
+          title: "✅ Question Answered",
+          content: `A question was answered by ${ctx.user.name ?? "a user"}.`,
+        });
         return { success: true };
       }),
   }),

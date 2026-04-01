@@ -224,3 +224,8 @@
 - [x] Add "CAN'T APPLY" reject button to each job card in ApplierView
 - [x] Show confirmation dialog before rejecting to prevent accidental rejections
 - [x] Add test for applierReject procedure
+
+## v2.6 Question Bank Open Access
+- [x] Change questions.answer procedure from adminProcedure to protectedProcedure so all users can answer
+- [x] Update QuestionBank.tsx UI to show the answer input/button for all authenticated users (not just admins)
+- [x] Update tests to reflect that applier can now answer questions

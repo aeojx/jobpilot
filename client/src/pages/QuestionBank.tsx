@@ -57,7 +57,7 @@ export default function QuestionBank() {
             textTransform: "uppercase",
           }}
         >
-          {isOwner ? "Review and answer questions from the Applier" : "Your submitted questions and owner responses"}
+          All users can submit and answer questions in the shared question bank
         </p>
       </div>
 
@@ -123,40 +123,38 @@ export default function QuestionBank() {
                     {q.question}
                   </p>
 
-                  {/* Answer input (Owner only) */}
-                  {isOwner && (
-                    <div className="flex gap-2">
-                      <input
-                        className="brutal-input flex-1 text-sm"
-                        placeholder="Type your answer..."
-                        value={answerMap[q.id] ?? ""}
-                        onChange={(e) => setAnswerMap((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && answerMap[q.id]?.trim()) {
-                            answerMutation.mutate({ id: q.id, answer: answerMap[q.id]! });
-                          }
-                        }}
-                      />
-                      <button
-                        onClick={() => {
-                          if (answerMap[q.id]?.trim()) {
-                            answerMutation.mutate({ id: q.id, answer: answerMap[q.id]! });
-                          }
-                        }}
-                        disabled={!answerMap[q.id]?.trim() || answerMutation.isPending}
-                        className="px-4 py-2 font-black text-xs tracking-widest uppercase flex items-center gap-1 transition-all"
-                        style={{
-                          fontFamily: "Press Start 2P, monospace",
-                          background: "var(--atari-white)",
-                          color: "var(--atari-black)",
-                          border: "2px solid var(--atari-white)",
-                          letterSpacing: "0.1em",
-                        }}
-                      >
-                        {answerMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : "Answer"}
-                      </button>
-                    </div>
-                  )}
+                  {/* Answer input — all authenticated users */}
+                  <div className="flex gap-2">
+                    <input
+                      className="brutal-input flex-1 text-sm"
+                      placeholder="Type your answer..."
+                      value={answerMap[q.id] ?? ""}
+                      onChange={(e) => setAnswerMap((prev) => ({ ...prev, [q.id]: e.target.value }))}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && answerMap[q.id]?.trim()) {
+                          answerMutation.mutate({ id: q.id, answer: answerMap[q.id]! });
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        if (answerMap[q.id]?.trim()) {
+                          answerMutation.mutate({ id: q.id, answer: answerMap[q.id]! });
+                        }
+                      }}
+                      disabled={!answerMap[q.id]?.trim() || answerMutation.isPending}
+                      className="px-4 py-2 font-black text-xs tracking-widest uppercase flex items-center gap-1 transition-all"
+                      style={{
+                        fontFamily: "Press Start 2P, monospace",
+                        background: "var(--atari-white)",
+                        color: "var(--atari-black)",
+                        border: "2px solid var(--atari-white)",
+                        letterSpacing: "0.1em",
+                      }}
+                    >
+                      {answerMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : "Answer"}
+                    </button>
+                  </div>
 
                   {/* Date */}
                   <p
