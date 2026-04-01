@@ -200,3 +200,6 @@
 - [x] Add Undo button that restores the last swiped card and reverses its status change
 - [x] Make job title larger and more prominent on swipe card
 - [x] Make company name larger and more prominent on swipe card
+
+## v2.1 Bug Fixes
+- [ ] Fix "Incorrect password" mutation error on /dashboard page

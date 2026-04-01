@@ -695,9 +695,9 @@ export default function SwipeView() {
                   </span>
                 </div>
 
-                {/* Location — prominently displayed */}
+                {/* Location — prominently displayed, right-aligned */}
                 {currentJob.location ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.5rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem", marginBottom: "0.5rem" }}>
                     <MapPin size={13} color="var(--atari-cyan)" />
                     <span
                       style={{
@@ -707,6 +707,7 @@ export default function SwipeView() {
                         textTransform: "uppercase",
                         letterSpacing: "0.04em",
                         fontWeight: "bold",
+                        textAlign: "right",
                       }}
                     >
                       {currentJob.location}
@@ -735,11 +736,11 @@ export default function SwipeView() {
 
                 </div>
 
-                {/* Location not specified — shown below tags to avoid overlap */}
+                {/* Location not specified — right-aligned below tags */}
                 {!currentJob.location && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.5rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem", marginBottom: "0.5rem" }}>
                     <MapPin size={13} color="var(--atari-border)" />
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--atari-border)", letterSpacing: "0.04em" }}>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--atari-border)", letterSpacing: "0.04em", textAlign: "right" }}>
                       LOCATION NOT SPECIFIED
                     </span>
                   </div>
