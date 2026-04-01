@@ -1,16 +1,33 @@
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { CheckCircle, HelpCircle, Loader2, MessageSquare } from "lucide-react";
+import { CheckCircle, HelpCircle, Loader2, MessageSquare, PlusCircle, Send } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 export default function QuestionBank() {
   const { user } = useAuth();
-  const isOwner = user?.role === "admin";
   const utils = trpc.useUtils();
 
   const { data: questions = [], isLoading } = trpc.questions.all.useQuery();
   const [answerMap, setAnswerMap] = useState<Record<number, string>>({});
+
+  // New question form state
+  const [showForm, setShowForm] = useState(false);
+  const [newQuestion, setNewQuestion] = useState("");
+  const [newJobTitle, setNewJobTitle] = useState("");
+  const [newJobCompany, setNewJobCompany] = useState("");
+
+  const askMutation = trpc.questions.ask.useMutation({
+    onSuccess: () => {
+      toast.success("Question submitted!");
+      setNewQuestion("");
+      setNewJobTitle("");
+      setNewJobCompany("");
+      setShowForm(false);
+      utils.questions.all.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   const answerMutation = trpc.questions.answer.useMutation({
     onSuccess: (_, vars) => {
@@ -24,8 +41,19 @@ export default function QuestionBank() {
   const unanswered = questions.filter((q) => !q.answer);
   const answered = questions.filter((q) => q.answer);
 
+  const handleAsk = () => {
+    if (!newQuestion.trim()) return;
+    askMutation.mutate({
+      jobId: 0,
+      jobTitle: newJobTitle.trim() || undefined,
+      jobCompany: newJobCompany.trim() || undefined,
+      question: newQuestion.trim(),
+    });
+  };
+
   return (
     <div className="flex flex-col h-full overflow-auto">
+      {/* Header */}
       <div className="px-5 pt-5 pb-3 flex-shrink-0">
         <div className="flex items-center justify-between mb-1">
           <h2
@@ -44,6 +72,21 @@ export default function QuestionBank() {
               </span>
             )}
             {isLoading && <Loader2 size={14} className="animate-spin text-foreground/40" />}
+            <button
+              onClick={() => setShowForm((v) => !v)}
+              className="flex items-center gap-2 px-3 py-2 font-black text-xs tracking-widest uppercase transition-all"
+              style={{
+                fontFamily: "Press Start 2P, monospace",
+                background: showForm ? "var(--atari-cyan)" : "transparent",
+                color: showForm ? "var(--atari-black)" : "var(--atari-cyan)",
+                border: "2px solid var(--atari-cyan)",
+                letterSpacing: "0.08em",
+                fontSize: "0.6rem",
+              }}
+            >
+              <PlusCircle size={12} />
+              New Question
+            </button>
           </div>
         </div>
         <div className="atari-divider" />
@@ -60,6 +103,105 @@ export default function QuestionBank() {
           All users can submit and answer questions in the shared question bank
         </p>
       </div>
+
+      {/* New Question Form */}
+      {showForm && (
+        <div
+          className="mx-5 mb-4 p-4 flex-shrink-0"
+          style={{
+            background: "var(--atari-panel)",
+            border: "2px solid var(--atari-cyan)",
+          }}
+        >
+          <p
+            className="mb-3"
+            style={{
+              fontFamily: "Press Start 2P, monospace",
+              fontSize: "0.65rem",
+              letterSpacing: "0.12em",
+              color: "var(--atari-cyan)",
+              textTransform: "uppercase",
+            }}
+          >
+            Submit a New Question
+          </p>
+
+          {/* Optional job context row */}
+          <div className="flex gap-2 mb-2">
+            <input
+              className="brutal-input flex-1 text-sm"
+              placeholder="Job title (optional)"
+              value={newJobTitle}
+              onChange={(e) => setNewJobTitle(e.target.value)}
+            />
+            <input
+              className="brutal-input flex-1 text-sm"
+              placeholder="Company (optional)"
+              value={newJobCompany}
+              onChange={(e) => setNewJobCompany(e.target.value)}
+            />
+          </div>
+
+          {/* Question text */}
+          <textarea
+            className="brutal-input w-full text-sm mb-3"
+            placeholder="Type your question here..."
+            rows={3}
+            value={newQuestion}
+            onChange={(e) => setNewQuestion(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && newQuestion.trim()) {
+                handleAsk();
+              }
+            }}
+            style={{ resize: "vertical", minHeight: "72px" }}
+          />
+
+          <div className="flex items-center justify-between gap-2">
+            <p
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.6rem",
+                color: "oklch(0.35 0 0)",
+              }}
+            >
+              Submitted as: {user?.name ?? "You"} · Ctrl+Enter to send
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowForm(false); setNewQuestion(""); setNewJobTitle(""); setNewJobCompany(""); }}
+                className="px-3 py-2 text-xs uppercase tracking-widest"
+                style={{
+                  fontFamily: "Press Start 2P, monospace",
+                  background: "transparent",
+                  color: "oklch(0.4 0 0)",
+                  border: "1.5px solid var(--atari-border)",
+                  fontSize: "0.55rem",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAsk}
+                disabled={!newQuestion.trim() || askMutation.isPending}
+                className="flex items-center gap-2 px-4 py-2 font-black text-xs tracking-widest uppercase transition-all"
+                style={{
+                  fontFamily: "Press Start 2P, monospace",
+                  background: newQuestion.trim() ? "var(--atari-cyan)" : "oklch(0.2 0 0)",
+                  color: newQuestion.trim() ? "var(--atari-black)" : "oklch(0.35 0 0)",
+                  border: `2px solid ${newQuestion.trim() ? "var(--atari-cyan)" : "var(--atari-border)"}`,
+                  letterSpacing: "0.08em",
+                  fontSize: "0.6rem",
+                  cursor: newQuestion.trim() ? "pointer" : "not-allowed",
+                }}
+              >
+                {askMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 px-5 pb-5 space-y-6">
         {/* Unanswered */}
@@ -88,20 +230,22 @@ export default function QuestionBank() {
                   }}
                 >
                   {/* Job context */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <HelpCircle size={12} style={{ color: "var(--atari-amber)", flexShrink: 0 }} />
-                    <span
-                      style={{
-                        fontFamily: "Press Start 2P, monospace",
-                        fontSize: "0.7rem",
-                        letterSpacing: "0.08em",
-                        color: "var(--atari-amber)",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {q.jobTitle ?? "Unknown Job"} · {q.jobCompany ?? ""}
-                    </span>
-                  </div>
+                  {(q.jobTitle || q.jobCompany) && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <HelpCircle size={12} style={{ color: "var(--atari-amber)", flexShrink: 0 }} />
+                      <span
+                        style={{
+                          fontFamily: "Press Start 2P, monospace",
+                          fontSize: "0.7rem",
+                          letterSpacing: "0.08em",
+                          color: "var(--atari-amber)",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {q.jobTitle ?? "Unknown Job"}{q.jobCompany ? ` · ${q.jobCompany}` : ""}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Question */}
                   <p
@@ -114,7 +258,7 @@ export default function QuestionBank() {
                       textTransform: "uppercase",
                     }}
                   >
-                    Question from {q.askedByName ?? "Applier"}
+                    Question from {q.askedByName ?? "User"}
                   </p>
                   <p
                     className="mb-3"
@@ -198,20 +342,22 @@ export default function QuestionBank() {
                     border: "1.5px solid var(--atari-border)",
                   }}
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle size={12} style={{ color: "var(--atari-green)", flexShrink: 0 }} />
-                    <span
-                      style={{
-                        fontFamily: "Press Start 2P, monospace",
-                        fontSize: "0.7rem",
-                        letterSpacing: "0.08em",
-                        color: "oklch(0.5 0 0)",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {q.jobTitle ?? "Unknown Job"} · {q.jobCompany ?? ""}
-                    </span>
-                  </div>
+                  {(q.jobTitle || q.jobCompany) && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle size={12} style={{ color: "var(--atari-green)", flexShrink: 0 }} />
+                      <span
+                        style={{
+                          fontFamily: "Press Start 2P, monospace",
+                          fontSize: "0.7rem",
+                          letterSpacing: "0.08em",
+                          color: "oklch(0.5 0 0)",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {q.jobTitle ?? "Unknown Job"}{q.jobCompany ? ` · ${q.jobCompany}` : ""}
+                      </span>
+                    </div>
+                  )}
 
                   <p
                     className="mb-1"
@@ -223,7 +369,7 @@ export default function QuestionBank() {
                       textTransform: "uppercase",
                     }}
                   >
-                    Q:
+                    Q: <span style={{ color: "oklch(0.45 0 0)" }}>{q.askedByName ?? "User"}</span>
                   </p>
                   <p
                     className="mb-3"
@@ -266,13 +412,14 @@ export default function QuestionBank() {
           </div>
         )}
 
-        {questions.length === 0 && !isLoading && (
+        {questions.length === 0 && !isLoading && !showForm && (
           <div
             className="flex flex-col items-center justify-center py-16"
             style={{ border: "1.5px dashed var(--atari-border)" }}
           >
             <MessageSquare size={28} style={{ color: "var(--atari-border)", marginBottom: 12 }} />
             <p
+              className="mb-4"
               style={{
                 fontFamily: "Press Start 2P, monospace",
                 fontSize: "0.75rem",
@@ -283,6 +430,21 @@ export default function QuestionBank() {
             >
               No questions yet
             </p>
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-4 py-2 font-black text-xs tracking-widest uppercase"
+              style={{
+                fontFamily: "Press Start 2P, monospace",
+                background: "transparent",
+                color: "var(--atari-cyan)",
+                border: "2px solid var(--atari-cyan)",
+                letterSpacing: "0.08em",
+                fontSize: "0.6rem",
+              }}
+            >
+              <PlusCircle size={12} />
+              Ask the first question
+            </button>
           </div>
         )}
       </div>

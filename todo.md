@@ -229,3 +229,8 @@
 - [x] Change questions.answer procedure from adminProcedure to protectedProcedure so all users can answer
 - [x] Update QuestionBank.tsx UI to show the answer input/button for all authenticated users (not just admins)
 - [x] Update tests to reflect that applier can now answer questions
+
+## v2.7 Question Bank Standalone Form
+- [x] Add "New Question" form directly on the Question Bank page (question text + optional job title/company fields)
+- [x] Form available to all authenticated users (both Owner and Applier)
+- [x] Submit via questions.ask procedure, clear form on success
