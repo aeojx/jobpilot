@@ -242,3 +242,7 @@
 - [x] Wire viewMode into AppLayout nav: when viewMode="applier", show applier nav items and hide owner-only items
 - [x] Wire viewMode into routing: when viewMode="applier", redirect owner-only pages to applier home
 - [x] Show a persistent green banner at top of screen when in "applier view" mode so owner always knows they're in preview mode
+
+## v2.9 SwipeView Full Description
+- [x] Remove showFullDesc state and Read More / Show Less toggle from SwipeView
+- [x] Always render the full job description text in the scrollable description zone

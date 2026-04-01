@@ -243,7 +243,6 @@ export default function SwipeView() {
   // Local queue — we pop from the front as cards are swiped
   const [queue, setQueue] = useState<Job[]>([]);
   const [swipedCount, setSwipedCount] = useState(0);
-  const [showDesc, setShowDesc] = useState(false);
   const [showStats, setShowStats] = useState(false);
   // Undo stack: stores the last swiped job and the status it was moved to
   const [undoStack, setUndoStack] = useState<{ job: Job; previousStatus: "to_apply" | "rejected" }[]>([]);
@@ -293,7 +292,6 @@ export default function SwipeView() {
       setTimeout(() => {
         setQueue((prev) => prev.slice(1));
         setSwipedCount((c) => c + 1);
-        setShowDesc(false);
         setDrag({ startX: 0, startY: 0, currentX: 0, currentY: 0, isDragging: false });
         // Push to undo stack (keep last 1 for simplicity)
         const previousStatus = dir === "right" ? "to_apply" : "rejected";
@@ -320,7 +318,6 @@ export default function SwipeView() {
     if (animatingRef.current) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDrag({ startX: e.clientX, startY: e.clientY, currentX: e.clientX, currentY: e.clientY, isDragging: true });
-    setShowDesc(false);
   }, []);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
@@ -354,7 +351,6 @@ export default function SwipeView() {
     setUndoStack((s) => s.slice(0, -1));
     setQueue((prev) => [last.job, ...prev]);
     setSwipedCount((c) => Math.max(0, c - 1));
-    setShowDesc(false);
     // Restore job to 'matched' and roll back swipe stat
     undoSwipeMutation.mutate({ id: last.job.id, previousStatus: last.previousStatus });
     toast("UNDO ↩ RESTORED", {
@@ -757,37 +753,11 @@ export default function SwipeView() {
                         color: "#ffffff",
                         lineHeight: 1.75,
                         margin: 0,
-                        overflow: showDesc ? "visible" : "hidden",
-                        display: showDesc ? "block" : "-webkit-box",
-                        WebkitLineClamp: showDesc ? undefined : 5,
-                        WebkitBoxOrient: "vertical" as const,
                         whiteSpace: "pre-wrap",
                         wordBreak: "break-word",
                       }}>
-                        {currentJob.description.slice(0, showDesc ? 3000 : 500)}
-                        {!showDesc && currentJob.description.length > 500 && "..."}
+                        {currentJob.description}
                       </p>
-                      <button
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => { e.stopPropagation(); setShowDesc((s) => !s); }}
-                        style={{
-                          marginTop: "0.4rem",
-                          background: "transparent",
-                          border: "none",
-                          color: "var(--atari-amber)",
-                          fontFamily: "var(--font-mono)",
-                          fontSize: "0.62rem",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          padding: 0,
-                          letterSpacing: "0.05em",
-                        }}
-                      >
-                        {showDesc ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                        {showDesc ? "SHOW LESS" : "READ MORE"}
-                      </button>
                     </>
                   ) : (
                     <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.67rem", color: "var(--atari-border)", fontStyle: "italic", margin: 0 }}>
