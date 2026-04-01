@@ -14,6 +14,7 @@ import AppLayout from "./components/AppLayout";
 import PasswordGate from "./pages/PasswordGate";
 import SwipeView from "./pages/SwipeView";
 import FAQ from "./pages/FAQ";
+import Landing from "./pages/Landing";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 
@@ -102,6 +103,7 @@ function Router() {
       <Route path="/faq">
         {() => <AppLayout><FAQ /></AppLayout>}
       </Route>
+      <Route path="/landing" component={Landing} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
