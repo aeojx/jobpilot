@@ -190,3 +190,8 @@
 - [x] Backend: getSwipeStats query (returns today + last 7 days)
 - [x] SwipeView: stats panel showing today's swiped/approved/rejected counts
 - [x] SwipeView: weekly stats bar or summary (total this week, approval rate)
+
+## v1.9 FAQ Page
+- [x] Build FAQ.tsx page with all sections: overview, roles, job flow, matching algorithm, API/ingestion, schedules, swiping, question bank, gamification, performance, password gate
+- [x] Add /faq route in App.tsx
+- [x] Add FAQ nav item to both ownerNav and applierNav in AppLayout.tsx

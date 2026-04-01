@@ -8,6 +8,7 @@ import {
   LayoutGrid,
   LogOut,
   Menu,
+  MessageCircleQuestion,
   Radar,
   Shuffle,
   X,
@@ -23,12 +24,14 @@ const ownerNav = [
   { href: "/skills", label: "Skills Profile", icon: BookOpen },
   { href: "/questions", label: "Question Bank", icon: HelpCircle },
   { href: "/performance", label: "Performance", icon: BarChart3 },
+  { href: "/faq", label: "FAQ", icon: MessageCircleQuestion },
 ];
 
 const applierNav = [
   { href: "/apply", label: "My Queue", icon: Zap },
   { href: "/performance", label: "Performance", icon: BarChart3 },
   { href: "/questions", label: "Questions", icon: HelpCircle },
+  { href: "/faq", label: "FAQ", icon: MessageCircleQuestion },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
