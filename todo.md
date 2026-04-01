@@ -214,3 +214,7 @@
 
 ## v2.3 SwipeView Card Redesign
 - [x] Completely rewrite swipe card layout to eliminate all text overlap
+
+## v2.4 SwipeView Background Card Fix
+- [x] Strip all text from background (next job) card — show only a minimal silhouette with score badge, no title/company/location text bleeding through
+- [x] Ensure foreground card clips its content with overflow:hidden so nothing escapes the card boundary

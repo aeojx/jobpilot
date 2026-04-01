@@ -532,45 +532,34 @@ export default function SwipeView() {
           </div>
         ) : (
           <>
-            {/* Background card (next job) — static, slightly scaled down */}
+            {/* Background card (next job) — silhouette only, NO text so it never bleeds through */}
             {nextJob && (
               <div
                 style={{
                   position: "absolute",
                   inset: 0,
-                  transform: "scale(0.95) translateY(12px)",
+                  transform: "scale(0.95) translateY(14px)",
                   transformOrigin: "bottom center",
                   border: "2px solid var(--atari-border)",
                   background: "var(--atari-surface)",
-                  borderRadius: 0,
                   pointerEvents: "none",
-                  opacity: 0.6,
-                  display: "flex",
-                  flexDirection: "column",
-                  padding: "1.5rem",
+                  opacity: 0.45,
                   overflow: "hidden",
                 }}
               >
-                {/* Score badge on background card */}
+                {/* Only show score badge — no title/company/location text */}
                 {(nextJob.matchScore ?? 0) > 0 && (
-                  <span style={{
-                    fontFamily: "var(--font-pixel)", fontSize: "0.55rem",
-                    color: getScoreColor(Math.round(nextJob.matchScore ?? 0)),
-                    border: `1px solid ${getScoreColor(Math.round(nextJob.matchScore ?? 0))}`,
-                    padding: "2px 6px", display: "inline-block", marginBottom: "0.5rem", width: "fit-content",
-                  }}>
-                    MATCH: {Math.round(nextJob.matchScore ?? 0)}%
-                  </span>
-                )}
-                <div style={{ fontFamily: "var(--font-pixel)", fontSize: "0.65rem", color: "var(--atari-white)", lineHeight: 1.5 }}>
-                  {nextJob.title}
-                </div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--atari-gray)", marginTop: "0.25rem" }}>
-                  {nextJob.company}
-                </div>
-                {nextJob.location && (
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--atari-cyan)", marginTop: "0.25rem" }}>
-                    📍 {nextJob.location}
+                  <div style={{ position: "absolute", top: "0.75rem", right: "0.75rem" }}>
+                    <span style={{
+                      fontFamily: "var(--font-pixel)",
+                      fontSize: "0.5rem",
+                      color: getScoreColor(Math.round(nextJob.matchScore ?? 0)),
+                      border: `1px solid ${getScoreColor(Math.round(nextJob.matchScore ?? 0))}`,
+                      padding: "2px 5px",
+                      display: "inline-block",
+                    }}>
+                      {Math.round(nextJob.matchScore ?? 0)}%
+                    </span>
                   </div>
                 )}
               </div>
