@@ -1,9 +1,12 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
+import { useViewMode } from "@/contexts/ViewModeContext";
 import {
   BarChart3,
   BookOpen,
+  Eye,
+  EyeOff,
   HelpCircle,
   LayoutGrid,
   LogOut,
@@ -14,8 +17,8 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useRouter } from "wouter";
 
 const ownerNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
@@ -36,13 +39,37 @@ const applierNav = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, isAuthenticated, logout } = useAuth();
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { viewMode, isApplierView, toggleViewMode, setViewMode } = useViewMode();
 
   const { data: apiUsage } = trpc.ingestion.getUsage.useQuery(undefined, {
     enabled: user?.role === "admin",
     refetchInterval: 30000,
   });
+
+  const isOwner = user?.role === "admin";
+  // Effective role: admin in owner view = owner nav; admin in applier view = applier nav
+  const effectiveIsOwner = isOwner && !isApplierView;
+  const navItems = effectiveIsOwner ? ownerNav : applierNav;
+
+  // When owner switches to applier view, navigate to applier home
+  const handleToggleView = () => {
+    if (!isApplierView) {
+      // Switching to applier view — go to applier home
+      navigate("/apply");
+    } else {
+      // Switching back to owner view — go to owner home
+      navigate("/dashboard");
+    }
+    toggleViewMode();
+    setMobileOpen(false);
+  };
+
+  // Reset to owner view on logout
+  useEffect(() => {
+    if (!isAuthenticated) setViewMode("owner");
+  }, [isAuthenticated, setViewMode]);
 
   if (loading) {
     return (
@@ -60,27 +87,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen flex items-center justify-center px-6" style={{ background: "var(--atari-black)" }}>
         <div className="text-center max-w-sm w-full">
-          {/* Atari-style logo */}
           <div className="mb-6">
             <div className="inline-block px-4 py-2 mb-4" style={{ border: "2px solid var(--atari-amber)" }}>
               <p className="font-pixel text-xs" style={{ color: "var(--atari-amber)", letterSpacing: "0.15em" }}>
                 ★ INSERT COIN ★
               </p>
             </div>
-            <h1 className="font-pixel glow-amber mb-0" style={{ color: "var(--atari-amber)", fontSize: "22px" }}>
-              JOB
-            </h1>
-            <h1 className="font-pixel glow-cyan mb-0" style={{ color: "var(--atari-cyan)", fontSize: "22px" }}>
-              PILOT
-            </h1>
+            <h1 className="font-pixel glow-amber mb-0" style={{ color: "var(--atari-amber)", fontSize: "22px" }}>JOB</h1>
+            <h1 className="font-pixel glow-cyan mb-0" style={{ color: "var(--atari-cyan)", fontSize: "22px" }}>PILOT</h1>
           </div>
-
           <div className="atari-divider mb-6" />
-
           <p className="text-xs mb-8" style={{ color: "var(--atari-gray)", letterSpacing: "0.15em", fontFamily: "Share Tech Mono" }}>
             DUAL-ROLE JOB APPLICATION SYSTEM
           </p>
-
           <a
             href={getLoginUrl()}
             className="block w-full py-3 text-center text-xs tracking-widest uppercase transition-all"
@@ -103,7 +122,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           >
             ▶ PRESS START
           </a>
-
           <p className="text-xs mt-8 animate-pixel-pulse" style={{ color: "var(--atari-gray)", fontFamily: "Share Tech Mono" }}>
             © 2025 JOBPILOT SYSTEMS
           </p>
@@ -111,9 +129,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-
-  const isOwner = user?.role === "admin";
-  const navItems = isOwner ? ownerNav : applierNav;
 
   // Quota info
   const jobsRemaining = apiUsage && "jobsRemaining" in apiUsage ? apiUsage.jobsRemaining : null;
@@ -125,7 +140,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-4 pt-5 pb-3">
-        <Link href={isOwner ? "/dashboard" : "/apply"} onClick={() => setMobileOpen(false)}>
+        <Link href={effectiveIsOwner ? "/dashboard" : "/apply"} onClick={() => setMobileOpen(false)}>
           <div className="mb-1">
             <span className="font-pixel glow-amber" style={{ color: "var(--atari-amber)", fontSize: "14px" }}>JOB</span>
             <span className="font-pixel glow-cyan" style={{ color: "var(--atari-cyan)", fontSize: "14px" }}>PILOT</span>
@@ -141,13 +156,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           style={{
             fontFamily: "Press Start 2P, monospace",
             fontSize: "8px",
-            border: `1px solid ${isOwner ? "var(--atari-amber)" : "var(--atari-green)"}`,
-            color: isOwner ? "var(--atari-amber)" : "var(--atari-green)",
-            background: isOwner ? "rgba(255,176,0,0.08)" : "rgba(57,255,20,0.08)",
+            border: `1px solid ${effectiveIsOwner ? "var(--atari-amber)" : "var(--atari-green)"}`,
+            color: effectiveIsOwner ? "var(--atari-amber)" : "var(--atari-green)",
+            background: effectiveIsOwner ? "rgba(255,176,0,0.08)" : "rgba(57,255,20,0.08)",
             letterSpacing: "0.1em",
           }}
         >
-          {isOwner ? "★ OWNER" : "▶ APPLIER"}
+          {effectiveIsOwner ? "★ OWNER" : isApplierView ? "👁 PREVIEW" : "▶ APPLIER"}
         </span>
       </div>
 
@@ -170,8 +185,42 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         })}
       </nav>
 
-      {/* API Quota (Owner only) */}
-      {isOwner && apiUsage && (
+      {/* View Toggle (Owner only) */}
+      {isOwner && (
+        <div className="px-4 py-3" style={{ borderTop: "1px solid var(--atari-border)" }}>
+          <button
+            onClick={handleToggleView}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs tracking-widest uppercase transition-all"
+            style={{
+              fontFamily: "Press Start 2P, monospace",
+              fontSize: "7px",
+              background: isApplierView ? "rgba(57,255,20,0.1)" : "transparent",
+              color: isApplierView ? "var(--atari-green)" : "var(--atari-gray)",
+              border: `1.5px solid ${isApplierView ? "var(--atari-green)" : "var(--atari-border)"}`,
+              letterSpacing: "0.08em",
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) => {
+              if (!isApplierView) {
+                (e.currentTarget as HTMLButtonElement).style.color = "var(--atari-green)";
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--atari-green)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isApplierView) {
+                (e.currentTarget as HTMLButtonElement).style.color = "var(--atari-gray)";
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--atari-border)";
+              }
+            }}
+          >
+            {isApplierView ? <EyeOff size={12} /> : <Eye size={12} />}
+            {isApplierView ? "Back to Owner" : "View as Applier"}
+          </button>
+        </div>
+      )}
+
+      {/* API Quota (Owner only, not in applier view) */}
+      {isOwner && !isApplierView && apiUsage && (
         <div className="px-4 py-3" style={{ borderTop: "1px solid var(--atari-border)" }}>
           <p className="text-xs mb-1" style={{ color: "var(--atari-gray)", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "Share Tech Mono" }}>
             API CALLS / MONTH
@@ -226,67 +275,108 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "var(--atari-black)" }}>
-      {/* Desktop Sidebar */}
-      <aside
-        className="hidden md:flex flex-col w-52 flex-shrink-0"
-        style={{ background: "var(--atari-black)", borderRight: "2px solid var(--atari-border)" }}
-      >
-        <SidebarContent />
-      </aside>
-
-      {/* Mobile Sidebar Overlay */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/80" onClick={() => setMobileOpen(false)} />
-          <aside
-            className="absolute left-0 top-0 bottom-0 w-64 flex flex-col"
-            style={{ background: "var(--atari-black)", borderRight: "2px solid var(--atari-amber)" }}
-          >
-            <button
-              className="absolute top-4 right-4 transition-colors"
-              style={{ color: "var(--atari-gray)" }}
-              onClick={() => setMobileOpen(false)}
+    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "var(--atari-black)" }}>
+      {/* Applier Preview Banner (Owner only, when in applier view) */}
+      {isOwner && isApplierView && (
+        <div
+          className="flex-shrink-0 flex items-center justify-between px-4 py-1.5"
+          style={{
+            background: "rgba(57,255,20,0.08)",
+            borderBottom: "2px solid var(--atari-green)",
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <Eye size={12} style={{ color: "var(--atari-green)" }} />
+            <span
+              style={{
+                fontFamily: "Press Start 2P, monospace",
+                fontSize: "0.55rem",
+                color: "var(--atari-green)",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+              }}
             >
-              <X size={18} />
-            </button>
-            <SidebarContent />
-          </aside>
+              PREVIEW MODE — Viewing as Applier
+            </span>
+          </div>
+          <button
+            onClick={handleToggleView}
+            className="flex items-center gap-1 px-2 py-1"
+            style={{
+              fontFamily: "Press Start 2P, monospace",
+              fontSize: "0.5rem",
+              color: "var(--atari-green)",
+              border: "1px solid var(--atari-green)",
+              background: "transparent",
+              letterSpacing: "0.08em",
+              cursor: "pointer",
+            }}
+          >
+            <EyeOff size={10} />
+            Exit Preview
+          </button>
         </div>
       )}
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile Header */}
-        <header
-          className="md:hidden flex items-center justify-between px-4 py-3 flex-shrink-0"
-          style={{ background: "var(--atari-black)", borderBottom: "2px solid var(--atari-border)" }}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Desktop Sidebar */}
+        <aside
+          className="hidden md:flex flex-col w-52 flex-shrink-0"
+          style={{ background: "var(--atari-black)", borderRight: "2px solid var(--atari-border)" }}
         >
-          <button
-            onClick={() => setMobileOpen(true)}
-            style={{ color: "var(--atari-gray)" }}
-          >
-            <Menu size={20} />
-          </button>
-          <div>
-            <span className="font-pixel" style={{ color: "var(--atari-amber)", fontSize: "12px" }}>JOB</span>
-            <span className="font-pixel" style={{ color: "var(--atari-cyan)", fontSize: "12px" }}>PILOT</span>
-          </div>
-          <span
-            className="text-xs px-2 py-1"
-            style={{
-              fontFamily: "Press Start 2P, monospace",
-              fontSize: "7px",
-              border: `1px solid ${isOwner ? "var(--atari-amber)" : "var(--atari-green)"}`,
-              color: isOwner ? "var(--atari-amber)" : "var(--atari-green)",
-            }}
-          >
-            {isOwner ? "OWNER" : "APPLIER"}
-          </span>
-        </header>
+          <SidebarContent />
+        </aside>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto">{children}</main>
+        {/* Mobile Sidebar Overlay */}
+        {mobileOpen && (
+          <div className="fixed inset-0 z-50 md:hidden">
+            <div className="absolute inset-0 bg-black/80" onClick={() => setMobileOpen(false)} />
+            <aside
+              className="absolute left-0 top-0 bottom-0 w-64 flex flex-col"
+              style={{ background: "var(--atari-black)", borderRight: "2px solid var(--atari-amber)" }}
+            >
+              <button
+                className="absolute top-4 right-4 transition-colors"
+                style={{ color: "var(--atari-gray)" }}
+                onClick={() => setMobileOpen(false)}
+              >
+                <X size={18} />
+              </button>
+              <SidebarContent />
+            </aside>
+          </div>
+        )}
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Mobile Header */}
+          <header
+            className="md:hidden flex items-center justify-between px-4 py-3 flex-shrink-0"
+            style={{ background: "var(--atari-black)", borderBottom: "2px solid var(--atari-border)" }}
+          >
+            <button onClick={() => setMobileOpen(true)} style={{ color: "var(--atari-gray)" }}>
+              <Menu size={20} />
+            </button>
+            <div>
+              <span className="font-pixel" style={{ color: "var(--atari-amber)", fontSize: "12px" }}>JOB</span>
+              <span className="font-pixel" style={{ color: "var(--atari-cyan)", fontSize: "12px" }}>PILOT</span>
+            </div>
+            <span
+              className="text-xs px-2 py-1"
+              style={{
+                fontFamily: "Press Start 2P, monospace",
+                fontSize: "7px",
+                border: `1px solid ${effectiveIsOwner ? "var(--atari-amber)" : "var(--atari-green)"}`,
+                color: effectiveIsOwner ? "var(--atari-amber)" : "var(--atari-green)",
+              }}
+            >
+              {effectiveIsOwner ? "OWNER" : isApplierView ? "PREVIEW" : "APPLIER"}
+            </span>
+          </header>
+
+          {/* Page Content */}
+          <main className="flex-1 overflow-auto">{children}</main>
+        </div>
       </div>
     </div>
   );

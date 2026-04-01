@@ -234,3 +234,11 @@
 - [x] Add "New Question" form directly on the Question Bank page (question text + optional job title/company fields)
 - [x] Form available to all authenticated users (both Owner and Applier)
 - [x] Submit via questions.ask procedure, clear form on success
+
+## v2.8 Owner "View as Applier" Toggle
+- [x] Create ViewModeContext (viewMode: "owner" | "applier", toggleViewMode) in client/src/contexts/
+- [x] Wrap App in ViewModeProvider
+- [x] Add toggle button in AppLayout sidebar/header (only visible to admin users) — shows "VIEW AS APPLIER" / "BACK TO OWNER VIEW"
+- [x] Wire viewMode into AppLayout nav: when viewMode="applier", show applier nav items and hide owner-only items
+- [x] Wire viewMode into routing: when viewMode="applier", redirect owner-only pages to applier home
+- [x] Show a persistent green banner at top of screen when in "applier view" mode so owner always knows they're in preview mode
