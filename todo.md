@@ -218,3 +218,9 @@
 ## v2.4 SwipeView Background Card Fix
 - [x] Strip all text from background (next job) card — show only a minimal silhouette with score badge, no title/company/location text bleeding through
 - [x] Ensure foreground card clips its content with overflow:hidden so nothing escapes the card boundary
+
+## v2.5 Applier Reject Permission
+- [x] Add applierReject procedure in routers.ts — protectedProcedure (any logged-in user), moves job from to_apply → rejected
+- [x] Add "CAN'T APPLY" reject button to each job card in ApplierView
+- [x] Show confirmation dialog before rejecting to prevent accidental rejections
+- [x] Add test for applierReject procedure

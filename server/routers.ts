@@ -575,6 +575,14 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // Any authenticated user (owner or applier) can reject a job they cannot apply to
+    applierReject: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await updateJobStatus(input.id, "rejected");
+        return { success: true };
+      }),
+
     ingest: adminProcedure
       .input(z.object({
         title: z.string(), company: z.string(), location: z.string().optional(),

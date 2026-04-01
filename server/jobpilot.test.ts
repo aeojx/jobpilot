@@ -368,3 +368,28 @@ describe("jobs.swipeStats", () => {
     await expect(caller.jobs.undoSwipe({ id: 1, previousStatus: "to_apply" })).rejects.toThrow();
   });
 });
+
+// ─── Applier Reject Tests ────────────────────────────────────────────────────────────────────────────
+describe("jobs.applierReject", () => {
+  it("applier can reject a job they cannot apply to", async () => {
+    const caller = appRouter.createCaller(makeApplierCtx());
+    const result = await caller.jobs.applierReject({ id: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it("owner can also use applierReject", async () => {
+    const caller = appRouter.createCaller(makeOwnerCtx());
+    const result = await caller.jobs.applierReject({ id: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it("unauthenticated user cannot use applierReject", async () => {
+    const unauthCtx: TrpcContext = {
+      user: null,
+      req: { protocol: "https", headers: {} } as TrpcContext["req"],
+      res: { clearCookie: vi.fn() } as unknown as TrpcContext["res"],
+    };
+    const caller = appRouter.createCaller(unauthCtx);
+    await expect(caller.jobs.applierReject({ id: 1 })).rejects.toThrow();
+  });
+});

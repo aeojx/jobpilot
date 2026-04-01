@@ -10,6 +10,7 @@ import {
   HelpCircle,
   Loader2,
   Trophy,
+  XCircle,
   Zap,
 } from "lucide-react";
 import { useState } from "react";
@@ -49,6 +50,17 @@ export default function ApplierView() {
       utils.stats.today.invalidate();
       utils.stats.gamification.invalidate();
       setSelectedJob(null);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const [confirmRejectId, setConfirmRejectId] = useState<number | null>(null);
+
+  const applierReject = trpc.jobs.applierReject.useMutation({
+    onSuccess: () => {
+      toast.success("Job moved to rejected pile");
+      utils.jobs.kanban.invalidate();
+      setConfirmRejectId(null);
     },
     onError: (e) => toast.error(e.message),
   });
@@ -341,7 +353,7 @@ export default function ApplierView() {
                     <div className="flex flex-col gap-2 flex-shrink-0">
                       <button
                         onClick={() => markApplied.mutate({ id: job.id })}
-                        disabled={markApplied.isPending}
+                        disabled={markApplied.isPending || applierReject.isPending}
                         className="flex items-center gap-1 px-3 py-2 font-black text-xs tracking-widest uppercase transition-all"
                         style={{
                           fontFamily: "Press Start 2P, monospace",
@@ -359,6 +371,68 @@ export default function ApplierView() {
                         )}
                         Applied
                       </button>
+
+                      {/* Can't Apply — reject with confirmation */}
+                      {confirmRejectId === job.id ? (
+                        <div className="flex flex-col gap-1">
+                          <p style={{ fontFamily: "Press Start 2P, monospace", fontSize: "0.5rem", color: "var(--atari-red)", letterSpacing: "0.06em", textAlign: "center" }}>
+                            CONFIRM?
+                          </p>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => applierReject.mutate({ id: job.id })}
+                              disabled={applierReject.isPending}
+                              className="flex-1 flex items-center justify-center gap-1 px-2 py-1"
+                              style={{
+                                fontFamily: "Press Start 2P, monospace",
+                                fontSize: "0.5rem",
+                                background: "var(--atari-red)",
+                                color: "var(--atari-white)",
+                                border: "2px solid var(--atari-red)",
+                                letterSpacing: "0.05em",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {applierReject.isPending ? <Loader2 size={10} className="animate-spin" /> : "YES"}
+                            </button>
+                            <button
+                              onClick={() => setConfirmRejectId(null)}
+                              className="flex-1 flex items-center justify-center px-2 py-1"
+                              style={{
+                                fontFamily: "Press Start 2P, monospace",
+                                fontSize: "0.5rem",
+                                background: "transparent",
+                                color: "oklch(0.5 0 0)",
+                                border: "1.5px solid var(--atari-border)",
+                                letterSpacing: "0.05em",
+                              }}
+                            >
+                              NO
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmRejectId(job.id)}
+                          disabled={markApplied.isPending || applierReject.isPending}
+                          className="flex items-center gap-1 px-3 py-2 font-bold text-xs tracking-widest uppercase transition-all"
+                          style={{
+                            fontFamily: "Press Start 2P, monospace",
+                            background: "transparent",
+                            color: "var(--atari-red)",
+                            border: "1.5px solid var(--atari-red)",
+                            letterSpacing: "0.08em",
+                            whiteSpace: "nowrap",
+                            opacity: 0.7,
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                          onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
+                        >
+                          <XCircle size={12} />
+                          Can't Apply
+                        </button>
+                      )}
+
                       <button
                         onClick={() => setSelectedJob(job)}
                         className="flex items-center gap-1 px-3 py-2 font-bold text-xs tracking-widest uppercase transition-all"
