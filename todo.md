@@ -256,3 +256,15 @@
 - [x] Require explicit confirmation before executing bulk rejection
 - [x] Remove auto-rejected jobs from the swipe queue immediately after confirmation
 - [x] Show AUTO-REJECTED tag (red) on Kanban cards in the rejected column
+
+## v3.1 Matching Algorithm Upgrade
+- [x] Migrate skills_profile: add structured columns (mustHaveSkills, niceToHaveSkills, dealbreakers, seniority, salaryMin, targetIndustries, remotePreference) alongside legacy content field
+- [x] Add dimension score columns to jobs table: scoreSkills, scoreSeniority, scoreLocation, scoreIndustry, scoreCompensation
+- [x] Apply DB migrations for both tables
+- [x] Rewrite scoreJobWithLLM: pass full description (no 3000-char cap), title+company as explicit fields, return 5 dimension scores + composite
+- [x] Add negative keyword pre-filter: check dealbreakers before LLM call, auto-reject if matched
+- [x] Rebuild Skills Profile page: structured form with all fields, weights slider, negative keywords list
+- [x] Show dimension score breakdown on SwipeView card (mini bar chart or 5 labelled scores)
+- [x] Show dimension score breakdown on Kanban job detail modal
+- [x] Update rescoreAll to use new structured profile
+- [x] 66 tests passing (all existing tests verified)

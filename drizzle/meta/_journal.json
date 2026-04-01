@@ -57,6 +57,13 @@
       "when": 1775057721395,
       "tag": "0007_dazzling_squirrel_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1775062157351,
+      "tag": "0008_safe_kronos",
+      "breakpoints": true
     }
   ]
 }

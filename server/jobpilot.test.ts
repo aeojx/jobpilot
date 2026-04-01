@@ -424,3 +424,189 @@ describe("jobs.autoRejectConfirm", () => {
     await expect(caller.jobs.autoRejectConfirm({ threshold: 30 })).rejects.toThrow();
   });
 });
+
+// ─── v3.1 Matching Algorithm Tests ───────────────────────────────────────────
+
+describe("skills.upsert structured profile", () => {
+  it("owner can upsert structured skills profile with all new fields", async () => {
+    const caller = appRouter.createCaller(makeOwnerCtx());
+    await expect(
+      caller.skills.upsert({
+        content: "Senior software engineer with 8 years experience",
+        mustHaveSkills: ["TypeScript", "React", "Node.js"],
+        niceToHaveSkills: ["Rust", "Go"],
+        dealbreakers: ["requires security clearance", "no remote"],
+        seniority: "senior",
+        salaryMin: 120000,
+        targetIndustries: ["Technology", "Finance"],
+        remotePreference: "remote",
+        weightSkills: 40,
+        weightSeniority: 25,
+        weightLocation: 15,
+        weightIndustry: 10,
+        weightCompensation: 10,
+      })
+    ).resolves.not.toThrow();
+  });
+
+  it("applier cannot upsert skills profile (admin only)", async () => {
+    const caller = appRouter.createCaller(makeApplierCtx());
+    await expect(
+      caller.skills.upsert({
+        content: "test",
+        mustHaveSkills: [],
+        niceToHaveSkills: [],
+        dealbreakers: [],
+        seniority: "mid",
+        salaryMin: null,
+        targetIndustries: [],
+        remotePreference: "any",
+        weightSkills: 40,
+        weightSeniority: 25,
+        weightLocation: 15,
+        weightIndustry: 10,
+        weightCompensation: 10,
+      })
+    ).rejects.toThrow();
+  });
+});
+
+describe("skills.get returns structured fields", () => {
+  it("returns structured profile fields when profile has been set", async () => {
+    const { getSkillsProfile } = await import("./db");
+    (getSkillsProfile as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 1,
+      content: "Senior engineer",
+      mustHaveSkills: JSON.stringify(["TypeScript", "React"]),
+      niceToHaveSkills: JSON.stringify(["Rust"]),
+      dealbreakers: JSON.stringify(["security clearance"]),
+      seniority: "senior",
+      salaryMin: 120000,
+      targetIndustries: JSON.stringify(["Technology"]),
+      remotePreference: "remote",
+      weightSkills: 40,
+      weightSeniority: 25,
+      weightLocation: 15,
+      weightIndustry: 10,
+      weightCompensation: 10,
+      updatedAt: new Date(),
+    });
+    const caller = appRouter.createCaller(makeOwnerCtx());
+    const result = await caller.skills.get();
+    expect(result).not.toBeNull();
+    expect(result?.content).toBe("Senior engineer");
+  });
+});
+
+describe("v3.1 LLM scoring: multi-dimension scores", () => {
+  it("ingest stores dimension scores when LLM returns structured JSON", async () => {
+    const { invokeLLM } = await import("./_core/llm");
+    (invokeLLM as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      choices: [{
+        message: {
+          content: JSON.stringify({
+            scoreSkills: 85,
+            scoreSeniority: 70,
+            scoreLocation: 90,
+            scoreIndustry: 65,
+            scoreCompensation: 75,
+            composite: 78,
+            reasoning: "Strong skills match",
+          }),
+        },
+      }],
+    });
+
+    const { updateJobMatchScore } = await import("./db");
+    const caller = appRouter.createCaller(makeOwnerCtx());
+
+    // Trigger rescoreAll which calls scoreJobWithLLM
+    const { getAllJobs, getSkillsProfile } = await import("./db");
+    (getAllJobs as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      {
+        id: 1,
+        title: "Senior Engineer",
+        company: "Acme Corp",
+        description: "We need a senior TypeScript engineer with React experience.",
+        status: "matched",
+        matchScore: 50,
+      },
+    ]);
+    (getSkillsProfile as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 1,
+      content: "Senior TypeScript engineer",
+      mustHaveSkills: JSON.stringify(["TypeScript"]),
+      niceToHaveSkills: JSON.stringify([]),
+      dealbreakers: JSON.stringify([]),
+      seniority: "senior",
+      salaryMin: null,
+      targetIndustries: JSON.stringify([]),
+      remotePreference: "any",
+      weightSkills: 40,
+      weightSeniority: 25,
+      weightLocation: 15,
+      weightIndustry: 10,
+      weightCompensation: 10,
+      updatedAt: new Date(),
+    });
+
+    await caller.skills.rescoreAll();
+    expect(updateJobMatchScore).toHaveBeenCalledWith(
+      1,
+      expect.any(Number),
+      expect.objectContaining({
+        scoreSkills: expect.any(Number),
+      })
+    );
+  });
+
+  it("dealbreaker pre-filter: job with dealbreaker keyword is auto-rejected before LLM", async () => {
+    const { invokeLLM } = await import("./_core/llm");
+    const llmSpy = invokeLLM as ReturnType<typeof vi.fn>;
+    llmSpy.mockClear();
+
+    const { getAllJobs, getSkillsProfile, updateJobMatchScore: updateScoreMock } = await import("./db");
+    (getAllJobs as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      {
+        id: 99,
+        title: "Security Analyst",
+        company: "Gov Corp",
+        description: "This role requires security clearance and US citizenship.",
+        status: "matched",
+        matchScore: 60,
+      },
+    ]);
+    (getSkillsProfile as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 1,
+      content: "Senior engineer",
+      mustHaveSkills: JSON.stringify([]),
+      niceToHaveSkills: JSON.stringify([]),
+      dealbreakers: JSON.stringify(["security clearance"]),
+      seniority: "senior",
+      salaryMin: null,
+      targetIndustries: JSON.stringify([]),
+      remotePreference: "any",
+      weightSkills: 40,
+      weightSeniority: 25,
+      weightLocation: 15,
+      weightIndustry: 10,
+      weightCompensation: 10,
+      updatedAt: new Date(),
+    });
+
+    const caller = appRouter.createCaller(makeOwnerCtx());
+    await caller.skills.rescoreAll();
+
+    // LLM should NOT have been called for a dealbreaker-matched job
+    expect(llmSpy).not.toHaveBeenCalled();
+
+    // updateJobMatchScore should be called with score 0 and dealBreakerMatched truthy
+    expect(updateScoreMock).toHaveBeenCalledWith(
+      99,
+      0,
+      expect.objectContaining({
+        dealBreakerMatched: expect.any(String), // matched keyword string
+      })
+    );
+  });
+});

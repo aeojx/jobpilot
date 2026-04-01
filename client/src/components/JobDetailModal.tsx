@@ -166,6 +166,40 @@ export default function JobDetailModal({
             </a>
           )}
 
+          {/* Dimension Score Breakdown */}
+          {((job as any).scoreSkills != null || (job as any).scoreSeniority != null) && (
+            <div>
+              <p className="mb-2" style={{ fontFamily: "Press Start 2P, monospace", fontSize: "0.65rem", letterSpacing: "0.1em", color: "var(--atari-gray)", textTransform: "uppercase" }}>
+                Score Breakdown
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                {([
+                  { label: "Skills Match", key: "scoreSkills", color: "var(--atari-cyan)" },
+                  { label: "Seniority Fit", key: "scoreSeniority", color: "var(--atari-amber)" },
+                  { label: "Location / Remote", key: "scoreLocation", color: "oklch(0.7 0.18 145)" },
+                  { label: "Industry Fit", key: "scoreIndustry", color: "oklch(0.75 0.18 290)" },
+                  { label: "Compensation", key: "scoreCompensation", color: "oklch(0.65 0.22 27)" },
+                ] as const).map(({ label, key, color }) => {
+                  const val = (job as any)[key];
+                  if (val == null) return null;
+                  const pct = Math.max(0, Math.min(100, Math.round(val)));
+                  return (
+                    <div key={key} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "oklch(0.5 0 0)", width: "8rem", flexShrink: 0 }}>{label}</span>
+                      <div style={{ flex: 1, height: 5, background: "oklch(0.15 0 0)", borderRadius: 3, overflow: "hidden" }}>
+                        <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 3 }} />
+                      </div>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color, width: "2.5rem", textAlign: "right", flexShrink: 0 }}>{pct}%</span>
+                    </div>
+                  );
+                })}
+                {(job as any).dealBreakerMatched && (
+                  <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--atari-red)", marginTop: 4 }}>⚠ Dealbreaker keyword matched — score suppressed</p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Description */}
           {job.description && (
             <div>
@@ -187,13 +221,12 @@ export default function JobDetailModal({
                   color: "oklch(0.7 0 0)",
                   fontFamily: "var(--font-sans)",
                   fontSize: "0.82rem",
-                  maxHeight: "200px",
+                  maxHeight: "300px",
                   overflowY: "auto",
                   whiteSpace: "pre-wrap",
                 }}
               >
-                {job.description.slice(0, 1500)}
-                {job.description.length > 1500 && "..."}
+                {job.description}
               </div>
             </div>
           )}

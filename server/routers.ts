@@ -107,42 +107,161 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 // ─── LLM Scoring ─────────────────────────────────────────────────────────────
 
-async function scoreJobWithLLM(jobDescription: string, skillsContent: string): Promise<number> {
+export type DimensionScores = {
+  composite: number;
+  scoreSkills: number;
+  scoreSeniority: number;
+  scoreLocation: number;
+  scoreIndustry: number;
+  scoreCompensation: number;
+  dealBreakerMatched: string | null;
+};
+
+import type { SkillsProfile } from "../drizzle/schema";
+
+/**
+ * Check if a job description contains any dealbreaker keywords.
+ * Returns the matched keyword string, or null if clean.
+ */
+function checkDealbreakers(text: string, dealbreakers: string[]): string | null {
+  if (!dealbreakers || dealbreakers.length === 0) return null;
+  const lower = text.toLowerCase();
+  for (const kw of dealbreakers) {
+    if (kw.trim() && lower.includes(kw.trim().toLowerCase())) {
+      return kw.trim();
+    }
+  }
+  return null;
+}
+
+/**
+ * Score a job against the candidate's structured skills profile.
+ * Returns 5 dimension scores plus a weighted composite.
+ * Uses the FULL description (no character cap).
+ * Passes title + company as explicit fields.
+ */
+async function scoreJobWithLLM(
+  jobDescription: string,
+  skillsProfile: SkillsProfile,
+  jobTitle?: string,
+  jobCompany?: string
+): Promise<DimensionScores> {
+  const empty: DimensionScores = {
+    composite: 0, scoreSkills: 0, scoreSeniority: 0,
+    scoreLocation: 0, scoreIndustry: 0, scoreCompensation: 0,
+    dealBreakerMatched: null,
+  };
+
+  // ── Step 1: Negative keyword pre-filter ──────────────────────────────────────
+  // JSON fields from TiDB may arrive as strings in some contexts — parse defensively
+  function parseJsonArray(val: unknown): string[] {
+    if (Array.isArray(val)) return val as string[];
+    if (typeof val === "string") { try { return JSON.parse(val); } catch { return []; } }
+    return [];
+  }
+  const dealbreakers = parseJsonArray(skillsProfile.dealbreakers);
+  const fullText = `${jobTitle ?? ""} ${jobCompany ?? ""} ${jobDescription}`;
+  const matched = checkDealbreakers(fullText, dealbreakers);
+  if (matched) {
+    console.log(`[LLM Scoring] Dealbreaker matched: "${matched}" — skipping LLM call`);
+    return { ...empty, dealBreakerMatched: matched };
+  }
+
+  // ── Step 2: Build structured profile context ─────────────────────────────────
+  const weights = {
+    skills: skillsProfile.weightSkills ?? 40,
+    seniority: skillsProfile.weightSeniority ?? 20,
+    location: skillsProfile.weightLocation ?? 20,
+    industry: skillsProfile.weightIndustry ?? 10,
+    compensation: skillsProfile.weightCompensation ?? 10,
+  };
+
+  const profileContext = [
+    skillsProfile.content ? `BACKGROUND:\n${skillsProfile.content}` : "",
+    parseJsonArray(skillsProfile.mustHaveSkills).length ? `MUST-HAVE SKILLS: ${parseJsonArray(skillsProfile.mustHaveSkills).join(", ")}` : "",
+    parseJsonArray(skillsProfile.niceToHaveSkills).length ? `NICE-TO-HAVE SKILLS: ${parseJsonArray(skillsProfile.niceToHaveSkills).join(", ")}` : "",
+    skillsProfile.seniority ? `TARGET SENIORITY: ${skillsProfile.seniority}` : "",
+    skillsProfile.salaryMin ? `MINIMUM SALARY: $${skillsProfile.salaryMin.toLocaleString()} USD/year` : "",
+    parseJsonArray(skillsProfile.targetIndustries).length ? `TARGET INDUSTRIES: ${parseJsonArray(skillsProfile.targetIndustries).join(", ")}` : "",
+    skillsProfile.remotePreference && skillsProfile.remotePreference !== "any"
+      ? `REMOTE PREFERENCE: ${skillsProfile.remotePreference}` : "",
+  ].filter(Boolean).join("\n");
+
+  // ── Step 3: LLM multi-dimension scoring ──────────────────────────────────────
   try {
     const response = await invokeLLM({
       messages: [
         {
           role: "system",
-          content: `You are a job-matching expert. Analyze the job description against the candidate's skills profile and return a JSON object with a single field "score" (integer 0-100) representing how well the candidate matches the job. Consider semantic similarity, not just keyword overlap. Be precise and realistic.`,
+          content: `You are a precise job-matching expert. Score the job against the candidate profile across 5 dimensions. Return integers 0-100 for each. Be realistic and discriminating — most jobs should score 30-70, not 90+.`,
         },
         {
           role: "user",
-          content: `SKILLS PROFILE:\n${skillsContent}\n\nJOB DESCRIPTION:\n${jobDescription.slice(0, 3000)}`,
+          content: [
+            "=== CANDIDATE PROFILE ===",
+            profileContext,
+            "",
+            "=== JOB TO SCORE ===",
+            jobTitle ? `TITLE: ${jobTitle}` : "",
+            jobCompany ? `COMPANY: ${jobCompany}` : "",
+            `DESCRIPTION:\n${jobDescription}`,
+            "",
+            "=== SCORING DIMENSIONS ===",
+            `scoreSkills (weight ${weights.skills}%): How well do the candidate's skills match the required and preferred skills in this job?`,
+            `scoreSeniority (weight ${weights.seniority}%): Does the seniority level of this role match the candidate's target level?`,
+            `scoreLocation (weight ${weights.location}%): Does the job's location/remote policy match the candidate's preference?`,
+            `scoreIndustry (weight ${weights.industry}%): Does the company's industry match the candidate's target industries?`,
+            `scoreCompensation (weight ${weights.compensation}%): Does the likely compensation match the candidate's minimum salary requirement?`,
+          ].filter(Boolean).join("\n"),
         },
       ],
       response_format: {
         type: "json_schema",
         json_schema: {
-          name: "match_score",
+          name: "dimension_scores",
           strict: true,
           schema: {
             type: "object",
-            properties: { score: { type: "integer", description: "Match score 0-100" } },
-            required: ["score"],
+            properties: {
+              scoreSkills: { type: "integer", description: "Skills match 0-100" },
+              scoreSeniority: { type: "integer", description: "Seniority fit 0-100" },
+              scoreLocation: { type: "integer", description: "Location/remote fit 0-100" },
+              scoreIndustry: { type: "integer", description: "Industry fit 0-100" },
+              scoreCompensation: { type: "integer", description: "Compensation fit 0-100" },
+            },
+            required: ["scoreSkills", "scoreSeniority", "scoreLocation", "scoreIndustry", "scoreCompensation"],
             additionalProperties: false,
           },
         },
       },
     });
+
     const content = response.choices?.[0]?.message?.content;
     if (content) {
-      const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
-      return Math.max(0, Math.min(100, parsed.score ?? 0));
+      const d = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+      const clamp = (v: unknown) => Math.max(0, Math.min(100, Number(v) || 0));
+      const s = clamp(d.scoreSkills);
+      const sn = clamp(d.scoreSeniority);
+      const l = clamp(d.scoreLocation);
+      const i = clamp(d.scoreIndustry);
+      const c = clamp(d.scoreCompensation);
+      const composite = Math.round(
+        (s * weights.skills + sn * weights.seniority + l * weights.location + i * weights.industry + c * weights.compensation) / 100
+      );
+      return {
+        composite,
+        scoreSkills: s,
+        scoreSeniority: sn,
+        scoreLocation: l,
+        scoreIndustry: i,
+        scoreCompensation: c,
+        dealBreakerMatched: null,
+      };
     }
   } catch (e) {
     console.error("[LLM Scoring] Error:", e);
   }
-  return 0;
+  return empty;
 }
 
 // ─── Core Fetch Logic (shared by manual + scheduled runs) ─────────────────────
@@ -335,7 +454,7 @@ async function executeFetch(
   let jobsIngested = 0;
   let jobsDuplicate = 0;
 
-  const skills = await getSkillsProfile();
+      const skills = await getSkillsProfile();
 
   for (const job of rawJobs as Record<string, unknown>[]) {
     try {
@@ -347,10 +466,13 @@ async function executeFetch(
       const emailFound = extractEmailFromText(descText) ?? (job.ai_hiring_manager_email_address as string) ?? null;
       const hasEmail = !!emailFound;
       let matchScore = 0;
+      let dimensionScores: Partial<DimensionScores> = {};
       let status: "ingested" | "matched" = "ingested";
       if (skills && descText) {
-        matchScore = await scoreJobWithLLM(descText, skills.content);
-        if (matchScore > 0) status = "matched";
+        const result = await scoreJobWithLLM(descText, skills, title, company);
+        matchScore = result.composite;
+        dimensionScores = result;
+        if (matchScore > 0 && !result.dealBreakerMatched) status = "matched";
       }
       // locations_derived is an array of strings like ["Abu Dhabi, Abu Dhabi, United Arab Emirates"]
       const locRaw = job.locations_derived as string[] | undefined;
@@ -380,6 +502,12 @@ async function executeFetch(
         status,
         tags,
         rawJson: job,
+        scoreSkills: dimensionScores.scoreSkills,
+        scoreSeniority: dimensionScores.scoreSeniority,
+        scoreLocation: dimensionScores.scoreLocation,
+        scoreIndustry: dimensionScores.scoreIndustry,
+        scoreCompensation: dimensionScores.scoreCompensation,
+        dealBreakerMatched: dimensionScores.dealBreakerMatched ?? undefined,
       });
       jobsIngested++;
     } catch (jobErr) {
@@ -615,12 +743,23 @@ export const appRouter = router({
         const hasEmail = !!emailFound;
         const skills = await getSkillsProfile();
         let matchScore = 0;
+        let dimensionScores: Partial<DimensionScores> = {};
         let status: "ingested" | "matched" = "ingested";
         if (skills && descText) {
-          matchScore = await scoreJobWithLLM(descText, skills.content);
-          if (matchScore > 0) status = "matched";
+          const result = await scoreJobWithLLM(descText, skills, input.title, input.company);
+          matchScore = result.composite;
+          dimensionScores = result;
+          if (matchScore > 0 && !result.dealBreakerMatched) status = "matched";
         }
-        await insertJob({ ...input, isDuplicate, hasEmail, emailFound: emailFound ?? undefined, matchScore, status, tags: [] });
+        await insertJob({
+          ...input, isDuplicate, hasEmail, emailFound: emailFound ?? undefined, matchScore, status, tags: [],
+          scoreSkills: dimensionScores.scoreSkills,
+          scoreSeniority: dimensionScores.scoreSeniority,
+          scoreLocation: dimensionScores.scoreLocation,
+          scoreIndustry: dimensionScores.scoreIndustry,
+          scoreCompensation: dimensionScores.scoreCompensation,
+          dealBreakerMatched: dimensionScores.dealBreakerMatched ?? undefined,
+        });
         return { success: true, isDuplicate, matchScore };
       }),
   }),
@@ -717,9 +856,23 @@ export const appRouter = router({
     get: protectedProcedure.query(async () => getSkillsProfile()),
 
     upsert: adminProcedure
-      .input(z.object({ content: z.string().min(1) }))
+      .input(z.object({
+        content: z.string().default(""),
+        mustHaveSkills: z.array(z.string()).optional(),
+        niceToHaveSkills: z.array(z.string()).optional(),
+        dealbreakers: z.array(z.string()).optional(),
+        seniority: z.string().optional(),
+        salaryMin: z.number().optional(),
+        targetIndustries: z.array(z.string()).optional(),
+        remotePreference: z.enum(["remote", "hybrid", "onsite", "any"]).optional(),
+        weightSkills: z.number().min(0).max(100).optional(),
+        weightSeniority: z.number().min(0).max(100).optional(),
+        weightLocation: z.number().min(0).max(100).optional(),
+        weightIndustry: z.number().min(0).max(100).optional(),
+        weightCompensation: z.number().min(0).max(100).optional(),
+      }))
       .mutation(async ({ input }) => {
-        await upsertSkillsProfile(input.content);
+        await upsertSkillsProfile(input);
         return { success: true };
       }),
 
@@ -730,9 +883,16 @@ export const appRouter = router({
       let updated = 0;
       for (const job of allJobs) {
         if (job.description) {
-          const score = await scoreJobWithLLM(job.description, skills.content);
-          await updateJobMatchScore(job.id, score);
-          if (score > 0 && job.status === "ingested") await updateJobStatus(job.id, "matched");
+          const result = await scoreJobWithLLM(job.description, skills, job.title, job.company);
+          await updateJobMatchScore(job.id, result.composite, {
+            scoreSkills: result.scoreSkills,
+            scoreSeniority: result.scoreSeniority,
+            scoreLocation: result.scoreLocation,
+            scoreIndustry: result.scoreIndustry,
+            scoreCompensation: result.scoreCompensation,
+            dealBreakerMatched: result.dealBreakerMatched,
+          });
+          if (result.composite > 0 && !result.dealBreakerMatched && job.status === "ingested") await updateJobStatus(job.id, "matched");
           updated++;
         }
       }

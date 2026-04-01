@@ -905,6 +905,37 @@ export default function SwipeView() {
                   )}
                 </div>
 
+                {/* ── ZONE 5b: Dimension score bars (only when scores exist) ── */}
+                {((currentJob as any).scoreSkills != null ||
+                  (currentJob as any).scoreSeniority != null ||
+                  (currentJob as any).scoreLocation != null) && (
+                  <div style={{ flexShrink: 0, padding: "0.4rem 1.25rem 0", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                    {([
+                      { label: "SKL", key: "scoreSkills", color: "var(--atari-cyan)" },
+                      { label: "SEN", key: "scoreSeniority", color: "var(--atari-amber)" },
+                      { label: "LOC", key: "scoreLocation", color: "oklch(0.7 0.18 145)" },
+                      { label: "IND", key: "scoreIndustry", color: "oklch(0.75 0.18 290)" },
+                      { label: "PAY", key: "scoreCompensation", color: "oklch(0.65 0.22 27)" },
+                    ] as const).map(({ label, key, color }) => {
+                      const val = (currentJob as any)[key];
+                      if (val == null) return null;
+                      const pct = Math.max(0, Math.min(100, Math.round(val)));
+                      return (
+                        <div key={key} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", color, width: "2.2rem", flexShrink: 0, letterSpacing: "0.06em" }}>{label}</span>
+                          <div style={{ flex: 1, height: 4, background: "oklch(0.15 0 0)", borderRadius: 2, overflow: "hidden" }}>
+                            <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 2 }} />
+                          </div>
+                          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", color, width: "2rem", textAlign: "right", flexShrink: 0 }}>{pct}%</span>
+                        </div>
+                      );
+                    })}
+                    {(currentJob as any).dealBreakerMatched && (
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", color: "var(--atari-red)", letterSpacing: "0.06em" }}>⚠ DEALBREAKER MATCHED</span>
+                    )}
+                  </div>
+                )}
+
                 {/* ── Divider ── */}
                 <div style={{ flexShrink: 0, height: 1, background: "var(--atari-red)", margin: "0.6rem 1.25rem" }} />
 

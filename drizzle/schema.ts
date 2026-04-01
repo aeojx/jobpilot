@@ -39,6 +39,14 @@ export const jobs = mysqlTable("jobs", {
   applyUrl: text("applyUrl"),
   source: varchar("source", { length: 128 }), // ATS system
   matchScore: float("matchScore").default(0),
+  // Dimension scores (0-100 each)
+  scoreSkills: float("scoreSkills"),
+  scoreSeniority: float("scoreSeniority"),
+  scoreLocation: float("scoreLocation"),
+  scoreIndustry: float("scoreIndustry"),
+  scoreCompensation: float("scoreCompensation"),
+  // Pre-filter flag
+  dealBreakerMatched: varchar("dealBreakerMatched", { length: 512 }),
   status: mysqlEnum("status", [
     "ingested",
     "matched",
@@ -69,7 +77,22 @@ export type InsertJob = typeof jobs.$inferInsert;
 
 export const skillsProfile = mysqlTable("skills_profile", {
   id: int("id").autoincrement().primaryKey(),
+  // Legacy free-text field (kept for backward compat)
   content: text("content").notNull(),
+  // Structured fields
+  mustHaveSkills: json("mustHaveSkills").$type<string[]>(),
+  niceToHaveSkills: json("niceToHaveSkills").$type<string[]>(),
+  dealbreakers: json("dealbreakers").$type<string[]>(),
+  seniority: varchar("seniority", { length: 64 }),        // e.g. "Senior", "Lead", "Staff"
+  salaryMin: int("salaryMin"),                              // annual USD
+  targetIndustries: json("targetIndustries").$type<string[]>(),
+  remotePreference: mysqlEnum("remotePreference", ["remote", "hybrid", "onsite", "any"]).default("any"),
+  // Dimension weights (must sum to 100)
+  weightSkills: int("weightSkills").default(40),
+  weightSeniority: int("weightSeniority").default(20),
+  weightLocation: int("weightLocation").default(20),
+  weightIndustry: int("weightIndustry").default(10),
+  weightCompensation: int("weightCompensation").default(10),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 

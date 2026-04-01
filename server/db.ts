@@ -105,10 +105,21 @@ export async function updateJobStatus(id: number, status: Job["status"], extra?:
   await db.update(jobs).set(updates).where(eq(jobs.id, id));
 }
 
-export async function updateJobMatchScore(id: number, matchScore: number) {
+export async function updateJobMatchScore(
+  id: number,
+  matchScore: number,
+  dimensions?: {
+    scoreSkills?: number;
+    scoreSeniority?: number;
+    scoreLocation?: number;
+    scoreIndustry?: number;
+    scoreCompensation?: number;
+    dealBreakerMatched?: string | null;
+  }
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(jobs).set({ matchScore }).where(eq(jobs.id, id));
+  await db.update(jobs).set({ matchScore, ...(dimensions ?? {}) }).where(eq(jobs.id, id));
 }
 
 export async function checkDuplicate(title: string, company: string): Promise<boolean> {
@@ -137,14 +148,32 @@ export async function getSkillsProfile() {
   return result[0] ?? null;
 }
 
-export async function upsertSkillsProfile(content: string) {
+export type SkillsProfileInput = {
+  content: string;
+  mustHaveSkills?: string[];
+  niceToHaveSkills?: string[];
+  dealbreakers?: string[];
+  seniority?: string;
+  salaryMin?: number;
+  targetIndustries?: string[];
+  remotePreference?: "remote" | "hybrid" | "onsite" | "any";
+  weightSkills?: number;
+  weightSeniority?: number;
+  weightLocation?: number;
+  weightIndustry?: number;
+  weightCompensation?: number;
+};
+
+export async function upsertSkillsProfile(input: SkillsProfileInput | string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  // Accept legacy string or new structured input
+  const data: SkillsProfileInput = typeof input === "string" ? { content: input } : input;
   const existing = await getSkillsProfile();
   if (existing) {
-    await db.update(skillsProfile).set({ content }).where(eq(skillsProfile.id, existing.id));
+    await db.update(skillsProfile).set(data).where(eq(skillsProfile.id, existing.id));
   } else {
-    await db.insert(skillsProfile).values({ content });
+    await db.insert(skillsProfile).values(data);
   }
 }
 
