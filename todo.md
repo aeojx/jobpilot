@@ -246,3 +246,13 @@
 ## v2.9 SwipeView Full Description
 - [x] Remove showFullDesc state and Read More / Show Less toggle from SwipeView
 - [x] Always render the full job description text in the scrollable description zone
+
+## v3.0 Auto-Reject Feature
+- [x] Add autoRejected boolean column to jobs table in schema.ts, generate and apply migration
+- [x] Add autoReject bulk procedure in routers.ts: accepts threshold (0-100), returns count of jobs to be rejected, then on confirm moves all matched jobs below threshold to rejected with autoRejected=true
+- [x] Add Auto-Reject button to SwipeView header
+- [x] Show threshold input dialog with slider (default 30%)
+- [x] Show preview: "X jobs will be auto-rejected" before confirming
+- [x] Require explicit confirmation before executing bulk rejection
+- [x] Remove auto-rejected jobs from the swipe queue immediately after confirmation
+- [x] Show AUTO-REJECTED tag (red) on Kanban cards in the rejected column

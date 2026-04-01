@@ -9,6 +9,7 @@ import {
   XCircle,
   Clock,
   ArrowUpDown,
+  Zap,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -207,6 +208,11 @@ function JobCard({
         {job.isDuplicate && (
           <span className="brutal-tag" style={{ borderColor: "var(--atari-magenta)", color: "var(--atari-magenta)" }}>
             <Copy size={8} />Dupe
+          </span>
+        )}
+        {job.autoRejected && (
+          <span className="brutal-tag" style={{ borderColor: "var(--atari-red)", color: "var(--atari-red)", fontWeight: 700 }}>
+            <Zap size={8} />Auto-Rejected
           </span>
         )}
       </div>

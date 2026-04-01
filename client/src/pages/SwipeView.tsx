@@ -15,6 +15,8 @@ import {
   ExternalLink,
   Briefcase,
   Undo2,
+  Zap,
+  AlertTriangle,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -247,6 +249,31 @@ export default function SwipeView() {
   // Undo stack: stores the last swiped job and the status it was moved to
   const [undoStack, setUndoStack] = useState<{ job: Job; previousStatus: "to_apply" | "rejected" }[]>([]);
 
+  // Auto-reject state
+  const [showAutoReject, setShowAutoReject] = useState(false);
+  const [arThreshold, setArThreshold] = useState(30);
+  const [arStep, setArStep] = useState<"config" | "confirm">("config");
+
+  const { data: arPreview, isLoading: arPreviewLoading } = trpc.jobs.autoRejectPreview.useQuery(
+    { threshold: arThreshold },
+    { enabled: showAutoReject }
+  );
+
+  const autoRejectConfirm = trpc.jobs.autoRejectConfirm.useMutation({
+    onSuccess: (data) => {
+      // Remove auto-rejected jobs from the local queue (match backend criteria: null or < threshold)
+      setQueue((prev) => prev.filter((j) => j.matchScore != null && j.matchScore >= arThreshold));
+      setShowAutoReject(false);
+      setArStep("config");
+      utils.jobs.byStatus.invalidate({ status: "matched" });
+      utils.jobs.kanban.invalidate();
+      toast(`AUTO-REJECTED ${data.affected} JOBS`, {
+        style: { background: "var(--atari-black)", border: "2px solid var(--atari-red)", color: "var(--atari-red)" },
+        duration: 3000,
+      });
+    },
+  });
+
   // Populate queue once data loads
   useEffect(() => {
     if (matchedJobs && queue.length === 0 && swipedCount === 0) {
@@ -397,6 +424,123 @@ export default function SwipeView() {
       {/* Stats modal */}
       {showStats && <StatsPanel onClose={() => setShowStats(false)} />}
 
+      {/* Auto-Reject modal */}
+      {showAutoReject && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 200,
+            background: "rgba(0,0,0,0.85)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "1rem",
+          }}
+          onClick={() => { setShowAutoReject(false); setArStep("config"); }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "var(--atari-black)",
+              border: "2px solid var(--atari-red)",
+              padding: "1.5rem",
+              width: "100%",
+              maxWidth: 400,
+              fontFamily: "var(--font-mono)",
+            }}
+          >
+            {/* Title */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem" }}>
+              <Zap size={16} color="var(--atari-red)" />
+              <span style={{ fontFamily: "var(--font-pixel)", fontSize: "0.8rem", color: "var(--atari-red)", letterSpacing: "0.1em" }}>
+                AUTO-REJECT
+              </span>
+            </div>
+
+            {arStep === "config" ? (
+              <>
+                <p style={{ fontSize: "0.65rem", color: "var(--atari-gray)", marginBottom: "1rem", lineHeight: 1.6 }}>
+                  All <span style={{ color: "var(--atari-amber)" }}>Matched</span> jobs with a match score below the threshold will be moved to <span style={{ color: "var(--atari-red)" }}>Rejected</span> and tagged <span style={{ color: "var(--atari-red)" }}>AUTO-REJECTED</span>.
+                </p>
+
+                {/* Threshold slider */}
+                <div style={{ marginBottom: "1.25rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                    <span style={{ fontSize: "0.6rem", color: "var(--atari-gray)", letterSpacing: "0.08em" }}>THRESHOLD</span>
+                    <span style={{ fontSize: "0.75rem", color: getScoreColor(arThreshold), fontFamily: "var(--font-pixel)" }}>{arThreshold}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0} max={100} step={5}
+                    value={arThreshold}
+                    onChange={(e) => setArThreshold(Number(e.target.value))}
+                    style={{ width: "100%", accentColor: "var(--atari-red)" }}
+                  />
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.55rem", color: "var(--atari-border)", marginTop: "0.25rem" }}>
+                    <span>0%</span><span>50%</span><span>100%</span>
+                  </div>
+                </div>
+
+                {/* Preview count */}
+                <div style={{ border: "1px solid var(--atari-border)", padding: "0.75rem", marginBottom: "1.25rem", textAlign: "center" }}>
+                  {arPreviewLoading ? (
+                    <span style={{ fontSize: "0.65rem", color: "var(--atari-gray)" }}>CALCULATING...</span>
+                  ) : (
+                    <>
+                      <div style={{ fontFamily: "var(--font-pixel)", fontSize: "1.4rem", color: "var(--atari-red)", lineHeight: 1 }}>
+                        {arPreview?.count ?? 0}
+                      </div>
+                      <div style={{ fontSize: "0.55rem", color: "var(--atari-gray)", marginTop: "0.35rem", letterSpacing: "0.08em" }}>
+                        JOBS WILL BE REJECTED
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: "flex", gap: "0.75rem" }}>
+                  <button
+                    onClick={() => { setShowAutoReject(false); setArStep("config"); }}
+                    style={{ flex: 1, padding: "0.5rem", background: "transparent", border: "1px solid var(--atari-border)", color: "var(--atari-gray)", cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.08em" }}
+                  >
+                    CANCEL
+                  </button>
+                  <button
+                    onClick={() => setArStep("confirm")}
+                    disabled={(arPreview?.count ?? 0) === 0}
+                    style={{ flex: 1, padding: "0.5rem", background: (arPreview?.count ?? 0) === 0 ? "var(--atari-border)" : "var(--atari-red)", border: "none", color: "#fff", cursor: (arPreview?.count ?? 0) === 0 ? "not-allowed" : "pointer", fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.08em" }}
+                  >
+                    NEXT →
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Confirmation step */}
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem", marginBottom: "1.25rem", padding: "0.75rem", border: "1px solid var(--atari-red)", background: "rgba(255,0,0,0.05)" }}>
+                  <AlertTriangle size={20} color="var(--atari-red)" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <p style={{ fontSize: "0.65rem", color: "#fff", lineHeight: 1.7, margin: 0 }}>
+                    You are about to permanently reject <span style={{ color: "var(--atari-red)", fontFamily: "var(--font-pixel)" }}>{arPreview?.count ?? 0} jobs</span> with a match score below <span style={{ color: getScoreColor(arThreshold), fontFamily: "var(--font-pixel)" }}>{arThreshold}%</span>. This cannot be undone.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "0.75rem" }}>
+                  <button
+                    onClick={() => setArStep("config")}
+                    style={{ flex: 1, padding: "0.5rem", background: "transparent", border: "1px solid var(--atari-border)", color: "var(--atari-gray)", cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.08em" }}
+                  >
+                    ← BACK
+                  </button>
+                  <button
+                    onClick={() => autoRejectConfirm.mutate({ threshold: arThreshold })}
+                    disabled={autoRejectConfirm.isPending}
+                    style={{ flex: 1, padding: "0.5rem", background: "var(--atari-red)", border: "none", color: "#fff", cursor: autoRejectConfirm.isPending ? "not-allowed" : "pointer", fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.08em" }}
+                  >
+                    {autoRejectConfirm.isPending ? "REJECTING..." : "CONFIRM REJECT"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ width: "100%", maxWidth: 480, marginBottom: "1.5rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
@@ -421,6 +565,27 @@ export default function SwipeView() {
             >
               {remaining} / {totalMatched} LEFT
             </span>
+            {/* Auto-Reject button (owner only) */}
+            <button
+              onClick={() => { setShowAutoReject(true); setArStep("config"); }}
+              title="Auto-reject low-score jobs"
+              style={{
+                background: "transparent",
+                border: "1px solid var(--atari-red)",
+                color: "var(--atari-red)",
+                cursor: "pointer",
+                padding: "4px 8px",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.6rem",
+                letterSpacing: "0.05em",
+              }}
+            >
+              <Zap size={12} />
+              AUTO-REJECT
+            </button>
             {/* Stats button */}
             <button
               onClick={() => setShowStats(true)}

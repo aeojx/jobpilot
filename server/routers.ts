@@ -36,6 +36,8 @@ import {
   recordSwipe,
   reverseSwipe,
   getSwipeStatsRange,
+  countAutoRejectPreview,
+  bulkAutoReject,
 } from "./db";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { ENV } from "./_core/env";
@@ -581,6 +583,22 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await updateJobStatus(input.id, "rejected");
         return { success: true };
+      }),
+
+    // Preview: how many matched jobs would be auto-rejected at the given threshold
+    autoRejectPreview: protectedProcedure
+      .input(z.object({ threshold: z.number().min(0).max(100) }))
+      .query(async ({ input }) => {
+        const count = await countAutoRejectPreview(input.threshold);
+        return { count };
+      }),
+
+    // Execute: bulk-reject all matched jobs below threshold
+    autoRejectConfirm: adminProcedure
+      .input(z.object({ threshold: z.number().min(0).max(100) }))
+      .mutation(async ({ input }) => {
+        const affected = await bulkAutoReject(input.threshold);
+        return { success: true, affected };
       }),
 
     ingest: adminProcedure

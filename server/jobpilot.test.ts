@@ -30,6 +30,8 @@ vi.mock("./db", () => ({
   reverseSwipe: vi.fn().mockResolvedValue(undefined),
   getSwipeStatsRange: vi.fn().mockResolvedValue([]),
   getDueFetchSchedules: vi.fn().mockResolvedValue([]),
+  countAutoRejectPreview: vi.fn().mockResolvedValue(5),
+  bulkAutoReject: vi.fn().mockResolvedValue(5),
 }));
 
 vi.mock("./_core/llm", () => ({
@@ -392,5 +394,33 @@ describe("jobs.applierReject", () => {
     };
     const caller = appRouter.createCaller(unauthCtx);
     await expect(caller.jobs.applierReject({ id: 1 })).rejects.toThrow();
+  });
+});
+
+// ─── Auto-Reject Tests ───────────────────────────────────────────────────────
+describe("jobs.autoRejectPreview", () => {
+  it("owner can preview auto-reject count at threshold 30", async () => {
+    const caller = appRouter.createCaller(makeOwnerCtx());
+    const result = await caller.jobs.autoRejectPreview({ threshold: 30 });
+    expect(result).toHaveProperty("count");
+    expect(typeof result.count).toBe("number");
+  });
+  it("applier can also preview auto-reject count", async () => {
+    const caller = appRouter.createCaller(makeApplierCtx());
+    const result = await caller.jobs.autoRejectPreview({ threshold: 50 });
+    expect(result).toHaveProperty("count");
+  });
+});
+
+describe("jobs.autoRejectConfirm", () => {
+  it("owner can execute auto-reject bulk action", async () => {
+    const caller = appRouter.createCaller(makeOwnerCtx());
+    const result = await caller.jobs.autoRejectConfirm({ threshold: 30 });
+    expect(result.success).toBe(true);
+    expect(typeof result.affected).toBe("number");
+  });
+  it("applier cannot execute auto-reject (admin only)", async () => {
+    const caller = appRouter.createCaller(makeApplierCtx());
+    await expect(caller.jobs.autoRejectConfirm({ threshold: 30 })).rejects.toThrow();
   });
 });

@@ -57,6 +57,7 @@ export const jobs = mysqlTable("jobs", {
   ingestedAt: timestamp("ingestedAt").defaultNow().notNull(),
   appliedAt: timestamp("appliedAt"),
   statusChangedAt: timestamp("statusChangedAt"),
+  autoRejected: boolean("autoRejected").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

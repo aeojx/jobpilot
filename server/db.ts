@@ -386,3 +386,35 @@ export async function updateGamification(userId: number, dateKey: string) {
     lastActiveDate: today,
   }).where(eq(applierGamification.userId, userId));
 }
+
+// ─── Auto-Reject ──────────────────────────────────────────────────────────────
+
+/** Count how many matched jobs would be auto-rejected at the given threshold */
+export async function countAutoRejectPreview(threshold: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db
+    .select({ id: jobs.id })
+    .from(jobs)
+    .where(
+      sql`${jobs.status} = 'matched' AND (${jobs.matchScore} IS NULL OR ${jobs.matchScore} < ${threshold})`
+    );
+  return result.length;
+}
+
+/** Bulk-reject all matched jobs below the threshold, marking them autoRejected=true */
+export async function bulkAutoReject(threshold: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  // Count first for reliable return value
+  const count = await countAutoRejectPreview(threshold);
+  if (count === 0) return 0;
+  const now = new Date();
+  await db
+    .update(jobs)
+    .set({ status: "rejected", autoRejected: true, statusChangedAt: now })
+    .where(
+      sql`${jobs.status} = 'matched' AND (${jobs.matchScore} IS NULL OR ${jobs.matchScore} < ${threshold})`
+    );
+  return count;
+}
