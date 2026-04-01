@@ -56,6 +56,7 @@ export const jobs = mysqlTable("jobs", {
   rawJson: json("rawJson"),
   ingestedAt: timestamp("ingestedAt").defaultNow().notNull(),
   appliedAt: timestamp("appliedAt"),
+  statusChangedAt: timestamp("statusChangedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

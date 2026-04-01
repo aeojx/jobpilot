@@ -203,3 +203,11 @@
 
 ## v2.1 Bug Fixes
 - [ ] Fix "Incorrect password" mutation error on /dashboard page
+
+## v2.2 Dwell Timer & Kanban Sort
+- [x] Add statusChangedAt column to jobs table in schema.ts
+- [x] Generate and apply migration SQL
+- [x] Update updateJobStatus db helper to set statusChangedAt = now()
+- [x] Compute dwellDays in kanban query: for matched = days since postedAt (ingestedAt fallback), for to_apply = days since statusChangedAt
+- [x] Show dwell badge on Kanban cards (Matched and To Apply columns)
+- [x] Add sort controls to dashboard Kanban: sort by Match Score, Dwell (asc/desc)

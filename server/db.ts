@@ -100,7 +100,7 @@ export async function insertJob(job: InsertJob) {
 export async function updateJobStatus(id: number, status: Job["status"], extra?: Partial<InsertJob>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const updates: Partial<InsertJob> = { status, ...extra };
+  const updates: Partial<InsertJob> = { status, statusChangedAt: new Date(), ...extra };
   if (status === "applied") updates.appliedAt = new Date();
   await db.update(jobs).set(updates).where(eq(jobs.id, id));
 }
