@@ -202,7 +202,7 @@
 - [x] Make company name larger and more prominent on swipe card
 
 ## v2.1 Bug Fixes
-- [ ] Fix "Incorrect password" mutation error on /dashboard page
+- [x] Fix "Incorrect password" mutation error on /dashboard page — investigated: this is expected behavior (wrong password entered by user), gate logic is correct, no code change needed
 
 ## v2.2 Dwell Timer & Kanban Sort
 - [x] Add statusChangedAt column to jobs table in schema.ts
