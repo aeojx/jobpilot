@@ -1,4 +1,4 @@
-import { and, desc, eq, like, or, sql, lte } from "drizzle-orm";
+import { and, count, desc, eq, gte, like, or, sql, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -195,6 +195,42 @@ export async function insertQuestion(q: InsertQuestion) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.insert(questionBank).values(q);
+}
+
+// ─── Pipeline Stats (for daily report) ──────────────────────────────────────
+
+export async function getPipelineStats() {
+  const db = await getDb();
+  if (!db) return { matched: 0, toApply: 0, applied: 0, totalApplied: 0 };
+
+  const [matchedRows, toApplyRows, appliedRows] = await Promise.all([
+    db.select({ c: count() }).from(jobs).where(eq(jobs.status, "matched")),
+    db.select({ c: count() }).from(jobs).where(eq(jobs.status, "to_apply")),
+    db.select({ c: count() }).from(jobs).where(eq(jobs.status, "applied")),
+  ]);
+
+  const appliedCount = appliedRows[0]?.c ?? 0;
+
+  return {
+    matched: matchedRows[0]?.c ?? 0,
+    toApply: toApplyRows[0]?.c ?? 0,
+    applied: appliedCount,
+    totalApplied: appliedCount,
+  };
+}
+
+export async function getAppliedTodayCount(dateKey: string): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select().from(applierStats).where(eq(applierStats.dateKey, dateKey)).limit(1);
+  return result[0]?.appliedCount ?? 0;
+}
+
+export async function getQuestionById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(questionBank).where(eq(questionBank.id, id)).limit(1);
+  return result[0] ?? null;
 }
 
 export async function answerQuestion(id: number, answer: string) {

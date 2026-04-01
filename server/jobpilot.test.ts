@@ -32,6 +32,9 @@ vi.mock("./db", () => ({
   getDueFetchSchedules: vi.fn().mockResolvedValue([]),
   countAutoRejectPreview: vi.fn().mockResolvedValue(5),
   bulkAutoReject: vi.fn().mockResolvedValue(5),
+  getQuestionById: vi.fn().mockResolvedValue({ id: 1, question: "What tech stack?", jobTitle: "Engineer", jobCompany: "Acme", answer: null, answeredAt: null, createdAt: new Date() }),
+  getPipelineStats: vi.fn().mockResolvedValue({ matched: 10, toApply: 5, applied: 20, totalApplied: 20 }),
+  getAppliedTodayCount: vi.fn().mockResolvedValue(3),
 }));
 
 vi.mock("./_core/llm", () => ({
@@ -42,6 +45,13 @@ vi.mock("./_core/llm", () => ({
 
 vi.mock("./_core/notification", () => ({
   notifyOwner: vi.fn().mockResolvedValue(true),
+}));
+
+vi.mock("./_core/email", () => ({
+  sendEmail: vi.fn().mockResolvedValue(true),
+  buildQuestionAnsweredEmail: vi.fn().mockReturnValue("<html>test</html>"),
+  buildDailyReportEmail: vi.fn().mockReturnValue("<html>report</html>"),
+  APPLIER_EMAIL: "z.hewedi@gmail.com",
 }));
 
 // ─── Context Factories ────────────────────────────────────────────────────────

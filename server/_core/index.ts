@@ -4,7 +4,7 @@ import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
-import { appRouter, startScheduledFetchRunner } from "../routers";
+import { appRouter, startScheduledFetchRunner, startDailyReportScheduler } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 
@@ -62,6 +62,8 @@ async function startServer() {
     // Start the scheduled fetch runner after server is up
     startScheduledFetchRunner();
     console.log("[Scheduler] Scheduled fetch runner started (checks every 5 minutes)");
+    startDailyReportScheduler();
+    console.log("[DailyReport] Daily report scheduler started (checks every 15 minutes, sends at 11 PM GST)");
   });
 }
 

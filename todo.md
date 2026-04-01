@@ -278,3 +278,28 @@
 - [x] Show "MANUAL" tag (amber) on Kanban cards for manually added jobs
 - [x] Show "Added by [name]" attribution line on manually added cards
 - [x] 75 tests passing (4 new manualAdd tests)
+
+## v3.3 Notification Updates
+- [ ] Store RESEND_API_KEY secret
+- [ ] Install resend npm package
+- [ ] Create server/_core/email.ts helper with sendEmail(to, subject, html) using Resend
+- [ ] Update questions.answer: send email to z.hewedi@gmail.com (Applier) when question is answered
+- [ ] Add daily report cron at 11 PM GST (19:00 UTC): query matched/to_apply/applied counts, last 7 days applied stats, compute 1000-job countdown
+- [ ] Send daily report email to both Owner (via notifyOwner) and Applier (z.hewedi@gmail.com via Resend)
+- [ ] Add tests for email helper and daily report cron logic
+
+## v3.3 Email Notifications (Resend)
+- [x] Install Resend SDK and create server/_core/email.ts with sendEmail helper
+- [x] Store RESEND_API_KEY as environment secret
+- [x] Set from address to notifications@allanabbas.com (verified domain)
+- [x] Add APPLIER_EMAIL constant (z.hewedi@gmail.com)
+- [x] Build buildQuestionAnsweredEmail() HTML template (retro-futuristic style)
+- [x] Build buildDailyReportEmail() HTML template with pipeline stats + 1,000-job countdown
+- [x] Add getQuestionById() helper to db.ts
+- [x] Add getPipelineStats() helper to db.ts (matched/toApply/applied counts)
+- [x] Add getAppliedTodayCount() helper to db.ts
+- [x] Wire questions.answer mutation to send email to Applier on answer
+- [x] Add daily report cron (checks every 15 min, fires at 11 PM GST)
+- [x] Daily report sent to both Owner (tedunt@gmail.com) and Applier (z.hewedi@gmail.com)
+- [x] Add notifications.sendTestDailyReport tRPC mutation (Owner only, for on-demand testing)
+- [x] Add email mock to test suite — 75 tests still passing

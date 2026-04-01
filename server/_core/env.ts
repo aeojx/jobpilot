@@ -9,4 +9,5 @@ export const ENV = {
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   rapidApiKey: process.env.RAPIDAPI_KEY ?? "",
   sitePassword: process.env.SITE_PASSWORD ?? "",
+  resendApiKey: process.env.RESEND_API_KEY ?? "",
 };

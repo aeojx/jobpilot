@@ -38,11 +38,15 @@ import {
   getSwipeStatsRange,
   countAutoRejectPreview,
   bulkAutoReject,
+  getQuestionById,
+  getPipelineStats,
+  getAppliedTodayCount,
 } from "./db";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { ENV } from "./_core/env";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
+import { sendEmail, buildQuestionAnsweredEmail, buildDailyReportEmail, APPLIER_EMAIL } from "./_core/email";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 
@@ -567,6 +571,88 @@ export function startScheduledFetchRunner() {
   }, 5 * 60 * 1000); // every 5 minutes
 }
 
+// ─── Daily Report Emailer (11 PM GST = 19:00 UTC) ────────────────────────────
+
+let _dailyReportInterval: ReturnType<typeof setInterval> | null = null;
+let _lastDailyReportDate: string | null = null;
+
+/**
+ * Returns the current date key in GST (UTC+4) as "YYYY-MM-DD".
+ */
+function getGstDateKey(): string {
+  const now = new Date();
+  // GST is UTC+4
+  const gst = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+  return gst.toISOString().slice(0, 10);
+}
+
+/**
+ * Returns the current hour in GST (0-23).
+ */
+function getGstHour(): number {
+  const now = new Date();
+  const gst = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+  return gst.getUTCHours();
+}
+
+/**
+ * Formats a date key "YYYY-MM-DD" as a human-readable string like "Wed, Apr 1, 2026".
+ */
+function formatDateKey(dateKey: string): string {
+  const d = new Date(dateKey + "T00:00:00Z");
+  return d.toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+export async function sendDailyReport(): Promise<void> {
+  try {
+    const dateKey = getGstDateKey();
+    const pipeline = await getPipelineStats();
+    const appliedToday = await getAppliedTodayCount(dateKey);
+    const weeklyStats = await getApplierStatsRange(7);
+
+    // Build last-7-days array (newest first → reverse for display oldest→newest)
+    const weeklyData = weeklyStats
+      .slice()
+      .reverse()
+      .map((s) => ({ date: formatDateKey(s.dateKey), applied: s.appliedCount }));
+
+    const weeklyApplied = weeklyStats.reduce((sum, s) => sum + s.appliedCount, 0);
+
+    const html = buildDailyReportEmail({
+      date: formatDateKey(dateKey),
+      matchedCount: pipeline.matched,
+      toApplyCount: pipeline.toApply,
+      appliedCount: pipeline.applied,
+      appliedToday,
+      weeklyApplied,
+      weeklyData,
+      totalApplied: pipeline.totalApplied,
+      targetTotal: 1000,
+    });
+
+    const subject = `📊 JobPilot Daily Report — ${formatDateKey(dateKey)}`;
+    const recipients = [APPLIER_EMAIL, "tedunt@gmail.com"];
+
+    await sendEmail({ to: recipients, subject, html });
+    console.log(`[DailyReport] Sent to ${recipients.join(", ")} for ${dateKey}`);
+  } catch (err) {
+    console.error("[DailyReport] Failed to send:", err);
+  }
+}
+
+export function startDailyReportScheduler() {
+  if (_dailyReportInterval) return;
+  // Check every 15 minutes if it's time to send (11 PM GST = hour 23 GST)
+  _dailyReportInterval = setInterval(async () => {
+    const hour = getGstHour();
+    const dateKey = getGstDateKey();
+    if (hour === 23 && _lastDailyReportDate !== dateKey) {
+      _lastDailyReportDate = dateKey;
+      await sendDailyReport();
+    }
+  }, 15 * 60 * 1000); // every 15 minutes
+}
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 // ─── Gate Cookie Name ────────────────────────────────────────────────────────
@@ -960,7 +1046,25 @@ export const appRouter = router({
     answer: protectedProcedure
       .input(z.object({ id: z.number(), answer: z.string().min(1) }))
       .mutation(async ({ input, ctx }) => {
+        // Fetch the question before updating so we have context for the email
+        const question = await getQuestionById(input.id);
         await answerQuestion(input.id, input.answer);
+        // Send email notification to Applier
+        if (question) {
+          const html = buildQuestionAnsweredEmail({
+            question: question.question,
+            answer: input.answer,
+            answeredBy: ctx.user.name ?? "a user",
+            jobTitle: question.jobTitle,
+            jobCompany: question.jobCompany,
+          });
+          await sendEmail({
+            to: APPLIER_EMAIL,
+            subject: `✅ Question Answered — ${question.jobTitle ?? "JobPilot"}`,
+            html,
+          });
+        }
+        // Also push Manus notification to owner
         await notifyOwner({
           title: "✅ Question Answered",
           content: `A question was answered by ${ctx.user.name ?? "a user"}.`,
@@ -985,6 +1089,19 @@ export const appRouter = router({
     getRampTarget: protectedProcedure
       .input(z.object({ startDate: z.string().optional() }))
       .query(({ input }) => ({ target: getRampUpTarget(input.startDate ?? null) })),
+  }),
+
+  // ─── Notifications (email) ───────────────────────────────────────────────────────────────────
+
+  notifications: router({
+    // Owner-only: send a test daily report immediately
+    sendTestDailyReport: protectedProcedure.mutation(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Owner only" });
+      }
+      await sendDailyReport();
+      return { success: true };
+    }),
   }),
 });
 
