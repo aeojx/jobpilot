@@ -679,7 +679,7 @@ export default function SwipeView() {
                 </div>
 
                 {/* Company */}
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.5rem", marginBottom: "0.4rem" }}>
                   <Building2 size={14} color="var(--atari-amber)" />
                   <span
                     style={{
@@ -712,14 +712,7 @@ export default function SwipeView() {
                       {currentJob.location}
                     </span>
                   </div>
-                ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.5rem" }}>
-                    <MapPin size={13} color="var(--atari-border)" />
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--atari-border)", letterSpacing: "0.04em" }}>
-                      LOCATION NOT SPECIFIED
-                    </span>
-                  </div>
-                )}
+                ) : null}
 
                 {/* Tags row */}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.6rem" }}>
@@ -742,6 +735,16 @@ export default function SwipeView() {
 
                 </div>
 
+                {/* Location not specified — shown below tags to avoid overlap */}
+                {!currentJob.location && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.5rem" }}>
+                    <MapPin size={13} color="var(--atari-border)" />
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--atari-border)", letterSpacing: "0.04em" }}>
+                      LOCATION NOT SPECIFIED
+                    </span>
+                  </div>
+                )}
+
                 {/* Red divider */}
                 <div style={{ height: 1, background: "var(--atari-red)", marginBottom: "0.6rem" }} />
 
@@ -752,7 +755,7 @@ export default function SwipeView() {
                       style={{
                         fontFamily: "var(--font-mono)",
                         fontSize: "0.68rem",
-                        color: "var(--atari-gray)",
+                        color: "#ffffff",
                         lineHeight: 1.7,
                         overflow: showDesc ? "visible" : "hidden",
                         display: showDesc ? "block" : "-webkit-box",
