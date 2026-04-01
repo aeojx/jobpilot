@@ -729,6 +729,35 @@ export const appRouter = router({
         return { success: true, affected };
       }),
 
+    // Manually add a job that was applied to directly (e.g. via LinkedIn)
+    manualAdd: protectedProcedure
+      .input(z.object({
+        title: z.string().min(1),
+        company: z.string().min(1),
+        location: z.string().optional(),
+        applyUrl: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await insertJob({
+          title: input.title,
+          company: input.company,
+          location: input.location ?? null,
+          description: input.notes ?? null,
+          applyUrl: input.applyUrl ?? null,
+          status: "applied",
+          matchScore: 0,
+          manuallyAdded: true,
+          addedBy: ctx.user.name ?? ctx.user.email ?? "Unknown",
+          appliedAt: new Date(),
+          statusChangedAt: new Date(),
+          isDuplicate: false,
+          hasEmail: false,
+          autoRejected: false,
+        });
+        return { success: true };
+      }),
+
     ingest: adminProcedure
       .input(z.object({
         title: z.string(), company: z.string(), location: z.string().optional(),

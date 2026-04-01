@@ -268,3 +268,13 @@
 - [x] Show dimension score breakdown on Kanban job detail modal
 - [x] Update rescoreAll to use new structured profile
 - [x] 66 tests passing (all existing tests verified)
+
+## v3.2 Manual Job Add
+- [x] Add manuallyAdded boolean and addedBy text columns to jobs table in schema.ts
+- [x] Generate and apply migration SQL
+- [x] Add jobs.manualAdd procedure: protectedProcedure, accepts title/company/location/url/notes, inserts with status=applied, manuallyAdded=true, addedBy=ctx.user.name
+- [x] Add "Manual Add" button to KanbanBoard header
+- [x] Build modal form: title (required), company (required), location, job URL, notes
+- [x] Show "MANUAL" tag (amber) on Kanban cards for manually added jobs
+- [x] Show "Added by [name]" attribution line on manually added cards
+- [x] 75 tests passing (4 new manualAdd tests)

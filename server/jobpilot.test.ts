@@ -610,3 +610,66 @@ describe("v3.1 LLM scoring: multi-dimension scores", () => {
     );
   });
 });
+
+// ─── Manual Add Tests ─────────────────────────────────────────────────────────
+
+describe("jobs.manualAdd", () => {
+  let insertJobMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(async () => {
+    const db = await import("./db");
+    insertJobMock = db.insertJob as ReturnType<typeof vi.fn>;
+    insertJobMock.mockClear();
+    insertJobMock.mockResolvedValue({ insertId: 42 });
+  });
+
+  it("owner can manually add a job to applied column", async () => {
+    const caller = appRouter.createCaller(makeOwnerCtx());
+    const result = await caller.jobs.manualAdd({
+      title: "Senior Engineer",
+      company: "Acme Corp",
+      location: "New York, NY",
+      applyUrl: "https://acme.com/jobs/123",
+    });
+    expect(result.success).toBe(true);
+    expect(insertJobMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Senior Engineer",
+        company: "Acme Corp",
+        status: "applied",
+        manuallyAdded: true,
+        addedBy: "Owner",
+      })
+    );
+  });
+
+  it("applier can also manually add a job", async () => {
+    const caller = appRouter.createCaller(makeApplierCtx());
+    const result = await caller.jobs.manualAdd({
+      title: "Product Manager",
+      company: "Startup Inc",
+    });
+    expect(result.success).toBe(true);
+    expect(insertJobMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        manuallyAdded: true,
+        addedBy: "Applier",
+        status: "applied",
+      })
+    );
+  });
+
+  it("rejects empty title", async () => {
+    const caller = appRouter.createCaller(makeOwnerCtx());
+    await expect(
+      caller.jobs.manualAdd({ title: "", company: "Acme" })
+    ).rejects.toThrow();
+  });
+
+  it("rejects empty company", async () => {
+    const caller = appRouter.createCaller(makeOwnerCtx());
+    await expect(
+      caller.jobs.manualAdd({ title: "Engineer", company: "" })
+    ).rejects.toThrow();
+  });
+});
