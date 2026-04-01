@@ -42,12 +42,16 @@ import {
   getPipelineStats,
   getAppliedTodayCount,
   getJobsAppliedToday,
+  getJobsRejectedToday,
+  getRejectedStats,
+  getJobsAppliedThisWeek,
+  getJobsRejectedThisWeek,
 } from "./db";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { ENV } from "./_core/env";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
-import { sendEmail, buildQuestionAnsweredEmail, buildDailyReportEmail, APPLIER_EMAIL } from "./_core/email";
+import { sendEmail, buildQuestionAnsweredEmail, buildDailyReportEmail, buildWeeklyReportEmail, APPLIER_EMAIL } from "./_core/email";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 
@@ -607,10 +611,14 @@ function formatDateKey(dateKey: string): string {
 export async function sendDailyReport(): Promise<void> {
   try {
     const dateKey = getGstDateKey();
-    const pipeline = await getPipelineStats();
-    const appliedToday = await getAppliedTodayCount(dateKey);
-    const weeklyStats = await getApplierStatsRange(7);
-    const appliedTodayJobs = await getJobsAppliedToday(dateKey);
+    const [pipeline, appliedToday, weeklyStats, appliedTodayJobs, rejectedTodayJobs, rejectedStats] = await Promise.all([
+      getPipelineStats(),
+      getAppliedTodayCount(dateKey),
+      getApplierStatsRange(7),
+      getJobsAppliedToday(dateKey),
+      getJobsRejectedToday(dateKey),
+      getRejectedStats(dateKey),
+    ]);
 
     // Build last-7-days array (newest first → reverse for display oldest→newest)
     const weeklyData = weeklyStats
@@ -631,16 +639,20 @@ export async function sendDailyReport(): Promise<void> {
       toApplyCount: pipeline.toApply,
       appliedCount: pipeline.applied,
       appliedToday,
+      rejectedToday: rejectedStats.rejectedToday,
+      totalRejected: rejectedStats.totalRejected,
       weeklyApplied,
       weeklyData,
       totalApplied: pipeline.totalApplied,
       targetTotal: 1000,
       weeksToGoal,
       appliedTodayJobs,
+      rejectedTodayJobs,
     });
 
-    // Dynamic subject: "📊 Daily Report — 8 applied today | 63 in pipeline to apply | 981/1000 remaining"
-    const subject = `📊 Daily Report — ${appliedToday} applied today | ${pipeline.toApply} in pipeline to apply | ${pipeline.totalApplied}/1000 remaining`;
+    // Subject: "1000Jobs Daily Report — ✅ 8 applied today | ⏳ 63 ready to apply | 🎯 981 remaining"
+    const remainingCount = Math.max(0, 1000 - pipeline.totalApplied);
+    const subject = `1000Jobs Daily Report — ✅ ${appliedToday} applied today | ⏳ ${pipeline.toApply} ready to apply | 🎯 ${remainingCount} remaining`;
     const recipients = [APPLIER_EMAIL, "tedunt@gmail.com"];
 
     await sendEmail({ to: recipients, subject, html });
@@ -652,13 +664,93 @@ export async function sendDailyReport(): Promise<void> {
 
 export function startDailyReportScheduler() {
   if (_dailyReportInterval) return;
-  // Check every 15 minutes if it's time to send (11 PM GST = hour 23 GST)
+  // Check every 15 minutes if it's time to send (9 PM GST = hour 21 GST)
   _dailyReportInterval = setInterval(async () => {
     const hour = getGstHour();
     const dateKey = getGstDateKey();
-    if (hour === 23 && _lastDailyReportDate !== dateKey) {
+    if (hour === 21 && _lastDailyReportDate !== dateKey) {
       _lastDailyReportDate = dateKey;
       await sendDailyReport();
+    }
+  }, 15 * 60 * 1000); // every 15 minutes
+}
+
+// ─── Weekly Report Emailer (Fridays 9 PM GST) ─────────────────────────────────
+
+let _weeklyReportInterval: ReturnType<typeof setInterval> | null = null;
+let _lastWeeklyReportDate: string | null = null;
+
+export async function sendWeeklyReport(): Promise<void> {
+  try {
+    const [pipeline, weeklyAppliedJobs, weeklyRejectedJobs, weeklyStats] = await Promise.all([
+      getPipelineStats(),
+      getJobsAppliedThisWeek(7),
+      getJobsRejectedThisWeek(7),
+      getApplierStatsRange(7),
+    ]);
+
+    const appliedThisWeek = weeklyAppliedJobs.length;
+    const rejectedThisWeek = weeklyRejectedJobs.length;
+    const totalDecisions = appliedThisWeek + rejectedThisWeek;
+    const approvalRate = totalDecisions > 0 ? Math.round((appliedThisWeek / totalDecisions) * 100) : 0;
+
+    // Build daily breakdown from applierStats (last 7 days)
+    const dailyBreakdown = weeklyStats
+      .slice()
+      .reverse()
+      .map((s) => ({ date: formatDateKey(s.dateKey), applied: s.appliedCount, rejected: 0 }));
+
+    // Rate projection using this week's average
+    const remaining = Math.max(0, 1000 - pipeline.totalApplied);
+    const avgPerDay = appliedThisWeek > 0 ? appliedThisWeek / 7 : 0;
+    const weeksToGoal = avgPerDay > 0 ? Math.ceil(remaining / (avgPerDay * 7)) : null;
+
+    // Week label: Mon – Sun of the current week
+    const now = new Date();
+    const gstNow = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+    const dayOfWeek = gstNow.getUTCDay(); // 0=Sun, 5=Fri
+    const monday = new Date(gstNow.getTime() - ((dayOfWeek + 6) % 7) * 24 * 60 * 60 * 1000);
+    const sunday = new Date(monday.getTime() + 6 * 24 * 60 * 60 * 1000);
+    const weekLabel = `${monday.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} – ${sunday.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
+
+    const html = buildWeeklyReportEmail({
+      weekLabel,
+      appliedThisWeek,
+      rejectedThisWeek,
+      approvalRate,
+      totalApplied: pipeline.totalApplied,
+      targetTotal: 1000,
+      matchedCount: pipeline.matched,
+      toApplyCount: pipeline.toApply,
+      weeksToGoal,
+      dailyBreakdown,
+      appliedJobs: weeklyAppliedJobs,
+      rejectedJobs: weeklyRejectedJobs,
+    });
+
+    const remainingCount = Math.max(0, 1000 - pipeline.totalApplied);
+    const subject = `1000Jobs Weekly Report — Week of ${weekLabel} | ✅ ${appliedThisWeek} applied | ❌ ${rejectedThisWeek} rejected | 🎯 ${remainingCount} remaining`;
+    const recipients = [APPLIER_EMAIL, "tedunt@gmail.com"];
+
+    await sendEmail({ to: recipients, subject, html });
+    console.log(`[WeeklyReport] Sent to ${recipients.join(", ")} for week of ${weekLabel}`);
+  } catch (err) {
+    console.error("[WeeklyReport] Failed to send:", err);
+  }
+}
+
+export function startWeeklyReportScheduler() {
+  if (_weeklyReportInterval) return;
+  // Check every 15 minutes if it's Friday 9 PM GST (day 5, hour 21)
+  _weeklyReportInterval = setInterval(async () => {
+    const now = new Date();
+    const gst = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+    const dayOfWeek = gst.getUTCDay(); // 0=Sun, 5=Fri
+    const hour = gst.getUTCHours();
+    const dateKey = gst.toISOString().slice(0, 10);
+    if (dayOfWeek === 5 && hour === 21 && _lastWeeklyReportDate !== dateKey) {
+      _lastWeeklyReportDate = dateKey;
+      await sendWeeklyReport();
     }
   }, 15 * 60 * 1000); // every 15 minutes
 }
@@ -1110,6 +1202,14 @@ export const appRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Owner only" });
       }
       await sendDailyReport();
+      return { success: true };
+    }),
+    // Owner-only: send a test weekly report immediately
+    sendTestWeeklyReport: protectedProcedure.mutation(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Owner only" });
+      }
+      await sendWeeklyReport();
       return { success: true };
     }),
   }),

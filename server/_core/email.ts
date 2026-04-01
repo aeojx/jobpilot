@@ -30,7 +30,7 @@ export const APPLIER_EMAIL = "z.hewedi@gmail.com";
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   try {
     const resend = getResend();
-    const from = payload.from ?? "JobPilot <notifications@allanabbas.com>";
+    const from = payload.from ?? "1000Jobs <notifications@allanabbas.com>";
     const { error } = await resend.emails.send({
       from,
       to: Array.isArray(payload.to) ? payload.to : [payload.to],
@@ -93,16 +93,21 @@ export function buildDailyReportEmail(opts: {
   toApplyCount: number;
   appliedCount: number;
   appliedToday: number;
+  rejectedToday: number;
+  totalRejected: number;
   weeklyApplied: number;
   weeklyData: Array<{ date: string; applied: number }>;
   totalApplied: number;
   targetTotal: number;
   weeksToGoal: number | null;
   appliedTodayJobs: Array<{ title: string; company: string; location: string | null }>;
+  rejectedTodayJobs: Array<{ title: string; company: string; location: string | null }>;
 }): string {
   const remaining = Math.max(0, opts.targetTotal - opts.totalApplied);
   const pct = Math.min(100, Math.round((opts.totalApplied / opts.targetTotal) * 100));
   const progressBar = buildProgressBar(pct);
+  const totalDecisions = opts.appliedToday + opts.rejectedToday;
+  const rejectionRate = totalDecisions > 0 ? Math.round((opts.rejectedToday / totalDecisions) * 100) : 0;
 
   const weekRows = opts.weeklyData
     .map(
@@ -136,11 +141,25 @@ export function buildDailyReportEmail(opts: {
           .join("")
       : `<tr><td colspan="3" style="padding:16px 12px;color:#475569;font-size:12px;text-align:center;">No applications submitted today yet.</td></tr>`;
 
+  const rejectedJobRows =
+    opts.rejectedTodayJobs.length > 0
+      ? opts.rejectedTodayJobs
+          .map(
+            (j, i) =>
+              `<tr style="background:${i % 2 === 0 ? "#0f0f1a" : "#111827"}">
+                <td style="padding:8px 12px;color:#e2e8f0;font-size:12px;">${escapeHtml(j.title)}</td>
+                <td style="padding:8px 12px;color:#94a3b8;font-size:12px;">${escapeHtml(j.company)}</td>
+                <td style="padding:8px 12px;color:#64748b;font-size:11px;">${j.location ? escapeHtml(j.location) : "—"}</td>
+              </tr>`
+          )
+          .join("")
+      : `<tr><td colspan="3" style="padding:16px 12px;color:#475569;font-size:12px;text-align:center;">No rejections today.</td></tr>`;
+
   return `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><title>Daily Report — JobPilot</title></head>
+<head><meta charset="utf-8"><title>Daily Report — 1000Jobs</title></head>
 <body style="background:#0f0f1a;color:#e2e8f0;font-family:monospace,sans-serif;margin:0;padding:32px;">
-  <div style="max-width:600px;margin:0 auto;background:#1a1a2e;border:1px solid #00ff9f33;border-radius:8px;padding:32px;">
+  <div style="max-width:620px;margin:0 auto;background:#1a1a2e;border:1px solid #00ff9f33;border-radius:8px;padding:32px;">
     <h1 style="color:#00ff9f;font-size:20px;margin:0 0 4px 0;letter-spacing:2px;">📊 DAILY REPORT</h1>
     <p style="color:#64748b;font-size:12px;margin:0 0 28px 0;">${opts.date} · GST</p>
 
@@ -148,30 +167,48 @@ export function buildDailyReportEmail(opts: {
     <h2 style="color:#fbbf24;font-size:13px;letter-spacing:2px;margin:0 0 16px 0;text-transform:uppercase;">Pipeline Snapshot</h2>
     <table style="width:100%;border-collapse:collapse;margin-bottom:28px;">
       <tr>
-        <td style="padding:10px 16px;background:#0f0f1a;border-radius:6px;text-align:center;width:33%;">
-          <div style="color:#00ff9f;font-size:28px;font-weight:bold;">${opts.matchedCount}</div>
-          <div style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Matched</div>
+        <td style="padding:10px 8px;background:#0f0f1a;border-radius:6px;text-align:center;width:25%;">
+          <div style="color:#00ff9f;font-size:26px;font-weight:bold;">${opts.matchedCount}</div>
+          <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Matched</div>
         </td>
-        <td style="width:8px;"></td>
-        <td style="padding:10px 16px;background:#0f0f1a;border-radius:6px;text-align:center;width:33%;">
-          <div style="color:#fbbf24;font-size:28px;font-weight:bold;">${opts.toApplyCount}</div>
-          <div style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">To Apply</div>
+        <td style="width:6px;"></td>
+        <td style="padding:10px 8px;background:#0f0f1a;border-radius:6px;text-align:center;width:25%;">
+          <div style="color:#fbbf24;font-size:26px;font-weight:bold;">${opts.toApplyCount}</div>
+          <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Ready to Apply</div>
         </td>
-        <td style="width:8px;"></td>
-        <td style="padding:10px 16px;background:#0f0f1a;border-radius:6px;text-align:center;width:33%;">
-          <div style="color:#60a5fa;font-size:28px;font-weight:bold;">${opts.appliedCount}</div>
-          <div style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Applied</div>
+        <td style="width:6px;"></td>
+        <td style="padding:10px 8px;background:#0f0f1a;border-radius:6px;text-align:center;width:25%;">
+          <div style="color:#60a5fa;font-size:26px;font-weight:bold;">${opts.appliedCount}</div>
+          <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Total Applied</div>
+        </td>
+        <td style="width:6px;"></td>
+        <td style="padding:10px 8px;background:#0f0f1a;border-radius:6px;text-align:center;width:25%;">
+          <div style="color:#f87171;font-size:26px;font-weight:bold;">${opts.totalRejected}</div>
+          <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Total Rejected</div>
         </td>
       </tr>
     </table>
 
     <!-- Today's Activity -->
     <h2 style="color:#fbbf24;font-size:13px;letter-spacing:2px;margin:0 0 12px 0;text-transform:uppercase;">Today's Activity</h2>
-    <div style="background:#0f0f1a;border-radius:6px;padding:16px;margin-bottom:28px;">
-      <p style="margin:0;color:#e2e8f0;font-size:14px;">
-        Applications submitted today: <strong style="color:#00ff9f;font-size:20px;">${opts.appliedToday}</strong>
-      </p>
-    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:28px;">
+      <tr>
+        <td style="padding:14px 8px;background:#0f0f1a;border-radius:6px;text-align:center;width:33%;">
+          <div style="color:#00ff9f;font-size:30px;font-weight:bold;">${opts.appliedToday}</div>
+          <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Applied Today</div>
+        </td>
+        <td style="width:6px;"></td>
+        <td style="padding:14px 8px;background:#0f0f1a;border-radius:6px;text-align:center;width:33%;">
+          <div style="color:#f87171;font-size:30px;font-weight:bold;">${opts.rejectedToday}</div>
+          <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Rejected Today</div>
+        </td>
+        <td style="width:6px;"></td>
+        <td style="padding:14px 8px;background:#0f0f1a;border-radius:6px;text-align:center;width:33%;">
+          <div style="color:#a78bfa;font-size:30px;font-weight:bold;">${rejectionRate}%</div>
+          <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Rejection Rate</div>
+        </td>
+      </tr>
+    </table>
 
     <!-- Last 7 Days -->
     <h2 style="color:#fbbf24;font-size:13px;letter-spacing:2px;margin:0 0 12px 0;text-transform:uppercase;">Last 7 Days</h2>
@@ -202,7 +239,7 @@ export function buildDailyReportEmail(opts: {
       ${projectionLine}
     </div>
 
-    <!-- Today's Applied Jobs -->
+    <!-- Applied Today Jobs -->
     <h2 style="color:#fbbf24;font-size:13px;letter-spacing:2px;margin:24px 0 12px 0;text-transform:uppercase;">✅ Applied Today (${opts.appliedTodayJobs.length})</h2>
     <table style="width:100%;border-collapse:collapse;background:#0f0f1a;border-radius:6px;margin-bottom:24px;overflow:hidden;">
       <tr style="background:#1e293b;">
@@ -213,7 +250,199 @@ export function buildDailyReportEmail(opts: {
       ${appliedJobRows}
     </table>
 
-    <p style="color:#475569;font-size:11px;margin:24px 0 0 0;text-align:center;">JobPilot — Smart Job Application Manager · <a href="https://1000jobs.manus.space" style="color:#00ff9f;text-decoration:none;">1000jobs.manus.space</a></p>
+    <!-- Rejected Today Jobs -->
+    <h2 style="color:#f87171;font-size:13px;letter-spacing:2px;margin:0 0 12px 0;text-transform:uppercase;">❌ Rejected Today (${opts.rejectedTodayJobs.length})</h2>
+    <table style="width:100%;border-collapse:collapse;background:#0f0f1a;border-radius:6px;margin-bottom:24px;overflow:hidden;">
+      <tr style="background:#1e293b;">
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Job Title</th>
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Company</th>
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Location</th>
+      </tr>
+      ${rejectedJobRows}
+    </table>
+
+    <p style="color:#475569;font-size:11px;margin:24px 0 0 0;text-align:center;">1000Jobs · Smart Job Application Manager · <a href="https://1000jobs.manus.space" style="color:#00ff9f;text-decoration:none;">1000jobs.manus.space</a></p>
+  </div>
+</body>
+</html>`;
+}
+
+export function buildWeeklyReportEmail(opts: {
+  weekLabel: string; // e.g. "Mar 30 – Apr 5, 2026"
+  appliedThisWeek: number;
+  rejectedThisWeek: number;
+  approvalRate: number; // percentage
+  totalApplied: number;
+  targetTotal: number;
+  matchedCount: number;
+  toApplyCount: number;
+  weeksToGoal: number | null;
+  dailyBreakdown: Array<{ date: string; applied: number; rejected: number }>;
+  appliedJobs: Array<{ title: string; company: string; location: string | null }>;
+  rejectedJobs: Array<{ title: string; company: string; location: string | null; matchScore: number | null }>;
+}): string {
+  const remaining = Math.max(0, opts.targetTotal - opts.totalApplied);
+  const pct = Math.min(100, Math.round((opts.totalApplied / opts.targetTotal) * 100));
+  const progressBar = buildProgressBar(pct);
+
+  const projectionLine =
+    opts.weeksToGoal !== null
+      ? `<p style="color:#e2e8f0;font-size:14px;margin:12px 0 0 0;text-align:center;border-top:1px solid #334155;padding-top:12px;">
+          ⏱️ At this week's rate, you will reach 1,000 jobs in
+          <strong style="color:#00ff9f;"> ${opts.weeksToGoal} week${opts.weeksToGoal === 1 ? "" : "s"}</strong>.
+        </p>`
+      : "";
+
+  const dailyRows = opts.dailyBreakdown
+    .map(
+      (d, i) =>
+        `<tr style="background:${i % 2 === 0 ? "#0f0f1a" : "#111827"}">
+          <td style="padding:7px 12px;color:#94a3b8;font-size:12px;">${d.date}</td>
+          <td style="padding:7px 12px;color:#00ff9f;font-size:12px;text-align:right;">${d.applied}</td>
+          <td style="padding:7px 12px;color:#f87171;font-size:12px;text-align:right;">${d.rejected}</td>
+        </tr>`
+    )
+    .join("");
+
+  const appliedJobRows =
+    opts.appliedJobs.length > 0
+      ? opts.appliedJobs
+          .map(
+            (j, i) =>
+              `<tr style="background:${i % 2 === 0 ? "#0f0f1a" : "#111827"}">
+                <td style="padding:7px 12px;color:#e2e8f0;font-size:12px;">${escapeHtml(j.title)}</td>
+                <td style="padding:7px 12px;color:#94a3b8;font-size:12px;">${escapeHtml(j.company)}</td>
+                <td style="padding:7px 12px;color:#64748b;font-size:11px;">${j.location ? escapeHtml(j.location) : "—"}</td>
+              </tr>`
+          )
+          .join("")
+      : `<tr><td colspan="3" style="padding:16px 12px;color:#475569;font-size:12px;text-align:center;">No applications this week.</td></tr>`;
+
+  const rejectedJobRows =
+    opts.rejectedJobs.length > 0
+      ? opts.rejectedJobs
+          .map(
+            (j, i) =>
+              `<tr style="background:${i % 2 === 0 ? "#0f0f1a" : "#111827"}">
+                <td style="padding:7px 12px;color:#e2e8f0;font-size:12px;">${escapeHtml(j.title)}</td>
+                <td style="padding:7px 12px;color:#94a3b8;font-size:12px;">${escapeHtml(j.company)}</td>
+                <td style="padding:7px 12px;color:#64748b;font-size:11px;">${j.location ? escapeHtml(j.location) : "—"}</td>
+                <td style="padding:7px 12px;color:#a78bfa;font-size:11px;text-align:right;">${j.matchScore !== null ? j.matchScore + "%" : "—"}</td>
+              </tr>`
+          )
+          .join("")
+      : `<tr><td colspan="4" style="padding:16px 12px;color:#475569;font-size:12px;text-align:center;">No rejections this week.</td></tr>`;
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Weekly Report — 1000Jobs</title></head>
+<body style="background:#0f0f1a;color:#e2e8f0;font-family:monospace,sans-serif;margin:0;padding:32px;">
+  <div style="max-width:620px;margin:0 auto;background:#1a1a2e;border:1px solid #a78bfa33;border-radius:8px;padding:32px;">
+    <h1 style="color:#a78bfa;font-size:20px;margin:0 0 4px 0;letter-spacing:2px;">📅 WEEKLY REPORT</h1>
+    <p style="color:#64748b;font-size:12px;margin:0 0 28px 0;">Week of ${opts.weekLabel} · GST</p>
+
+    <!-- Week at a Glance -->
+    <h2 style="color:#fbbf24;font-size:13px;letter-spacing:2px;margin:0 0 16px 0;text-transform:uppercase;">Week at a Glance</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:28px;">
+      <tr>
+        <td style="padding:12px 8px;background:#0f0f1a;border-radius:6px;text-align:center;width:25%;">
+          <div style="color:#00ff9f;font-size:28px;font-weight:bold;">${opts.appliedThisWeek}</div>
+          <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Applied</div>
+        </td>
+        <td style="width:6px;"></td>
+        <td style="padding:12px 8px;background:#0f0f1a;border-radius:6px;text-align:center;width:25%;">
+          <div style="color:#f87171;font-size:28px;font-weight:bold;">${opts.rejectedThisWeek}</div>
+          <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Rejected</div>
+        </td>
+        <td style="width:6px;"></td>
+        <td style="padding:12px 8px;background:#0f0f1a;border-radius:6px;text-align:center;width:25%;">
+          <div style="color:#fbbf24;font-size:28px;font-weight:bold;">${opts.approvalRate}%</div>
+          <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Apply Rate</div>
+        </td>
+        <td style="width:6px;"></td>
+        <td style="padding:12px 8px;background:#0f0f1a;border-radius:6px;text-align:center;width:25%;">
+          <div style="color:#60a5fa;font-size:28px;font-weight:bold;">${remaining}</div>
+          <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Remaining</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Daily Breakdown -->
+    <h2 style="color:#fbbf24;font-size:13px;letter-spacing:2px;margin:0 0 12px 0;text-transform:uppercase;">Daily Breakdown</h2>
+    <table style="width:100%;border-collapse:collapse;background:#0f0f1a;border-radius:6px;margin-bottom:28px;overflow:hidden;">
+      <tr style="background:#1e293b;">
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Date</th>
+        <th style="padding:8px 12px;text-align:right;color:#00ff9f;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Applied</th>
+        <th style="padding:8px 12px;text-align:right;color:#f87171;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Rejected</th>
+      </tr>
+      ${dailyRows}
+      <tr style="background:#1e293b;border-top:1px solid #334155;">
+        <td style="padding:8px 12px;color:#e2e8f0;font-size:12px;font-weight:bold;">Week Total</td>
+        <td style="padding:8px 12px;color:#00ff9f;font-size:12px;font-weight:bold;text-align:right;">${opts.appliedThisWeek}</td>
+        <td style="padding:8px 12px;color:#f87171;font-size:12px;font-weight:bold;text-align:right;">${opts.rejectedThisWeek}</td>
+      </tr>
+    </table>
+
+    <!-- Pipeline Health -->
+    <h2 style="color:#fbbf24;font-size:13px;letter-spacing:2px;margin:0 0 16px 0;text-transform:uppercase;">Pipeline Health</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:28px;">
+      <tr>
+        <td style="padding:10px 8px;background:#0f0f1a;border-radius:6px;text-align:center;width:33%;">
+          <div style="color:#00ff9f;font-size:26px;font-weight:bold;">${opts.matchedCount}</div>
+          <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Matched</div>
+        </td>
+        <td style="width:6px;"></td>
+        <td style="padding:10px 8px;background:#0f0f1a;border-radius:6px;text-align:center;width:33%;">
+          <div style="color:#fbbf24;font-size:26px;font-weight:bold;">${opts.toApplyCount}</div>
+          <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Ready to Apply</div>
+        </td>
+        <td style="width:6px;"></td>
+        <td style="padding:10px 8px;background:#0f0f1a;border-radius:6px;text-align:center;width:33%;">
+          <div style="color:#60a5fa;font-size:26px;font-weight:bold;">${opts.totalApplied}</div>
+          <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Total Applied</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- 1000-Job Countdown -->
+    <h2 style="color:#fbbf24;font-size:13px;letter-spacing:2px;margin:0 0 12px 0;text-transform:uppercase;">🎯 1,000-Job Campaign</h2>
+    <div style="background:#0f0f1a;border-radius:6px;padding:20px;margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span style="color:#94a3b8;font-size:12px;">Progress</span>
+        <span style="color:#00ff9f;font-size:12px;font-weight:bold;">${opts.totalApplied} / ${opts.targetTotal} (${pct}%)</span>
+      </div>
+      ${progressBar}
+      <p style="color:#e2e8f0;font-size:14px;margin:16px 0 0 0;text-align:center;">
+        <strong style="color:#fbbf24;font-size:22px;">${remaining.toLocaleString()}</strong>
+        <span style="color:#64748b;font-size:12px;"> jobs remaining to reach 1,000</span>
+      </p>
+      ${projectionLine}
+    </div>
+
+    <!-- All Applied This Week -->
+    <h2 style="color:#fbbf24;font-size:13px;letter-spacing:2px;margin:24px 0 12px 0;text-transform:uppercase;">✅ All Applied This Week (${opts.appliedJobs.length})</h2>
+    <table style="width:100%;border-collapse:collapse;background:#0f0f1a;border-radius:6px;margin-bottom:24px;overflow:hidden;">
+      <tr style="background:#1e293b;">
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Job Title</th>
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Company</th>
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Location</th>
+      </tr>
+      ${appliedJobRows}
+    </table>
+
+    <!-- All Rejected This Week -->
+    <h2 style="color:#f87171;font-size:13px;letter-spacing:2px;margin:0 0 12px 0;text-transform:uppercase;">❌ All Rejected This Week (${opts.rejectedJobs.length})</h2>
+    <table style="width:100%;border-collapse:collapse;background:#0f0f1a;border-radius:6px;margin-bottom:24px;overflow:hidden;">
+      <tr style="background:#1e293b;">
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Job Title</th>
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Company</th>
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Location</th>
+        <th style="padding:8px 12px;text-align:right;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Match</th>
+      </tr>
+      ${rejectedJobRows}
+    </table>
+
+    <p style="color:#475569;font-size:11px;margin:24px 0 0 0;text-align:center;">1000Jobs · Smart Job Application Manager · <a href="https://1000jobs.manus.space" style="color:#a78bfa;text-decoration:none;">1000jobs.manus.space</a></p>
   </div>
 </body>
 </html>`;

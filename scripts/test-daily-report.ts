@@ -1,9 +1,15 @@
 import "dotenv/config";
-import { sendDailyReport } from "../server/routers";
+import { sendDailyReport, sendWeeklyReport } from "../server/routers";
 
 async function main() {
-  console.log("[Test] Calling sendDailyReport...");
-  await sendDailyReport();
+  const arg = process.argv[2] ?? "daily";
+  if (arg === "weekly") {
+    console.log("[Test] Calling sendWeeklyReport...");
+    await sendWeeklyReport();
+  } else {
+    console.log("[Test] Calling sendDailyReport...");
+    await sendDailyReport();
+  }
   console.log("[Test] Done.");
   process.exit(0);
 }

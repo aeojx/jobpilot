@@ -309,3 +309,14 @@
 - [x] Add rate projection line: "At the current rate of applications, you will reach 1000 jobs in X weeks"
 - [x] Add today's applied jobs list at the bottom (title + location)
 - [x] Add getJobsAppliedToday() DB helper to fetch jobs moved to applied status today
+
+## v3.5 Email Overhaul
+- [x] Fix daily subject: "1000Jobs Daily Report — ✅ X applied today | ⏳ Y ready to apply | 🎯 Z remaining"
+- [x] Reschedule daily report from 11 PM to 9 PM GST
+- [x] Add rejection stats section to daily email (rejected today count, total rejected, rejection rate %)
+- [x] Add rejected jobs table to daily email (all jobs rejected today: title + company + location)
+- [x] Add getJobsRejectedToday() and getRejectedStats() DB helpers
+- [x] Build weekly email template with all applied + all rejected jobs for the week
+- [x] Add weekly email scheduler (Fridays 9 PM GST)
+- [x] Add getJobsAppliedThisWeek() and getJobsRejectedThisWeek() DB helpers
+- [x] Add notifications.sendTestWeeklyReport tRPC mutation (Owner only)

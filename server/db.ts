@@ -251,6 +251,94 @@ export async function getJobsAppliedToday(dateKey: string): Promise<Array<{ titl
   return rows;
 }
 
+/**
+ * Returns jobs that were moved to 'rejected' status today (based on statusChangedAt).
+ */
+export async function getJobsRejectedToday(dateKey: string): Promise<Array<{ title: string; company: string; location: string | null }>> {
+  const db = await getDb();
+  if (!db) return [];
+  const startUtc = new Date(dateKey + "T00:00:00.000Z");
+  startUtc.setTime(startUtc.getTime() - 4 * 60 * 60 * 1000);
+  const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000);
+  const rows = await db
+    .select({ title: jobs.title, company: jobs.company, location: jobs.location })
+    .from(jobs)
+    .where(
+      and(
+        eq(jobs.status, "rejected"),
+        gte(jobs.statusChangedAt, startUtc),
+        lte(jobs.statusChangedAt, endUtc)
+      )
+    )
+    .orderBy(desc(jobs.statusChangedAt));
+  return rows;
+}
+
+/**
+ * Returns total rejected count and today's rejected count.
+ */
+export async function getRejectedStats(dateKey: string): Promise<{ totalRejected: number; rejectedToday: number }> {
+  const db = await getDb();
+  if (!db) return { totalRejected: 0, rejectedToday: 0 };
+  const startUtc = new Date(dateKey + "T00:00:00.000Z");
+  startUtc.setTime(startUtc.getTime() - 4 * 60 * 60 * 1000);
+  const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000);
+  const [totalRows, todayRows] = await Promise.all([
+    db.select({ c: count() }).from(jobs).where(eq(jobs.status, "rejected")),
+    db.select({ c: count() }).from(jobs).where(
+      and(
+        eq(jobs.status, "rejected"),
+        gte(jobs.statusChangedAt, startUtc),
+        lte(jobs.statusChangedAt, endUtc)
+      )
+    ),
+  ]);
+  return {
+    totalRejected: totalRows[0]?.c ?? 0,
+    rejectedToday: todayRows[0]?.c ?? 0,
+  };
+}
+
+/**
+ * Returns all jobs applied in the last N days (for weekly report).
+ */
+export async function getJobsAppliedThisWeek(days: number = 7): Promise<Array<{ title: string; company: string; location: string | null; statusChangedAt: Date | null }>> {
+  const db = await getDb();
+  if (!db) return [];
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const rows = await db
+    .select({ title: jobs.title, company: jobs.company, location: jobs.location, statusChangedAt: jobs.statusChangedAt })
+    .from(jobs)
+    .where(
+      and(
+        eq(jobs.status, "applied"),
+        gte(jobs.statusChangedAt, cutoff)
+      )
+    )
+    .orderBy(desc(jobs.statusChangedAt));
+  return rows;
+}
+
+/**
+ * Returns all jobs rejected in the last N days (for weekly report).
+ */
+export async function getJobsRejectedThisWeek(days: number = 7): Promise<Array<{ title: string; company: string; location: string | null; matchScore: number | null; statusChangedAt: Date | null }>> {
+  const db = await getDb();
+  if (!db) return [];
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const rows = await db
+    .select({ title: jobs.title, company: jobs.company, location: jobs.location, matchScore: jobs.matchScore, statusChangedAt: jobs.statusChangedAt })
+    .from(jobs)
+    .where(
+      and(
+        eq(jobs.status, "rejected"),
+        gte(jobs.statusChangedAt, cutoff)
+      )
+    )
+    .orderBy(desc(jobs.statusChangedAt));
+  return rows;
+}
+
 export async function getQuestionById(id: number) {
   const db = await getDb();
   if (!db) return null;
