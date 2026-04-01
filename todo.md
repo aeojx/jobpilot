@@ -311,3 +311,6 @@
 - [x] Build three pricing tier cards (Free / Hustler / Operator) with feature comparison table
 - [x] Add FAQ accordion section
 - [x] Register /landing route in App.tsx
+
+## v3.7 Public Landing Page
+- [x] Exempt /landing from GateGuard so it is accessible without password

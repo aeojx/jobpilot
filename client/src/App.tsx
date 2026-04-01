@@ -110,6 +110,24 @@ function Router() {
   );
 }
 
+// Routes that are publicly accessible without the password gate
+const PUBLIC_ROUTES = ["/landing"];
+
+function GatedApp() {
+  const [location] = useLocation();
+  const isPublic = PUBLIC_ROUTES.some((r) => location === r || location.startsWith(r + "/"));
+
+  if (isPublic) {
+    return <Router />;
+  }
+
+  return (
+    <GateGuard>
+      <Router />
+    </GateGuard>
+  );
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -130,9 +148,7 @@ function App() {
               },
             }}
           />
-          <GateGuard>
-            <Router />
-          </GateGuard>
+          <GatedApp />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
