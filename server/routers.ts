@@ -34,6 +34,7 @@ import {
   upsertSkillsProfile,
   getDueFetchSchedules,
   recordSwipe,
+  reverseSwipe,
   getSwipeStatsRange,
 } from "./db";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -513,6 +514,18 @@ export const appRouter = router({
           if (input.status === "to_apply") await recordSwipe(dateKey, "approved");
           else if (input.status === "rejected") await recordSwipe(dateKey, "rejected");
         }
+        return { success: true };
+      }),
+
+    undoSwipe: adminProcedure
+      .input(z.object({ id: z.number(), previousStatus: z.enum(["to_apply", "rejected"]) }))
+      .mutation(async ({ input }) => {
+        // Restore job to 'matched'
+        await updateJobStatus(input.id, "matched");
+        // Decrement swipe stat for today
+        const dateKey = getCurrentDateKey();
+        const direction = input.previousStatus === "to_apply" ? "approved" : "rejected";
+        await reverseSwipe(dateKey, direction);
         return { success: true };
       }),
 

@@ -14,6 +14,7 @@ import {
   BarChart2,
   ExternalLink,
   Briefcase,
+  Undo2,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -244,6 +245,8 @@ export default function SwipeView() {
   const [swipedCount, setSwipedCount] = useState(0);
   const [showDesc, setShowDesc] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  // Undo stack: stores the last swiped job and the status it was moved to
+  const [undoStack, setUndoStack] = useState<{ job: Job; previousStatus: "to_apply" | "rejected" }[]>([]);
 
   // Populate queue once data loads
   useEffect(() => {
@@ -292,6 +295,9 @@ export default function SwipeView() {
         setSwipedCount((c) => c + 1);
         setShowDesc(false);
         setDrag({ startX: 0, startY: 0, currentX: 0, currentY: 0, isDragging: false });
+        // Push to undo stack (keep last 1 for simplicity)
+        const previousStatus = dir === "right" ? "to_apply" : "rejected";
+        setUndoStack([{ job, previousStatus }]);
         animatingRef.current = false;
         if (cardRef.current) {
           cardRef.current.style.transition = "";
@@ -333,16 +339,41 @@ export default function SwipeView() {
     }
   }, [drag, currentJob, commitSwipe]);
 
+  // ─── Undo last swipe ─────────────────────────────────────────────────────
+  const undoSwipeMutation = trpc.jobs.undoSwipe.useMutation({
+    onSuccess: () => {
+      utils.jobs.byStatus.invalidate({ status: "matched" });
+      utils.jobs.kanban.invalidate();
+      utils.jobs.swipeStats.invalidate();
+    },
+  });
+
+  const undoSwipe = useCallback(() => {
+    if (undoStack.length === 0 || animatingRef.current) return;
+    const last = undoStack[undoStack.length - 1];
+    setUndoStack((s) => s.slice(0, -1));
+    setQueue((prev) => [last.job, ...prev]);
+    setSwipedCount((c) => Math.max(0, c - 1));
+    setShowDesc(false);
+    // Restore job to 'matched' and roll back swipe stat
+    undoSwipeMutation.mutate({ id: last.job.id, previousStatus: last.previousStatus });
+    toast("UNDO ↩ RESTORED", {
+      style: { background: "var(--atari-black)", border: "2px solid var(--atari-amber)", color: "var(--atari-amber)" },
+      duration: 1200,
+    });
+  }, [undoStack, undoSwipeMutation]);
+
   // ─── Keyboard support ────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (!currentJob || showStats) return;
-      if (e.key === "ArrowRight") commitSwipe("right", currentJob);
-      if (e.key === "ArrowLeft") commitSwipe("left", currentJob);
+      if (showStats) return;
+      if (e.key === "ArrowRight" && currentJob) commitSwipe("right", currentJob);
+      if (e.key === "ArrowLeft" && currentJob) commitSwipe("left", currentJob);
+      if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey)) undoSwipe();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [currentJob, commitSwipe, showStats]);
+  }, [currentJob, commitSwipe, showStats, undoSwipe]);
 
   // ─── Redirect non-owners ─────────────────────────────────────────────────
   if (user && user.role !== "admin") {
@@ -618,12 +649,13 @@ export default function SwipeView() {
                   <h2
                     style={{
                       fontFamily: "var(--font-pixel)",
-                      fontSize: "clamp(0.6rem, 2.2vw, 0.8rem)",
+                      fontSize: "clamp(0.75rem, 3vw, 1.05rem)",
                       color: "var(--atari-white)",
-                      lineHeight: 1.6,
-                      letterSpacing: "0.05em",
+                      lineHeight: 1.55,
+                      letterSpacing: "0.06em",
                       flex: 1,
                       minWidth: 0,
+                      textShadow: "0 0 8px rgba(224,224,240,0.25)",
                     }}
                   >
                     {currentJob.title}
@@ -647,15 +679,16 @@ export default function SwipeView() {
                 </div>
 
                 {/* Company */}
-                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.35rem" }}>
-                  <Building2 size={12} color="var(--atari-gray)" />
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem" }}>
+                  <Building2 size={14} color="var(--atari-amber)" />
                   <span
                     style={{
                       fontFamily: "var(--font-mono)",
-                      fontSize: "0.75rem",
-                      color: "var(--atari-gray)",
+                      fontSize: "0.9rem",
+                      color: "var(--atari-amber)",
                       textTransform: "uppercase",
-                      letterSpacing: "0.05em",
+                      letterSpacing: "0.07em",
+                      fontWeight: "bold",
                     }}
                   >
                     {currentJob.company}
@@ -849,14 +882,37 @@ export default function SwipeView() {
             <X size={28} strokeWidth={3} />
           </button>
 
-          {/* Center: remaining count + stats button */}
-          <div style={{ textAlign: "center" }}>
+          {/* Center: remaining count + undo button */}
+          <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
             <div style={{ fontFamily: "var(--font-pixel)", fontSize: "1.2rem", color: "var(--atari-white)", lineHeight: 1 }}>
               {remaining}
             </div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--atari-gray)", letterSpacing: "0.1em", marginTop: "4px" }}>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--atari-gray)", letterSpacing: "0.1em" }}>
               LEFT
             </div>
+            {/* Undo button */}
+            <button
+              onClick={undoSwipe}
+              disabled={undoStack.length === 0}
+              title="Undo last swipe (Ctrl+Z)"
+              style={{
+                background: "transparent",
+                border: `1px solid ${undoStack.length > 0 ? "var(--atari-amber)" : "var(--atari-border)"}`,
+                color: undoStack.length > 0 ? "var(--atari-amber)" : "var(--atari-border)",
+                cursor: undoStack.length > 0 ? "pointer" : "not-allowed",
+                padding: "4px 10px",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.55rem",
+                letterSpacing: "0.05em",
+                transition: "all 0.15s",
+              }}
+            >
+              <Undo2 size={11} />
+              UNDO
+            </button>
           </div>
 
           {/* Apply button */}
@@ -897,7 +953,7 @@ export default function SwipeView() {
         }}
         className="hidden md:block"
       >
-        KEYBOARD: ← REJECT &nbsp;|&nbsp; → TO APPLY
+        KEYBOARD: ← REJECT &nbsp;|&nbsp; → TO APPLY &nbsp;|&nbsp; CTRL+Z UNDO
       </div>
     </div>
   );

@@ -195,3 +195,8 @@
 - [x] Build FAQ.tsx page with all sections: overview, roles, job flow, matching algorithm, API/ingestion, schedules, swiping, question bank, gamification, performance, password gate
 - [x] Add /faq route in App.tsx
 - [x] Add FAQ nav item to both ownerNav and applierNav in AppLayout.tsx
+
+## v2.0 SwipeView UX
+- [x] Add Undo button that restores the last swiped card and reverses its status change
+- [x] Make job title larger and more prominent on swipe card
+- [x] Make company name larger and more prominent on swipe card

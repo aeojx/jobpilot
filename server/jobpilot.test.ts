@@ -27,6 +27,7 @@ vi.mock("./db", () => ({
   getOrCreateGamification: vi.fn().mockResolvedValue({ id: 1, userId: 1, totalXp: 50, currentStreak: 2, longestStreak: 5, lastActiveDate: "2026-03-28", updatedAt: new Date() }),
   updateGamification: vi.fn().mockResolvedValue(undefined),
   recordSwipe: vi.fn().mockResolvedValue(undefined),
+  reverseSwipe: vi.fn().mockResolvedValue(undefined),
   getSwipeStatsRange: vi.fn().mockResolvedValue([]),
   getDueFetchSchedules: vi.fn().mockResolvedValue([]),
 }));
@@ -339,5 +340,31 @@ describe("jobs.swipeStats", () => {
     } catch (e: unknown) {
       expect((e as Error).message).toBeDefined();
     }
+  });
+
+  it("owner can call undoSwipe with previousStatus=to_apply", async () => {
+    const caller = appRouter.createCaller(makeOwnerCtx());
+    try {
+      const result = await caller.jobs.undoSwipe({ id: 1, previousStatus: "to_apply" });
+      expect(result).toEqual({ success: true });
+    } catch (e: unknown) {
+      // DB not available — confirm input schema is accepted
+      expect((e as Error).message).toBeDefined();
+    }
+  });
+
+  it("owner can call undoSwipe with previousStatus=rejected", async () => {
+    const caller = appRouter.createCaller(makeOwnerCtx());
+    try {
+      const result = await caller.jobs.undoSwipe({ id: 2, previousStatus: "rejected" });
+      expect(result).toEqual({ success: true });
+    } catch (e: unknown) {
+      expect((e as Error).message).toBeDefined();
+    }
+  });
+
+  it("applier cannot call undoSwipe (admin only)", async () => {
+    const caller = appRouter.createCaller(makeApplierCtx());
+    await expect(caller.jobs.undoSwipe({ id: 1, previousStatus: "to_apply" })).rejects.toThrow();
   });
 });

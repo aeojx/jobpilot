@@ -329,6 +329,22 @@ export async function recordSwipe(dateKey: string, direction: "approved" | "reje
   }
 }
 
+export async function reverseSwipe(dateKey: string, direction: "approved" | "rejected") {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(swipeStats).where(eq(swipeStats.dateKey, dateKey)).limit(1);
+  if (!existing[0]) return; // nothing to reverse
+  if (direction === "approved") {
+    await db.update(swipeStats)
+      .set({ approved: sql`GREATEST(0, ${swipeStats.approved} - 1)` })
+      .where(eq(swipeStats.dateKey, dateKey));
+  } else {
+    await db.update(swipeStats)
+      .set({ rejected: sql`GREATEST(0, ${swipeStats.rejected} - 1)` })
+      .where(eq(swipeStats.dateKey, dateKey));
+  }
+}
+
 export async function getSwipeStatsRange(days: number) {
   const db = await getDb();
   if (!db) return [];
