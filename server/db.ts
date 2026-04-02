@@ -122,9 +122,19 @@ export async function updateJobMatchScore(
   await db.update(jobs).set({ matchScore, ...(dimensions ?? {}) }).where(eq(jobs.id, id));
 }
 
-export async function checkDuplicate(title: string, company: string): Promise<boolean> {
+export async function checkDuplicate(title: string, company: string, externalId?: string): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
+  // Primary check: externalId (the API's own job ID) — most reliable
+  if (externalId) {
+    const byId = await db
+      .select({ id: jobs.id })
+      .from(jobs)
+      .where(eq(jobs.externalId, externalId))
+      .limit(1);
+    if (byId.length > 0) return true;
+  }
+  // Fallback: title + company fuzzy match
   const result = await db
     .select({ id: jobs.id })
     .from(jobs)

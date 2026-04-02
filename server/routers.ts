@@ -464,7 +464,8 @@ async function executeFetch(
     try {
       const title = (job.title as string) ?? "Untitled";
       const company = (job.organization as string) ?? (job.company as string) ?? "Unknown";
-      const isDuplicate = await checkDuplicate(title, company);
+      const externalId = (job.id as string) ?? undefined;
+      const isDuplicate = await checkDuplicate(title, company, externalId);
       if (isDuplicate) {
         jobsDuplicate++;
         continue; // Skip inserting — duplicate jobs are not stored

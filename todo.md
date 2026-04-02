@@ -329,11 +329,18 @@
 - [x] Retroactively score all unscored "matched" jobs
 
 ## v3.10 Improve API Error Logging
-- [ ] Capture raw response body before JSON.parse in fetch handler
-- [ ] When JSON parse fails, log the first 200 chars of HTML response in History error message
-- [ ] Add diagnosis hint (e.g., "API returned HTML — likely auth error, rate limit, or expired key")
+- [x] Capture raw response body before JSON.parse in fetch handler
+- [x] When JSON parse fails, log the first 200 chars of HTML response in History error message
+- [x] Add diagnosis hint (e.g., "API returned HTML — likely auth error, rate limit, or expired key")
 
 ## v3.11 Skip Duplicate Job Insertion
 - [x] Update ingest loop: when isDuplicate is true, skip insertJob and continue to next job
 - [x] Keep jobsDuplicate counter increment for History reporting
 - [x] Optionally: delete all existing jobs where isDuplicate = true from the database
+
+## v3.12 Smarter Duplicate Detection
+- [x] Update checkDuplicate in db.ts to accept optional externalId and check it first
+- [x] If externalId matches an existing job, return true (duplicate) immediately
+- [x] Fall back to title+company match if no externalId provided or no externalId match
+- [x] Pass externalId from the ingest loop to checkDuplicate in routers.ts
+- [x] Update tests to cover externalId-based deduplication
