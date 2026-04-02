@@ -348,3 +348,8 @@
 ## v3.13 Release Notes in FAQ
 - [x] Add Release Notes section to FAQ.tsx with full timeline of all versions (v3.0–v3.12)
 - [x] Update Release Notes with every future change
+
+## v3.14 Fix Daily Report Scheduler
+- [x] Fix trigger hour from 23 (11 PM GST) to 21 (9 PM GST)
+- [x] Add catch-up logic: if server wakes after 9 PM and no report sent today, send immediately
+- [x] Wire startWeeklyReportScheduler into server startup (Fridays 9 PM GST)

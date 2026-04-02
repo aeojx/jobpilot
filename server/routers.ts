@@ -581,10 +581,12 @@ export function startScheduledFetchRunner() {
   }, 5 * 60 * 1000); // every 5 minutes
 }
 
-// ─── Daily Report Emailer (11 PM GST = 19:00 UTC) ────────────────────────────
+// ─── Daily Report Emailer (9 PM GST = 17:00 UTC) ────────────────────────────
 
 let _dailyReportInterval: ReturnType<typeof setInterval> | null = null;
 let _lastDailyReportDate: string | null = null;
+let _weeklyReportInterval: ReturnType<typeof setInterval> | null = null;
+let _lastWeeklyReportDate: string | null = null;
 
 /**
  * Returns the current date key in GST (UTC+4) as "YYYY-MM-DD".
@@ -640,7 +642,8 @@ export async function sendDailyReport(): Promise<void> {
       targetTotal: 1000,
     });
 
-    const subject = `📊 JobPilot Daily Report — ${formatDateKey(dateKey)}`;
+    const remaining = Math.max(0, 1000 - pipeline.totalApplied);
+    const subject = `1000Jobs Daily Report — ✅ ${appliedToday} applied today | ⏳ ${pipeline.toApply} ready to apply | 🎯 ${remaining} remaining`;
     const recipients = [APPLIER_EMAIL, "tedunt@gmail.com"];
 
     await sendEmail({ to: recipients, subject, html });
@@ -652,15 +655,76 @@ export async function sendDailyReport(): Promise<void> {
 
 export function startDailyReportScheduler() {
   if (_dailyReportInterval) return;
-  // Check every 15 minutes if it's time to send (11 PM GST = hour 23 GST)
-  _dailyReportInterval = setInterval(async () => {
+
+  const checkAndSendDaily = async () => {
     const hour = getGstHour();
     const dateKey = getGstDateKey();
-    if (hour === 23 && _lastDailyReportDate !== dateKey) {
+    // Fire at 9 PM GST (hour 21). Also catch up if server woke between 21-23 and hasn't sent today.
+    if (hour >= 21 && hour <= 23 && _lastDailyReportDate !== dateKey) {
       _lastDailyReportDate = dateKey;
+      console.log(`[DailyReport] Triggering at GST hour ${hour} for ${dateKey}`);
       await sendDailyReport();
     }
-  }, 15 * 60 * 1000); // every 15 minutes
+  };
+
+  // Run immediately on startup to catch missed sends after hibernation
+  checkAndSendDaily();
+  _dailyReportInterval = setInterval(checkAndSendDaily, 15 * 60 * 1000);
+  console.log("[DailyReport] Daily report scheduler started (checks every 15 minutes, sends at 9 PM GST)");
+}
+
+export async function sendWeeklyReport(): Promise<void> {
+  try {
+    const dateKey = getGstDateKey();
+    const pipeline = await getPipelineStats();
+    const appliedToday = await getAppliedTodayCount(dateKey);
+    const weeklyStats = await getApplierStatsRange(7);
+    const weeklyData = weeklyStats
+      .slice()
+      .reverse()
+      .map((s) => ({ date: formatDateKey(s.dateKey), applied: s.appliedCount }));
+    const weeklyApplied = weeklyStats.reduce((sum, s) => sum + s.appliedCount, 0);
+    const remaining = Math.max(0, 1000 - pipeline.totalApplied);
+    const html = buildDailyReportEmail({
+      date: formatDateKey(dateKey),
+      matchedCount: pipeline.matched,
+      toApplyCount: pipeline.toApply,
+      appliedCount: pipeline.applied,
+      appliedToday,
+      weeklyApplied,
+      weeklyData,
+      totalApplied: pipeline.totalApplied,
+      targetTotal: 1000,
+    });
+    const subject = `1000Jobs Weekly Report — ✅ ${weeklyApplied} applied this week | 🎯 ${remaining} remaining`;
+    const recipients = [APPLIER_EMAIL, "tedunt@gmail.com"];
+    await sendEmail({ to: recipients, subject, html });
+    console.log(`[WeeklyReport] Sent to ${recipients.join(", ")} for week of ${dateKey}`);
+  } catch (err) {
+    console.error("[WeeklyReport] Failed to send:", err);
+  }
+}
+
+export function startWeeklyReportScheduler() {
+  if (_weeklyReportInterval) return;
+
+  const checkAndSendWeekly = async () => {
+    const now = new Date();
+    const gst = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+    const dayOfWeek = gst.getUTCDay(); // 0=Sun, 5=Fri
+    const hour = gst.getUTCHours();
+    const dateKey = getGstDateKey();
+    // Fire on Fridays at 9 PM GST. Also catch up if server woke between 21-23 on a Friday.
+    if (dayOfWeek === 5 && hour >= 21 && hour <= 23 && _lastWeeklyReportDate !== dateKey) {
+      _lastWeeklyReportDate = dateKey;
+      console.log(`[WeeklyReport] Triggering Friday report at GST hour ${hour} for ${dateKey}`);
+      await sendWeeklyReport();
+    }
+  };
+
+  checkAndSendWeekly();
+  _weeklyReportInterval = setInterval(checkAndSendWeekly, 15 * 60 * 1000);
+  console.log("[WeeklyReport] Weekly report scheduler started (checks every 15 minutes, sends Fridays at 9 PM GST)");
 }
 
 // ─── Router ───────────────────────────────────────────────────────────────────
