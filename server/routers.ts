@@ -465,7 +465,10 @@ async function executeFetch(
       const title = (job.title as string) ?? "Untitled";
       const company = (job.organization as string) ?? (job.company as string) ?? "Unknown";
       const isDuplicate = await checkDuplicate(title, company);
-      if (isDuplicate) { jobsDuplicate++; }
+      if (isDuplicate) {
+        jobsDuplicate++;
+        continue; // Skip inserting — duplicate jobs are not stored
+      }
       const descText = (job.description_text as string) ?? (job.description as string) ?? "";
       const emailFound = extractEmailFromText(descText) ?? (job.ai_hiring_manager_email_address as string) ?? null;
       const hasEmail = !!emailFound;
@@ -505,7 +508,7 @@ async function executeFetch(
         descriptionHtml: (job.description_html as string) ?? undefined,
         applyUrl: (job.url as string) ?? undefined,
         source: (job.source as string) ?? undefined,
-        isDuplicate,
+        isDuplicate: false, // Always false now — duplicates are skipped before insert
         hasEmail,
         emailFound: emailFound ?? undefined,
         matchScore,

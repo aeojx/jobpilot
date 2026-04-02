@@ -327,3 +327,13 @@
 - [x] Remove "Ingested" Kanban column — auto-score jobs on ingest and place in "Matched"
 - [x] Migrate existing "ingested" jobs: score them and move to "matched"
 - [x] Retroactively score all unscored "matched" jobs
+
+## v3.10 Improve API Error Logging
+- [ ] Capture raw response body before JSON.parse in fetch handler
+- [ ] When JSON parse fails, log the first 200 chars of HTML response in History error message
+- [ ] Add diagnosis hint (e.g., "API returned HTML — likely auth error, rate limit, or expired key")
+
+## v3.11 Skip Duplicate Job Insertion
+- [x] Update ingest loop: when isDuplicate is true, skip insertJob and continue to next job
+- [x] Keep jobsDuplicate counter increment for History reporting
+- [x] Optionally: delete all existing jobs where isDuplicate = true from the database
