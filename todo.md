@@ -314,3 +314,6 @@
 
 ## v3.7 Public Landing Page
 - [x] Exempt /landing from GateGuard so it is accessible without password
+
+## v3.8 Remove Daily Target Met Email
+- [x] Delete the "Daily Target Met!" email trigger from the codebase

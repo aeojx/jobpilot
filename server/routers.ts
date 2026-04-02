@@ -781,13 +781,6 @@ export const appRouter = router({
         await getOrCreateApplierStats(dateKey, target);
         await incrementApplierStats(dateKey);
         await updateGamification(ctx.user.id, dateKey);
-        const stats = await getOrCreateApplierStats(dateKey, target);
-        if (stats.appliedCount >= target) {
-          await notifyOwner({
-            title: "🎯 Daily Target Met!",
-            content: `The Applier has reached today's target of ${target} applications on ${dateKey}.`,
-          });
-        }
         return { success: true };
       }),
 
