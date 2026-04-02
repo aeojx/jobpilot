@@ -785,6 +785,131 @@ const FAQ_SECTIONS: FAQSection[] = [
       },
     ],
   },
+  {
+    title: "Release Notes",
+    icon: "📋",
+    items: [
+      {
+        q: "v3.12 — Apr 2, 2026 · Smarter Duplicate Detection",
+        a: (
+          <p>
+            Duplicate detection now uses a two-stage check. The API's own job ID (<code style={{ color: "var(--atari-cyan)" }}>externalId</code>) is checked first — an exact match immediately skips the job. If no externalId is available, the system falls back to the existing title + company fuzzy match. This catches the same job re-posted under a slightly different title.
+          </p>
+        ),
+      },
+      {
+        q: "v3.11 — Apr 2, 2026 · Duplicate Jobs Deleted (Not Tagged)",
+        a: (
+          <p>
+            Duplicate jobs are now silently skipped during ingestion — they are never inserted into the database. Previously they were stored with an <code style={{ color: "var(--atari-cyan)" }}>isDuplicate</code> flag. 316 existing duplicate-tagged jobs were deleted from the database. The fetch History panel still shows the duplicate count for each run.
+          </p>
+        ),
+      },
+      {
+        q: "v3.10 — Apr 2, 2026 · Improved API Error Logging",
+        a: (
+          <p>
+            When the API returns an HTML page instead of JSON (e.g. due to an expired key, rate limit, or proxy issue), the error is now captured and stored with a human-readable diagnosis. The History panel shows the exact HTTP status and a plain-English explanation: <em>"Not subscribed to this API"</em>, <em>"Monthly quota exceeded"</em>, <em>"Invalid API key"</em>, or <em>"API returned HTML — likely a network/proxy issue"</em>.
+          </p>
+        ),
+      },
+      {
+        q: "v3.9 — Apr 2, 2026 · Ingest & Dashboard Updates",
+        a: (
+          <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+            <li><strong>UAE added to location filter</strong> — "United Arab Emirates" is now a selectable location in the Fetch Now form.</li>
+            <li><strong>Multi-select location filter</strong> — multiple locations can now be selected simultaneously for a single fetch.</li>
+            <li><strong>Fetch details in History & Schedules</strong> — every History and Schedule entry now shows the full filter set used for that API call.</li>
+            <li><strong>Ingested column removed</strong> — all fetched jobs now land directly in Matched after AI scoring. The Ingested column no longer exists.</li>
+            <li><strong>Retroactive scoring</strong> — 197 previously unscored Matched jobs were scored using the LLM.</li>
+          </ul>
+        ),
+      },
+      {
+        q: "v3.8 — Apr 1, 2026 · Remove Daily Target Met Email",
+        a: (
+          <p>
+            The "Daily Target Met!" notification email was removed. The daily and weekly report emails remain active.
+          </p>
+        ),
+      },
+      {
+        q: "v3.7 — Apr 1, 2026 · Public Landing Page",
+        a: (
+          <p>
+            The <code style={{ color: "var(--atari-cyan)" }}>/landing</code> route is now publicly accessible without requiring the password gate. Anyone can visit the 1000Jobs marketing page directly.
+          </p>
+        ),
+      },
+      {
+        q: "v3.6 — Apr 1, 2026 · Marketing Landing Page",
+        a: (
+          <p>
+            A full one-page marketing site was built at <code style={{ color: "var(--atari-cyan)" }}>/landing</code> for the "1000Jobs — Tinder for Jobs" product. It includes a hero with swipe card mockup, problem/solution sections, social proof, three pricing tiers (Free / Hustler $29/mo / Operator $99/mo), a 90-day guarantee, FAQ accordion, and a final CTA — all styled in the retro-futuristic aesthetic.
+          </p>
+        ),
+      },
+      {
+        q: "v3.5 — Apr 1, 2026 · Email Overhaul (Daily + Weekly Reports)",
+        a: (
+          <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+            <li><strong>Daily report rescheduled to 9 PM GST</strong> (was 11 PM).</li>
+            <li><strong>Subject line updated</strong> to: <em>"1000Jobs Daily Report — ✅ X applied today | ⏳ Y ready to apply | 🎯 Z remaining"</em>.</li>
+            <li><strong>Rejection stats added</strong> to daily email: Rejected Today, Total Rejected, Rejection Rate %.</li>
+            <li><strong>Rejected jobs table added</strong> — all jobs rejected that day listed with title, company, location.</li>
+            <li><strong>Weekly report added</strong> — sent every Friday at 9 PM GST with Week at a Glance stats, daily Mon–Sun breakdown, pipeline health, 1,000-job progress bar, and full lists of all applied and rejected jobs for the week.</li>
+          </ul>
+        ),
+      },
+      {
+        q: "v3.4 — Mar 31, 2026 · Daily Report Email Enhancements",
+        a: (
+          <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+            <li><strong>Dynamic subject line</strong> with live applied/pipeline/remaining counts.</li>
+            <li><strong>Rate projection</strong> — "At the current rate, you will reach 1,000 jobs in X weeks" based on 7-day rolling average.</li>
+            <li><strong>Applied today table</strong> — all jobs applied that day listed with title, company, and location at the bottom of the email.</li>
+          </ul>
+        ),
+      },
+      {
+        q: "v3.3 — Mar 30, 2026 · Email Notifications (Resend)",
+        a: (
+          <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+            <li><strong>Resend SDK integrated</strong> with verified domain <code style={{ color: "var(--atari-cyan)" }}>notifications@allanabbas.com</code>.</li>
+            <li><strong>Question-answered email</strong> — when any user answers a question in the Question Bank, an email is sent to the Applier (z.hewedi@gmail.com) with the question, answer, and job context.</li>
+            <li><strong>Daily report email</strong> — sent nightly to both Owner and Applier with pipeline snapshot, last 7 days breakdown, and 1,000-job campaign progress bar.</li>
+          </ul>
+        ),
+      },
+      {
+        q: "v3.2 — Mar 29, 2026 · Manual Job Add",
+        a: (
+          <p>
+            A "Manual Add" button was added to the Kanban header. Owners can manually add jobs (title, company, location, URL, notes) that land directly in the Applied column. Manually added cards show a <strong style={{ color: "var(--atari-amber)" }}>MANUAL</strong> tag and an "Added by [name]" attribution line.
+          </p>
+        ),
+      },
+      {
+        q: "v3.1 — Mar 28, 2026 · Matching Algorithm Upgrade",
+        a: (
+          <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+            <li><strong>Structured skills profile</strong> — must-have skills, nice-to-have skills, dealbreakers, seniority, salary minimum, target industries, remote preference.</li>
+            <li><strong>5-dimension scoring</strong> — Skills, Seniority, Location, Industry, Compensation scored separately then combined into a composite.</li>
+            <li><strong>Dealbreaker pre-filter</strong> — jobs matching any dealbreaker keyword are auto-rejected before the LLM call.</li>
+            <li><strong>Dimension score breakdown</strong> shown on SwipeView cards and Kanban job detail modal.</li>
+          </ul>
+        ),
+      },
+      {
+        q: "v3.0 — Mar 27, 2026 · Auto-Reject Feature",
+        a: (
+          <p>
+            An Auto-Reject button was added to the SwipeView header. The Owner sets a score threshold (default 30%) and previews how many jobs will be rejected. On confirmation, all Matched jobs below the threshold are moved to Rejected with an <strong style={{ color: "var(--atari-red)" }}>AUTO-REJECTED</strong> tag and removed from the swipe queue immediately.
+          </p>
+        ),
+      },
+    ],
+  },
 ];
 
 // ─── Accordion Item ───────────────────────────────────────────────────────────

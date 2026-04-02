@@ -344,3 +344,7 @@
 - [x] Fall back to title+company match if no externalId provided or no externalId match
 - [x] Pass externalId from the ingest loop to checkDuplicate in routers.ts
 - [x] Update tests to cover externalId-based deduplication
+
+## v3.13 Release Notes in FAQ
+- [x] Add Release Notes section to FAQ.tsx with full timeline of all versions (v3.0–v3.12)
+- [x] Update Release Notes with every future change
