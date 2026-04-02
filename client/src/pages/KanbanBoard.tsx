@@ -21,7 +21,6 @@ type KanbanStatus = "ingested" | "matched" | "to_apply" | "applied" | "rejected"
 type SortKey = "default" | "score_desc" | "score_asc" | "dwell_desc" | "dwell_asc";
 
 const COLUMNS: { id: KanbanStatus; label: string; color: string }[] = [
-  { id: "ingested",  label: "Ingested",     color: "var(--atari-gray)" },
   { id: "matched",   label: "Matched",      color: "var(--atari-green)" },
   { id: "to_apply",  label: "To Apply",     color: "var(--atari-amber)" },
   { id: "applied",   label: "Applied",      color: "var(--atari-cyan)" },

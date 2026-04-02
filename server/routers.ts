@@ -144,7 +144,7 @@ function checkDealbreakers(text: string, dealbreakers: string[]): string | null 
  * Uses the FULL description (no character cap).
  * Passes title + company as explicit fields.
  */
-async function scoreJobWithLLM(
+export async function scoreJobWithLLM(
   jobDescription: string,
   skillsProfile: SkillsProfile,
   jobTitle?: string,
@@ -471,12 +471,18 @@ async function executeFetch(
       const hasEmail = !!emailFound;
       let matchScore = 0;
       let dimensionScores: Partial<DimensionScores> = {};
-      let status: "ingested" | "matched" = "ingested";
+      // Always land in "matched" — "ingested" is no longer a visible column.
+      // If scoring succeeds and composite > 0 and no deal-breaker, score is set.
+      // If no skills profile or scoring fails, job still lands in matched with score 0.
+      const status: "matched" = "matched";
       if (skills && descText) {
-        const result = await scoreJobWithLLM(descText, skills, title, company);
-        matchScore = result.composite;
-        dimensionScores = result;
-        if (matchScore > 0 && !result.dealBreakerMatched) status = "matched";
+        try {
+          const result = await scoreJobWithLLM(descText, skills, title, company);
+          matchScore = result.composite;
+          dimensionScores = result;
+        } catch (scoreErr) {
+          console.error("[fetchJobs] Scoring failed for job, inserting with score 0:", (scoreErr as Error).message);
+        }
       }
       // locations_derived is an array of strings like ["Abu Dhabi, Abu Dhabi, United Arab Emirates"]
       const locRaw = job.locations_derived as string[] | undefined;
@@ -989,22 +995,33 @@ export const appRouter = router({
       if (!skills) throw new TRPCError({ code: "BAD_REQUEST", message: "No skills profile found" });
       const allJobs = await getAllJobs();
       let updated = 0;
+      let migrated = 0;
       for (const job of allJobs) {
-        if (job.description) {
-          const result = await scoreJobWithLLM(job.description, skills, job.title, job.company);
-          await updateJobMatchScore(job.id, result.composite, {
-            scoreSkills: result.scoreSkills,
-            scoreSeniority: result.scoreSeniority,
-            scoreLocation: result.scoreLocation,
-            scoreIndustry: result.scoreIndustry,
-            scoreCompensation: result.scoreCompensation,
-            dealBreakerMatched: result.dealBreakerMatched,
-          });
-          if (result.composite > 0 && !result.dealBreakerMatched && job.status === "ingested") await updateJobStatus(job.id, "matched");
-          updated++;
+        // Migrate any remaining "ingested" jobs to "matched" regardless of score
+        if (job.status === "ingested") {
+          await updateJobStatus(job.id, "matched");
+          migrated++;
+        }
+        // Score jobs that have no score yet (score === 0) or are ingested
+        const needsScoring = (job.matchScore === 0 || job.matchScore === null) && job.description;
+        if (needsScoring && job.description) {
+          try {
+            const result = await scoreJobWithLLM(job.description, skills, job.title, job.company);
+            await updateJobMatchScore(job.id, result.composite, {
+              scoreSkills: result.scoreSkills,
+              scoreSeniority: result.scoreSeniority,
+              scoreLocation: result.scoreLocation,
+              scoreIndustry: result.scoreIndustry,
+              scoreCompensation: result.scoreCompensation,
+              dealBreakerMatched: result.dealBreakerMatched,
+            });
+            updated++;
+          } catch (err) {
+            console.error("[rescoreAll] Scoring failed for job", job.id, (err as Error).message);
+          }
         }
       }
-      return { success: true, updated };
+      return { success: true, updated, migrated };
     }),
   }),
 

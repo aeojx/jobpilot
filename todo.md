@@ -317,3 +317,13 @@
 
 ## v3.8 Remove Daily Target Met Email
 - [x] Delete the "Daily Target Met!" email trigger from the codebase
+
+## v3.9 Ingest & Dashboard Updates
+- [x] Add "United Arab Emirates" to location filter in Fetch Now page
+- [x] Enable multi-select for location filter in Fetch Now page
+- [x] Show fetch details (query, location, keywords, count) in History entries
+- [x] Log failed API calls with error reason in History
+- [x] Show fetch details in Schedules entries
+- [x] Remove "Ingested" Kanban column — auto-score jobs on ingest and place in "Matched"
+- [x] Migrate existing "ingested" jobs: score them and move to "matched"
+- [x] Retroactively score all unscored "matched" jobs

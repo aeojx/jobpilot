@@ -539,7 +539,7 @@ describe("v3.1 LLM scoring: multi-dimension scores", () => {
         company: "Acme Corp",
         description: "We need a senior TypeScript engineer with React experience.",
         status: "matched",
-        matchScore: 50,
+        matchScore: 0,
       },
     ]);
     (getSkillsProfile as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
@@ -583,7 +583,7 @@ describe("v3.1 LLM scoring: multi-dimension scores", () => {
         company: "Gov Corp",
         description: "This role requires security clearance and US citizenship.",
         status: "matched",
-        matchScore: 60,
+        matchScore: 0,
       },
     ]);
     (getSkillsProfile as ReturnType<typeof vi.fn>).mockResolvedValueOnce({

@@ -51,12 +51,13 @@ const TAXONOMIES = [
 ];
 const DAYS_OF_WEEK = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
-// Common location suggestions for autocomplete
-const LOCATION_SUGGESTIONS = [
-  "United States","United Kingdom","Canada","Australia","Germany","France","Netherlands",
-  "Singapore","India","Ireland","New Zealand","Switzerland","Sweden","Norway","Denmark",
-  "Remote","New York","San Francisco","London","Toronto","Sydney","Berlin","Amsterdam",
-  "Dubai","Austin","Seattle","Chicago","Boston","Los Angeles","Atlanta","Miami",
+// Location options for multi-select
+const LOCATION_OPTIONS = [
+  "United Arab Emirates","United States","United Kingdom","Canada","Australia",
+  "Germany","France","Netherlands","Singapore","India","Ireland","New Zealand",
+  "Switzerland","Sweden","Norway","Denmark","Remote",
+  "Dubai","Abu Dhabi","New York","San Francisco","London","Toronto","Sydney",
+  "Berlin","Amsterdam","Austin","Seattle","Chicago","Boston","Los Angeles","Atlanta","Miami",
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -299,7 +300,7 @@ const defaultFilters = () => ({
   endpoint: "active-ats-7d" as "active-ats-7d" | "active-ats-24h",
   titleFilter: "",
   advancedTitleFilter: "",
-  locationFilter: "",
+  locationFilter: [] as string[],
   descriptionFilter: "",
   organizationFilter: "",
   organizationExclusionFilter: "",
@@ -333,7 +334,7 @@ function filtersToInput(f: Filters) {
     endpoint: f.endpoint,
     titleFilter: f.titleFilter || undefined,
     advancedTitleFilter: f.advancedTitleFilter || undefined,
-    locationFilter: f.locationFilter || undefined,
+    locationFilter: f.locationFilter.length ? f.locationFilter.join(" OR ") : undefined,
     descriptionFilter: f.descriptionFilter || undefined,
     organizationFilter: f.organizationFilter || undefined,
     organizationExclusionFilter: f.organizationExclusionFilter || undefined,
@@ -359,6 +360,37 @@ function filtersToInput(f: Filters) {
     offset: parseInt(f.offset) || 0,
     descriptionType: f.descriptionType,
   };
+}
+
+// ── Fetch Details Component ─────────────────────────────────────────────────
+
+function FetchDetails({ filters }: { filters?: unknown }) {
+  if (!filters) return null;
+  const f = filters as Record<string, unknown>;
+  const details: { label: string; value: string }[] = [];
+  if (f.titleFilter) details.push({ label: "TITLE", value: String(f.titleFilter) });
+  if (f.locationFilter) details.push({ label: "LOCATION", value: String(f.locationFilter) });
+  if (f.descriptionFilter) details.push({ label: "DESCRIPTION", value: String(f.descriptionFilter) });
+  if (f.organizationFilter) details.push({ label: "ORG", value: String(f.organizationFilter) });
+  if (f.source) details.push({ label: "SOURCE", value: String(f.source) });
+  if (f.aiWorkArrangementFilter) details.push({ label: "ARRANGEMENT", value: String(f.aiWorkArrangementFilter) });
+  if (f.aiExperienceLevelFilter) details.push({ label: "EXPERIENCE", value: String(f.aiExperienceLevelFilter) });
+  if (f.aiEmploymentTypeFilter) details.push({ label: "EMPLOYMENT", value: String(f.aiEmploymentTypeFilter) });
+  if (f.aiTaxonomiesAFilter) details.push({ label: "TAXONOMY", value: String(f.aiTaxonomiesAFilter) });
+  if (f.remote !== undefined && f.remote !== null) details.push({ label: "REMOTE", value: f.remote === true ? "YES" : f.remote === false ? "NO" : "ANY" });
+  if (f.limit) details.push({ label: "LIMIT", value: String(f.limit) });
+  if (f.offset && f.offset !== 0) details.push({ label: "OFFSET", value: String(f.offset) });
+  if (details.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+      {details.map((d) => (
+        <span key={d.label} className="text-xs font-mono">
+          <span className="text-gray-500">{d.label}: </span>
+          <span className="text-cyan-400 truncate max-w-[200px] inline-block align-bottom" title={d.value}>{d.value}</span>
+        </span>
+      ))}
+    </div>
+  );
 }
 
 // ── History Row Component ───────────────────────────────────────────────────
@@ -422,19 +454,22 @@ function HistoryRow({
             )}
           </div>
           {h.status === "success" ? (
-            <div className="flex flex-wrap gap-4 text-xs">
-              <span className="text-white font-bold">{h.jobsFetched} fetched</span>
-              <span className="text-green-400">{h.jobsIngested} ingested</span>
-              <span className="text-yellow-400">{h.jobsDuplicate} duplicates</span>
-              {h.jobsRemaining !== null && h.jobsRemaining !== undefined && (
-                <span className="text-gray-400">{h.jobsRemaining.toLocaleString()} credits left</span>
-              )}
-              {h.durationMs != null && (
-                <span className="text-purple-400 flex items-center gap-1">
-                  <Timer size={10} />
-                  {formatDuration(h.durationMs)}
-                </span>
-              )}
+            <div>
+              <div className="flex flex-wrap gap-4 text-xs">
+                <span className="text-white font-bold">{h.jobsFetched} fetched</span>
+                <span className="text-green-400">{h.jobsIngested} ingested</span>
+                <span className="text-yellow-400">{h.jobsDuplicate} duplicates</span>
+                {h.jobsRemaining !== null && h.jobsRemaining !== undefined && (
+                  <span className="text-gray-400">{h.jobsRemaining.toLocaleString()} credits left</span>
+                )}
+                {h.durationMs != null && (
+                  <span className="text-purple-400 flex items-center gap-1">
+                    <Timer size={10} />
+                    {formatDuration(h.durationMs)}
+                  </span>
+                )}
+              </div>
+              <FetchDetails filters={h.filters} />
             </div>
           ) : (
             <div className="space-y-2">
@@ -782,12 +817,12 @@ export default function Ingestion() {
                 placeholder='e.g. "Software Engineer" OR Developer'
                 disabled={isFetching}
               />
-              <AutocompleteInput
+              <MultiSelect
                 label="LOCATION FILTER"
-                value={filters.locationFilter}
+                options={LOCATION_OPTIONS}
+                selected={filters.locationFilter}
                 onChange={(v) => setFilter("locationFilter", v)}
-                suggestions={LOCATION_SUGGESTIONS}
-                placeholder='e.g. "United States" OR "United Kingdom"'
+                placeholder='Any location'
                 disabled={isFetching}
               />
               <TextInput
@@ -1037,6 +1072,7 @@ export default function Ingestion() {
                       {s.lastRunAt && <span>Last run: {new Date(s.lastRunAt).toLocaleString()}</span>}
                       {s.nextRunAt && s.enabled && <span className="text-amber-400">Next: {new Date(s.nextRunAt).toLocaleString()}</span>}
                     </div>
+                    <FetchDetails filters={s.filters} />
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <button onClick={() => runNowMut.mutate({ id: s.id })} disabled={runNowMut.isPending} title="Run now" className="p-1.5 border border-amber-400 text-amber-400 hover:bg-amber-400/10 transition-colors">
@@ -1076,7 +1112,7 @@ export default function Ingestion() {
                   ...defaultFilters(),
                   endpoint: (snap.endpoint as Filters["endpoint"]) ?? "active-ats-7d",
                   titleFilter: (snap.titleFilter as string) ?? "",
-                  locationFilter: (snap.locationFilter as string) ?? "",
+                  locationFilter: snap.locationFilter ? (typeof snap.locationFilter === "string" ? snap.locationFilter.split(" OR ") : (snap.locationFilter as string[])) : [],
                   descriptionFilter: (snap.descriptionFilter as string) ?? "",
                   organizationFilter: (snap.organizationFilter as string) ?? "",
                   limit: String(snap.limit ?? 100),
