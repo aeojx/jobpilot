@@ -790,6 +790,80 @@ const FAQ_SECTIONS: FAQSection[] = [
     icon: "📋",
     items: [
       {
+        q: "v3.20 — Apr 5, 2026 · Daily Report Bug Fix & Time Change",
+        a: (
+          <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+            <li><strong>Duplicate daily emails fixed</strong> — the last-sent date is now persisted to the database (<code style={{ color: "var(--atari-cyan)" }}>system_config</code> table) instead of an in-memory variable. Server restarts and hibernation wakeups no longer trigger duplicate sends.</li>
+            <li><strong>Daily report rescheduled to 7 PM GST</strong> (was 9 PM). The trigger window is now 7–9 PM GST (hours 19–21).</li>
+            <li><strong>Weekly report</strong> also updated to use DB persistence for the same reason.</li>
+          </ul>
+        ),
+      },
+      {
+        q: "v3.19 — Apr 3, 2026 · CampaignBar Now Visible on All Pages",
+        a: (
+          <p>
+            Root cause found — the CampaignBar was wired into <code style={{ color: "var(--atari-cyan)" }}>DashboardLayout</code> but the app uses a custom <code style={{ color: "var(--atari-cyan)" }}>AppLayout</code> component. Moved CampaignBar to AppLayout so it now appears on every page.
+          </p>
+        ),
+      },
+      {
+        q: "v3.18 — Apr 3, 2026 · CampaignBar Redesign",
+        a: (
+          <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+            <li><strong>Redesigned layout</strong> — shows ✅ applied today pill, animated progress bar, total applied / 1,000, and 🎯 remaining badge.</li>
+            <li><strong>Sticky bar</strong> — stays visible while scrolling.</li>
+            <li><strong>Clickable</strong> — links to the Performance page.</li>
+            <li><strong>Auto-refreshes</strong> every 60 seconds.</li>
+          </ul>
+        ),
+      },
+      {
+        q: "v3.17 — Apr 3, 2026 · Campaign Progress Bar (Initial)",
+        a: (
+          <p>
+            Added a persistent <strong>CampaignBar</strong> component at the top of every page. Shows the 🎯 1000 Jobs label, an animated progress bar, total applied count (e.g. 19 / 1,000), and a remaining badge. Backed by a new <code style={{ color: "var(--atari-cyan)" }}>stats.campaign</code> tRPC query. Refreshes every 60 seconds.
+          </p>
+        ),
+      },
+      {
+        q: "v3.16 — Apr 3, 2026 · Remove Gamification from Performance Page",
+        a: (
+          <p>
+            Removed the Applier Stats / Gamification section (Tier, XP, Streak, Best Streak, XP progress bar) from the Performance page. The page now focuses on applied counts, pipeline health, and the 1,000-job campaign progress.
+          </p>
+        ),
+      },
+      {
+        q: "v3.15 — Apr 3, 2026 · Fix Applied Job Counting",
+        a: (
+          <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+            <li><strong>Fixed applied count</strong> — daily reports and performance stats now query the <code style={{ color: "var(--atari-cyan)" }}>jobs</code> table directly using <code style={{ color: "var(--atari-cyan)" }}>statusChangedAt</code> in GST timezone.</li>
+            <li>Previously these functions read from the <code style={{ color: "var(--atari-cyan)" }}>applierStats</code> table which only tracked “Mark as Applied” button clicks, missing manually added jobs and swipe-approved jobs.</li>
+            <li>All applied jobs (manual, swipe, button) now count correctly in the daily report, weekly stats, and performance metrics.</li>
+          </ul>
+        ),
+      },
+      {
+        q: "v3.14 — Apr 2, 2026 · Weekly Report & Scheduler Fix",
+        a: (
+          <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+            <li><strong>Weekly report added</strong> — sent every Friday at 9 PM GST to both Owner and Applier.</li>
+            <li><strong>Daily report trigger hour corrected</strong> to 9 PM GST (was 11 PM).</li>
+            <li><strong>Catch-up logic</strong> — if the server wakes after the trigger hour and no report was sent today, it sends immediately.</li>
+            <li><strong>Subject lines updated</strong> to use correct dynamic format with remaining count.</li>
+          </ul>
+        ),
+      },
+      {
+        q: "v3.13 — Apr 2, 2026 · Release Notes Section in FAQ",
+        a: (
+          <p>
+            Added this Release Notes section to the FAQ page with a full timeline of all changes from v3.0 onwards. Each entry shows the date, version title, and a summary of what changed. The section is searchable and collapsible like all other FAQ sections.
+          </p>
+        ),
+      },
+      {
         q: "v3.12 — Apr 2, 2026 · Smarter Duplicate Detection",
         a: (
           <p>

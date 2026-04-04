@@ -216,3 +216,12 @@ export const swipeStats = mysqlTable("swipe_stats", {
 });
 
 export type SwipeStats = typeof swipeStats.$inferSelect;
+
+// Key-value store for system configuration (e.g., last report sent dates)
+export const systemConfig = mysqlTable("system_config", {
+  key: varchar("key", { length: 64 }).primaryKey(),
+  value: varchar("value", { length: 255 }).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SystemConfig = typeof systemConfig.$inferSelect;

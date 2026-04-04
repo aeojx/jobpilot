@@ -374,3 +374,10 @@
 
 ## v3.19 CampaignBar Debug
 - [x] Root cause: CampaignBar was added to DashboardLayout but app uses AppLayout — moved to AppLayout
+
+## v3.20 Fix Duplicate Daily Report Emails
+- [x] Diagnose why daily report fires multiple times per day
+- [x] Fix deduplication logic so it sends exactly once per day at 7 PM GST (persist last-sent date to system_config DB table)
+- [x] Update scheduled time from 9 PM to 7 PM GST as requested
+- [x] Apply same DB persistence fix to weekly report scheduler
+- [x] Update Release Notes in FAQ (v3.13–v3.20)

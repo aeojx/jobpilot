@@ -41,6 +41,8 @@ import {
   getQuestionById,
   getPipelineStats,
   getAppliedTodayCount,
+  getSystemConfig,
+  setSystemConfig,
 } from "./db";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { ENV } from "./_core/env";
@@ -581,12 +583,14 @@ export function startScheduledFetchRunner() {
   }, 5 * 60 * 1000); // every 5 minutes
 }
 
-// ─── Daily Report Emailer (9 PM GST = 17:00 UTC) ────────────────────────────
+// ─── Daily Report Emailer (7 PM GST = 15:00 UTC) ────────────────────────────
 
 let _dailyReportInterval: ReturnType<typeof setInterval> | null = null;
-let _lastDailyReportDate: string | null = null;
 let _weeklyReportInterval: ReturnType<typeof setInterval> | null = null;
-let _lastWeeklyReportDate: string | null = null;
+
+// DB keys for persisting last-sent dates across server restarts
+const DB_KEY_DAILY_REPORT = "last_daily_report_date";
+const DB_KEY_WEEKLY_REPORT = "last_weekly_report_date";
 
 /**
  * Returns the current date key in GST (UTC+4) as "YYYY-MM-DD".
@@ -659,18 +663,23 @@ export function startDailyReportScheduler() {
   const checkAndSendDaily = async () => {
     const hour = getGstHour();
     const dateKey = getGstDateKey();
-    // Fire at 9 PM GST (hour 21). Catch up if server woke between 21-23 and hasn't sent today.
-    if (hour >= 21 && hour <= 23 && _lastDailyReportDate !== dateKey) {
-      _lastDailyReportDate = dateKey;
-      console.log(`[DailyReport] Triggering at GST hour ${hour} for ${dateKey}`);
-      await sendDailyReport();
+    // Fire at 7 PM GST (hour 19). Catch up if server woke between 19-21 and hasn't sent today.
+    if (hour >= 19 && hour <= 21) {
+      // Read last-sent date from DB to survive server restarts
+      const lastSent = await getSystemConfig(DB_KEY_DAILY_REPORT);
+      if (lastSent !== dateKey) {
+        // Persist BEFORE sending to prevent duplicate sends from concurrent wakeups
+        await setSystemConfig(DB_KEY_DAILY_REPORT, dateKey);
+        console.log(`[DailyReport] Triggering at GST hour ${hour} for ${dateKey}`);
+        await sendDailyReport();
+      }
     }
   };
 
   // Run immediately on startup to catch missed sends after hibernation
   checkAndSendDaily();
   _dailyReportInterval = setInterval(checkAndSendDaily, 15 * 60 * 1000);
-  console.log("[DailyReport] Scheduler started (checks every 15 min, sends at 9 PM GST)");
+  console.log("[DailyReport] Scheduler started (checks every 15 min, sends at 7 PM GST)");
 }
 
 export async function sendWeeklyReport(): Promise<void> {
@@ -715,10 +724,15 @@ export function startWeeklyReportScheduler() {
     const hour = gst.getUTCHours();
     const dateKey = getGstDateKey();
     // Fire on Fridays at 9 PM GST. Catch up if server woke between 21-23 on a Friday.
-    if (dayOfWeek === 5 && hour >= 21 && hour <= 23 && _lastWeeklyReportDate !== dateKey) {
-      _lastWeeklyReportDate = dateKey;
-      console.log(`[WeeklyReport] Triggering Friday report at GST hour ${hour} for ${dateKey}`);
-      await sendWeeklyReport();
+    if (dayOfWeek === 5 && hour >= 21 && hour <= 23) {
+      // Read last-sent date from DB to survive server restarts
+      const lastSent = await getSystemConfig(DB_KEY_WEEKLY_REPORT);
+      if (lastSent !== dateKey) {
+        // Persist BEFORE sending to prevent duplicate sends from concurrent wakeups
+        await setSystemConfig(DB_KEY_WEEKLY_REPORT, dateKey);
+        console.log(`[WeeklyReport] Triggering Friday report at GST hour ${hour} for ${dateKey}`);
+        await sendWeeklyReport();
+      }
     }
   };
 

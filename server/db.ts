@@ -16,6 +16,7 @@ import {
   questionBank,
   skillsProfile,
   swipeStats,
+  systemConfig,
   users,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
@@ -516,4 +517,28 @@ export async function bulkAutoReject(threshold: number): Promise<number> {
       sql`${jobs.status} = 'matched' AND (${jobs.matchScore} IS NULL OR ${jobs.matchScore} < ${threshold})`
     );
   return count;
+}
+
+// ─── System Config (persistent key-value store) ──────────────────────────────
+
+/** Get a system config value by key. Returns null if not found. */
+export async function getSystemConfig(key: string): Promise<string | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select({ value: systemConfig.value })
+    .from(systemConfig)
+    .where(eq(systemConfig.key, key))
+    .limit(1);
+  return rows[0]?.value ?? null;
+}
+
+/** Upsert a system config value by key. */
+export async function setSystemConfig(key: string, value: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .insert(systemConfig)
+    .values({ key, value })
+    .onDuplicateKeyUpdate({ set: { value } });
 }
