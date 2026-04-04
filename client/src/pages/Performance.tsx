@@ -1,21 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { BarChart2, Flame, Star, Trophy, Zap } from "lucide-react";
-
-const TIERS = [
-  { name: "Rookie", minXp: 0, color: "var(--atari-gray)" },
-  { name: "Grinder", minXp: 100, color: "var(--atari-amber)" },
-  { name: "Machine", minXp: 500, color: "var(--atari-cyan)" },
-  { name: "Legend", minXp: 2000, color: "var(--atari-amber)" },
-];
-
-function getTier(xp: number) {
-  return [...TIERS].reverse().find((t) => xp >= t.minXp) ?? TIERS[0];
-}
-
-function getNextTier(xp: number) {
-  return TIERS.find((t) => xp < t.minXp);
-}
+import { BarChart2, Trophy } from "lucide-react";
 
 const RAMP_SCHEDULE = [
   { label: "Days 1–5", target: 10, days: "1-5" },
@@ -30,16 +15,10 @@ export default function Performance() {
 
   const { data: todayStats } = trpc.stats.today.useQuery();
   const { data: recentStats = [] } = trpc.stats.recent.useQuery();
-  const { data: gami } = trpc.stats.gamification.useQuery();
-
   const today = todayStats?.appliedCount ?? 0;
   const target = todayStats?.targetCount ?? 10;
   const pct = Math.min(100, Math.round((today / target) * 100));
   const isComplete = today >= target;
-
-  const tier = getTier(gami?.totalXp ?? 0);
-  const nextTier = getNextTier(gami?.totalXp ?? 0);
-  const xpToNext = nextTier ? nextTier.minXp - (gami?.totalXp ?? 0) : 0;
 
   return (
     <div className="flex flex-col h-full overflow-auto">
@@ -137,184 +116,6 @@ export default function Performance() {
             {pct}% complete · {Math.max(0, target - today)} remaining
           </p>
         </div>
-
-        {/* Gamification */}
-        {gami && (
-          <div
-            className="p-5"
-            style={{ background: "var(--atari-panel)", border: "1.5px solid var(--atari-border)" }}
-          >
-            <p
-              className="mb-4"
-              style={{
-                fontFamily: "Press Start 2P, monospace",
-                fontSize: "0.7rem",
-                letterSpacing: "0.15em",
-                color: "oklch(0.45 0 0)",
-                textTransform: "uppercase",
-              }}
-            >
-              Applier Stats
-            </p>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {/* Tier */}
-              <div
-                className="p-3 text-center"
-                style={{ background: "oklch(0.1 0 0)", border: `1.5px solid ${tier.color}` }}
-              >
-                <Trophy size={18} style={{ color: tier.color, margin: "0 auto 4px" }} />
-                <p
-                  style={{
-                    fontFamily: "Press Start 2P, monospace",
-                    fontSize: "1.1rem",
-                    fontWeight: 800,
-                    color: tier.color,
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  {tier.name}
-                </p>
-                <p
-                  style={{
-                    fontFamily: "Press Start 2P, monospace",
-                    fontSize: "0.6rem",
-                    color: "oklch(0.35 0 0)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.1em",
-                  }}
-                >
-                  Tier
-                </p>
-              </div>
-
-              {/* XP */}
-              <div
-                className="p-3 text-center"
-                style={{ background: "oklch(0.1 0 0)", border: "1.5px solid var(--atari-amber)" }}
-              >
-                <Zap size={18} style={{ color: "var(--atari-amber)", margin: "0 auto 4px" }} />
-                <p
-                  style={{
-                    fontFamily: "Press Start 2P, monospace",
-                    fontSize: "1.1rem",
-                    fontWeight: 800,
-                    color: "var(--atari-white)",
-                    letterSpacing: "0.02em",
-                  }}
-                >
-                  {gami.totalXp}
-                </p>
-                <p
-                  style={{
-                    fontFamily: "Press Start 2P, monospace",
-                    fontSize: "0.6rem",
-                    color: "oklch(0.35 0 0)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.1em",
-                  }}
-                >
-                  Total XP
-                </p>
-              </div>
-
-              {/* Streak */}
-              <div
-                className="p-3 text-center"
-                style={{ background: "oklch(0.1 0 0)", border: "1.5px solid var(--atari-amber)" }}
-              >
-                <Flame size={18} style={{ color: "var(--atari-amber)", margin: "0 auto 4px" }} />
-                <p
-                  style={{
-                    fontFamily: "Press Start 2P, monospace",
-                    fontSize: "1.1rem",
-                    fontWeight: 800,
-                    color: "var(--atari-white)",
-                  }}
-                >
-                  {gami.currentStreak}
-                </p>
-                <p
-                  style={{
-                    fontFamily: "Press Start 2P, monospace",
-                    fontSize: "0.6rem",
-                    color: "oklch(0.35 0 0)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.1em",
-                  }}
-                >
-                  Day Streak
-                </p>
-              </div>
-
-              {/* Best Streak */}
-              <div
-                className="p-3 text-center"
-                style={{ background: "oklch(0.1 0 0)", border: "1.5px solid var(--atari-cyan)" }}
-              >
-                <Star size={18} style={{ color: "var(--atari-cyan)", margin: "0 auto 4px" }} />
-                <p
-                  style={{
-                    fontFamily: "Press Start 2P, monospace",
-                    fontSize: "1.1rem",
-                    fontWeight: 800,
-                    color: "var(--atari-white)",
-                  }}
-                >
-                  {gami.longestStreak}
-                </p>
-                <p
-                  style={{
-                    fontFamily: "Press Start 2P, monospace",
-                    fontSize: "0.6rem",
-                    color: "oklch(0.35 0 0)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.1em",
-                  }}
-                >
-                  Best Streak
-                </p>
-              </div>
-            </div>
-
-            {/* XP to next tier */}
-            {nextTier && (
-              <div className="mt-4">
-                <div className="flex items-center justify-between mb-1">
-                  <p
-                    style={{
-                      fontFamily: "Press Start 2P, monospace",
-                      fontSize: "0.65rem",
-                      letterSpacing: "0.1em",
-                      color: "var(--atari-gray)",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Progress to {nextTier.name}
-                  </p>
-                  <p
-                    style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: "0.65rem",
-                      color: "var(--atari-gray)",
-                    }}
-                  >
-                    {xpToNext} XP needed
-                  </p>
-                </div>
-                <div className="progress-track">
-                  <div
-                    className="progress-fill"
-                    style={{
-                      width: `${Math.round(((gami.totalXp - tier.minXp) / (nextTier.minXp - tier.minXp)) * 100)}%`,
-                      background: nextTier.color,
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Ramp-Up Schedule */}
         <div>
