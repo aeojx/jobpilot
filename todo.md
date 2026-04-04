@@ -371,3 +371,6 @@
 - [x] Add "jobs remaining to hit 1000" label to the bar
 - [x] Make bar sticky so it stays visible while scrolling
 - [x] Bar is now clickable and links to Performance page
+
+## v3.19 CampaignBar Debug
+- [x] Root cause: CampaignBar was added to DashboardLayout but app uses AppLayout — moved to AppLayout

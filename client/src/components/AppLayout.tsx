@@ -18,6 +18,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import CampaignBar from "./CampaignBar";
 import { Link, useLocation, useRouter } from "wouter";
 
 const ownerNav = [
@@ -374,6 +375,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </span>
           </header>
 
+          {/* Campaign Progress Bar */}
+          <CampaignBar />
           {/* Page Content */}
           <main className="flex-1 overflow-auto">{children}</main>
         </div>
