@@ -64,6 +64,10 @@ async function startServer() {
     console.log("[Scheduler] Scheduled fetch runner started (checks every 5 minutes)");
     startDailyReportScheduler();
     startWeeklyReportScheduler();
+<<<<<<< Updated upstream
+=======
+    console.log("[DailyReport] Daily report scheduler started (checks every 15 minutes, sends at 11 PM GST)");
+>>>>>>> Stashed changes
   });
 }
 
