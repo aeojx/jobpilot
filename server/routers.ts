@@ -1167,6 +1167,14 @@ export const appRouter = router({
     getRampTarget: protectedProcedure
       .input(z.object({ startDate: z.string().optional() }))
       .query(({ input }) => ({ target: getRampUpTarget(input.startDate ?? null) })),
+
+    campaign: publicProcedure.query(async () => {
+      const pipeline = await getPipelineStats();
+      const totalApplied = pipeline.totalApplied;
+      const remaining = Math.max(0, 1000 - totalApplied);
+      const pct = Math.min(100, Math.round((totalApplied / 1000) * 100));
+      return { totalApplied, remaining, pct, goal: 1000 };
+    }),
   }),
 
   // ─── Notifications (email) ───────────────────────────────────────────────────────────────────

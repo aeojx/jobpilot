@@ -359,3 +359,8 @@
 - [x] Fix getApplierStatsRange: now queries jobs table directly grouped by GST date
 - [x] Normalize TiDB Date object returns to YYYY-MM-DD string
 - [x] Verified: today's 6 manually added jobs now count correctly (confirmed 6 in DB)
+
+## v3.17 Campaign Top Bar
+- [x] Add stats.campaign publicProcedure query to routers.ts (uses existing getPipelineStats)
+- [x] Build CampaignBar component (top bar with progress bar, applied count, remaining badge)
+- [x] Wire CampaignBar into DashboardLayout so it appears on all pages for all users
