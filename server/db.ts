@@ -232,8 +232,15 @@ export async function getPipelineStats() {
 export async function getAppliedTodayCount(dateKey: string): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
-  const result = await db.select().from(applierStats).where(eq(applierStats.dateKey, dateKey)).limit(1);
-  return result[0]?.appliedCount ?? 0;
+  // Query jobs table directly using statusChangedAt (a datetime column) so manually added
+  // jobs, swipe-approved jobs, and "Mark as Applied" jobs all count equally.
+  const result = await db
+    .select({ c: count() })
+    .from(jobs)
+    .where(
+      sql`${jobs.status} = 'applied' AND DATE(CONVERT_TZ(${jobs.statusChangedAt}, '+00:00', '+04:00')) = ${dateKey}`
+    );
+  return result[0]?.c ?? 0;
 }
 
 export async function getQuestionById(id: number) {
@@ -368,7 +375,24 @@ export async function incrementApplierStats(dateKey: string) {
 export async function getApplierStatsRange(days: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(applierStats).orderBy(desc(applierStats.dateKey)).limit(days);
+  // Build last N date keys in GST (UTC+4) — server-generated, safe to inline
+  const dateKeys: string[] = [];
+  for (let i = 0; i < days; i++) {
+    const d = new Date(new Date().getTime() + 4 * 60 * 60 * 1000 - i * 86400000);
+    dateKeys.push(d.toISOString().slice(0, 10));
+  }
+  // Inline the date list (safe: server-generated YYYY-MM-DD strings)
+  const inClause = dateKeys.map(k => `'${k}'`).join(', ');
+  const rawQuery = `SELECT DATE(CONVERT_TZ(statusChangedAt, '+00:00', '+04:00')) AS dateKey, COUNT(*) AS appliedCount FROM jobs WHERE status = 'applied' AND DATE(CONVERT_TZ(statusChangedAt, '+00:00', '+04:00')) IN (${inClause}) GROUP BY dateKey`;
+  const rows = await db.execute(sql.raw(rawQuery)) as unknown as { dateKey: string; appliedCount: number }[][];
+  const resultRows = Array.isArray(rows[0]) ? rows[0] as { dateKey: string; appliedCount: number }[] : rows as unknown as { dateKey: string; appliedCount: number }[];
+  // Normalize dateKey: TiDB may return a Date object or full datetime string — extract YYYY-MM-DD
+  const normalizeKey = (k: string | Date) => {
+    if (k instanceof Date) return k.toISOString().slice(0, 10);
+    return String(k).slice(0, 10);
+  };
+  const rowMap = new Map(resultRows.map((r: { dateKey: string | Date; appliedCount: number }) => [normalizeKey(r.dateKey), Number(r.appliedCount)]));
+  return dateKeys.map(dateKey => ({ dateKey, appliedCount: rowMap.get(dateKey) ?? 0, targetCount: 0, id: 0, updatedAt: new Date() }));
 }
 
 // ─── Gamification ─────────────────────────────────────────────────────────────

@@ -353,3 +353,9 @@
 - [x] Fix trigger hour from 23 (11 PM GST) to 21 (9 PM GST)
 - [x] Add catch-up logic: if server wakes after 9 PM and no report sent today, send immediately
 - [x] Wire startWeeklyReportScheduler into server startup (Fridays 9 PM GST)
+
+## v3.15 Fix Applied Today Count Bug
+- [x] Fix getAppliedTodayCount: now queries jobs table directly using DATE(CONVERT_TZ(statusChangedAt)) in GST
+- [x] Fix getApplierStatsRange: now queries jobs table directly grouped by GST date
+- [x] Normalize TiDB Date object returns to YYYY-MM-DD string
+- [x] Verified: today's 6 manually added jobs now count correctly (confirmed 6 in DB)
