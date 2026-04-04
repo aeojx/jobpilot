@@ -659,11 +659,7 @@ export function startDailyReportScheduler() {
   const checkAndSendDaily = async () => {
     const hour = getGstHour();
     const dateKey = getGstDateKey();
-<<<<<<< Updated upstream
-    // Fire at 9 PM GST (hour 21). Also catch up if server woke between 21-23 and hasn't sent today.
-=======
     // Fire at 9 PM GST (hour 21). Catch up if server woke between 21-23 and hasn't sent today.
->>>>>>> Stashed changes
     if (hour >= 21 && hour <= 23 && _lastDailyReportDate !== dateKey) {
       _lastDailyReportDate = dateKey;
       console.log(`[DailyReport] Triggering at GST hour ${hour} for ${dateKey}`);
@@ -674,11 +670,7 @@ export function startDailyReportScheduler() {
   // Run immediately on startup to catch missed sends after hibernation
   checkAndSendDaily();
   _dailyReportInterval = setInterval(checkAndSendDaily, 15 * 60 * 1000);
-<<<<<<< Updated upstream
-  console.log("[DailyReport] Daily report scheduler started (checks every 15 minutes, sends at 9 PM GST)");
-=======
   console.log("[DailyReport] Scheduler started (checks every 15 min, sends at 9 PM GST)");
->>>>>>> Stashed changes
 }
 
 export async function sendWeeklyReport(): Promise<void> {
@@ -722,11 +714,7 @@ export function startWeeklyReportScheduler() {
     const dayOfWeek = gst.getUTCDay(); // 0=Sun, 5=Fri
     const hour = gst.getUTCHours();
     const dateKey = getGstDateKey();
-<<<<<<< Updated upstream
-    // Fire on Fridays at 9 PM GST. Also catch up if server woke between 21-23 on a Friday.
-=======
     // Fire on Fridays at 9 PM GST. Catch up if server woke between 21-23 on a Friday.
->>>>>>> Stashed changes
     if (dayOfWeek === 5 && hour >= 21 && hour <= 23 && _lastWeeklyReportDate !== dateKey) {
       _lastWeeklyReportDate = dateKey;
       console.log(`[WeeklyReport] Triggering Friday report at GST hour ${hour} for ${dateKey}`);
@@ -736,11 +724,7 @@ export function startWeeklyReportScheduler() {
 
   checkAndSendWeekly();
   _weeklyReportInterval = setInterval(checkAndSendWeekly, 15 * 60 * 1000);
-<<<<<<< Updated upstream
-  console.log("[WeeklyReport] Weekly report scheduler started (checks every 15 minutes, sends Fridays at 9 PM GST)");
-=======
   console.log("[WeeklyReport] Scheduler started (checks every 15 min, sends Fridays at 9 PM GST)");
->>>>>>> Stashed changes
 }
 
 // ─── Router ───────────────────────────────────────────────────────────────────
