@@ -1,99 +1,124 @@
 import { trpc } from "@/lib/trpc";
+import { Link } from "wouter";
 
 /**
- * CampaignBar — persistent top bar showing 1,000-job campaign progress.
- * Uses publicProcedure so it works for all users (owner + applier).
+ * CampaignBar — sticky top bar visible on all pages showing 1,000-job campaign progress.
+ * Shows: applied today, total applied, progress bar, and remaining to hit 1,000.
  */
 export default function CampaignBar() {
   const { data } = trpc.stats.campaign.useQuery(undefined, {
-    refetchInterval: 60_000, // refresh every minute
+    refetchInterval: 60_000,
     staleTime: 30_000,
   });
 
   if (!data) return null;
 
-  const { totalApplied, remaining, pct } = data;
+  const { totalApplied, remaining, pct, appliedToday } = data;
   const isComplete = remaining === 0;
 
   return (
-    <div
-      style={{
-        background: "oklch(0.08 0.01 240)",
-        borderBottom: "1px solid var(--atari-border, oklch(0.2 0 0))",
-        padding: "6px 16px",
-        display: "flex",
-        alignItems: "center",
-        gap: "12px",
-        flexShrink: 0,
-        zIndex: 50,
-      }}
-    >
-      {/* Label */}
-      <span
-        style={{
-          fontFamily: "Press Start 2P, monospace",
-          fontSize: "0.55rem",
-          letterSpacing: "0.12em",
-          color: isComplete ? "var(--atari-green, #00ff88)" : "var(--atari-amber, #ffb300)",
-          textTransform: "uppercase",
-          whiteSpace: "nowrap",
-          flexShrink: 0,
-        }}
-      >
-        🎯 1000 Jobs
-      </span>
-
-      {/* Progress bar */}
+    <Link href="/performance">
       <div
         style={{
-          flex: 1,
-          height: "6px",
-          background: "oklch(0.15 0 0)",
-          borderRadius: "3px",
-          overflow: "hidden",
-          minWidth: "60px",
+          background: "oklch(0.07 0.015 240)",
+          borderBottom: "1px solid oklch(0.18 0.02 240)",
+          padding: "5px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "14px",
+          flexShrink: 0,
+          cursor: "pointer",
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
         }}
       >
+        {/* 🎯 Label */}
+        <span
+          style={{
+            fontFamily: "'Press Start 2P', monospace",
+            fontSize: "0.5rem",
+            letterSpacing: "0.1em",
+            color: isComplete ? "#00ff88" : "#ffb300",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+          }}
+        >
+          🎯 1000 JOBS
+        </span>
+
+        {/* Applied today pill */}
+        <span
+          style={{
+            background: "oklch(0.15 0.04 200)",
+            border: "1px solid oklch(0.25 0.06 200)",
+            borderRadius: "4px",
+            padding: "2px 8px",
+            fontFamily: "monospace",
+            fontSize: "0.7rem",
+            color: "#00e5ff",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+          }}
+        >
+          ✅ <strong>{appliedToday}</strong> applied today
+        </span>
+
+        {/* Progress bar */}
         <div
           style={{
-            height: "100%",
-            width: `${pct}%`,
-            background: isComplete
-              ? "var(--atari-green, #00ff88)"
-              : "linear-gradient(90deg, var(--atari-amber, #ffb300), var(--atari-cyan, #00e5ff))",
+            flex: 1,
+            height: "5px",
+            background: "oklch(0.14 0 0)",
             borderRadius: "3px",
-            transition: "width 0.6s ease",
+            overflow: "hidden",
+            minWidth: "60px",
           }}
-        />
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${pct}%`,
+              background: isComplete
+                ? "#00ff88"
+                : "linear-gradient(90deg, #ffb300, #00e5ff)",
+              borderRadius: "3px",
+              transition: "width 0.6s ease",
+            }}
+          />
+        </div>
+
+        {/* Total applied */}
+        <span
+          style={{
+            fontFamily: "monospace",
+            fontSize: "0.7rem",
+            color: "oklch(0.65 0 0)",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+          }}
+        >
+          <span style={{ color: "#00e5ff", fontWeight: 700 }}>{totalApplied.toLocaleString()}</span>
+          {" / 1,000"}
+        </span>
+
+        {/* Remaining badge */}
+        <span
+          style={{
+            background: isComplete ? "oklch(0.15 0.06 145)" : "oklch(0.12 0.02 30)",
+            border: `1px solid ${isComplete ? "oklch(0.3 0.1 145)" : "oklch(0.22 0.04 30)"}`,
+            borderRadius: "4px",
+            padding: "2px 8px",
+            fontFamily: "monospace",
+            fontSize: "0.7rem",
+            color: isComplete ? "#00ff88" : "#ff8c42",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+          }}
+        >
+          {isComplete ? "✅ GOAL MET!" : `🎯 ${remaining.toLocaleString()} remaining`}
+        </span>
       </div>
-
-      {/* Stats */}
-      <span
-        style={{
-          fontFamily: "var(--font-mono, monospace)",
-          fontSize: "0.7rem",
-          color: "oklch(0.7 0 0)",
-          whiteSpace: "nowrap",
-          flexShrink: 0,
-        }}
-      >
-        <span style={{ color: "var(--atari-cyan, #00e5ff)", fontWeight: 700 }}>{totalApplied.toLocaleString()}</span>
-        {" / 1,000"}
-      </span>
-
-      {/* Remaining badge */}
-      <span
-        style={{
-          fontFamily: "Press Start 2P, monospace",
-          fontSize: "0.55rem",
-          letterSpacing: "0.08em",
-          color: isComplete ? "var(--atari-green, #00ff88)" : "oklch(0.55 0 0)",
-          whiteSpace: "nowrap",
-          flexShrink: 0,
-        }}
-      >
-        {isComplete ? "✅ GOAL MET!" : `${remaining.toLocaleString()} left`}
-      </span>
-    </div>
+    </Link>
   );
 }

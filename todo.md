@@ -364,3 +364,10 @@
 - [x] Add stats.campaign publicProcedure query to routers.ts (uses existing getPipelineStats)
 - [x] Build CampaignBar component (top bar with progress bar, applied count, remaining badge)
 - [x] Wire CampaignBar into DashboardLayout so it appears on all pages for all users
+
+## v3.18 Fix CampaignBar Visibility
+- [x] Fixed: server needed restart to pick up new stats.campaign tRPC procedure
+- [x] Add "jobs applied today" count to the bar
+- [x] Add "jobs remaining to hit 1000" label to the bar
+- [x] Make bar sticky so it stays visible while scrolling
+- [x] Bar is now clickable and links to Performance page

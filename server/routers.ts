@@ -1173,7 +1173,9 @@ export const appRouter = router({
       const totalApplied = pipeline.totalApplied;
       const remaining = Math.max(0, 1000 - totalApplied);
       const pct = Math.min(100, Math.round((totalApplied / 1000) * 100));
-      return { totalApplied, remaining, pct, goal: 1000 };
+      const dateKey = getCurrentDateKey();
+      const appliedToday = await getAppliedTodayCount(dateKey);
+      return { totalApplied, remaining, pct, goal: 1000, appliedToday };
     }),
   }),
 
