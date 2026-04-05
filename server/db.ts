@@ -519,6 +519,24 @@ export async function bulkAutoReject(threshold: number): Promise<number> {
   return count;
 }
 
+// ─── Source Breakdown ───────────────────────────────────────────────────────
+/** Returns count of applied jobs grouped by source category: linkedin, external, manual */
+export async function getAppliedBySource(): Promise<{ linkedin: number; external: number; manual: number; total: number }> {
+  const db = await getDb();
+  if (!db) return { linkedin: 0, external: 0, manual: 0, total: 0 };
+  const rows = await db
+    .select({ source: jobs.source, manuallyAdded: jobs.manuallyAdded })
+    .from(jobs)
+    .where(eq(jobs.status, "applied"));
+  let linkedin = 0, external = 0, manual = 0;
+  for (const row of rows) {
+    if (row.manuallyAdded) { manual++; continue; }
+    if (row.source && row.source.toLowerCase().includes("linkedin")) { linkedin++; continue; }
+    external++;
+  }
+  return { linkedin, external, manual, total: rows.length };
+}
+
 // ─── System Config (persistent key-value store) ──────────────────────────────
 
 /** Get a system config value by key. Returns null if not found. */

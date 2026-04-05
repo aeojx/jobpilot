@@ -15,6 +15,7 @@ export default function Performance() {
 
   const { data: todayStats } = trpc.stats.today.useQuery();
   const { data: recentStats = [] } = trpc.stats.recent.useQuery();
+  const { data: sourceData } = trpc.stats.sourceBreakdown.useQuery();
   const today = todayStats?.appliedCount ?? 0;
   const target = todayStats?.targetCount ?? 10;
   const pct = Math.min(100, Math.round((today / target) * 100));
@@ -179,6 +180,52 @@ export default function Performance() {
             })}
           </div>
         </div>
+
+        {/* Source Breakdown */}
+        {sourceData && sourceData.total > 0 && (
+          <div
+            className="p-5"
+            style={{ background: "var(--atari-panel)", border: "2px solid var(--atari-border)" }}
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart2 size={14} style={{ color: "var(--atari-cyan)" }} />
+              <p style={{ fontFamily: "Press Start 2P, monospace", fontSize: "0.7rem", letterSpacing: "0.12em", color: "oklch(0.45 0 0)", textTransform: "uppercase" }}>
+                Applied by Source
+              </p>
+            </div>
+            {/* Bar chart */}
+            <div className="space-y-3">
+              {[
+                { label: "LINKEDIN", count: sourceData.linkedin, color: "#0a66c2" },
+                { label: "EXTERNAL", count: sourceData.external, color: "var(--atari-cyan)" },
+                { label: "MANUAL",   count: sourceData.manual,   color: "var(--atari-amber)" },
+              ].map(({ label, count, color }) => {
+                const barPct = sourceData.total > 0 ? Math.round((count / sourceData.total) * 100) : 0;
+                return (
+                  <div key={label} className="flex items-center gap-3">
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--atari-gray)", width: 64, flexShrink: 0, letterSpacing: "0.06em" }}>
+                      {label}
+                    </span>
+                    <div style={{ flex: 1, height: 14, background: "var(--atari-border)", position: "relative" }}>
+                      <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${barPct}%`, background: color, transition: "width 0.5s" }} />
+                    </div>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color, width: 40, textAlign: "right", flexShrink: 0, fontWeight: 700 }}>
+                      {count}
+                    </span>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--atari-gray)", width: 36, textAlign: "right", flexShrink: 0 }}>
+                      {barPct}%
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Total */}
+            <div style={{ marginTop: "1rem", paddingTop: "0.75rem", borderTop: "1px solid var(--atari-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--atari-gray)", letterSpacing: "0.08em" }}>TOTAL APPLIED</span>
+              <span style={{ fontFamily: "Press Start 2P, monospace", fontSize: "1rem", color: "var(--atari-white)" }}>{sourceData.total}</span>
+            </div>
+          </div>
+        )}
 
         {/* Recent History */}
         {recentStats.length > 0 && (

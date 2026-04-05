@@ -41,6 +41,7 @@ import {
   getQuestionById,
   getPipelineStats,
   getAppliedTodayCount,
+  getAppliedBySource,
   getSystemConfig,
   setSystemConfig,
 } from "./db";
@@ -1218,6 +1219,7 @@ export const appRouter = router({
       const appliedToday = await getAppliedTodayCount(dateKey);
       return { totalApplied, remaining, pct, goal: 1000, appliedToday };
     }),
+    sourceBreakdown: protectedProcedure.query(async () => getAppliedBySource()),
   }),
 
   // ─── Notifications (email) ───────────────────────────────────────────────────────────────────

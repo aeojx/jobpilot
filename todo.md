@@ -393,3 +393,11 @@
 - [x] Support LinkedIn in fetch schedules (active-jb-7d / active-jb-24h endpoints)
 - [x] Update FAQ Release Notes with v3.21
 - [x] DB migrations applied: fetch_schedules endpoint enum extended, api_usage monthKey length extended
+
+## v3.22 LinkedIn Badge, Per-Source Stats, Fetch History Source
+- [x] Add blue LI badge on Kanban job cards when source contains "linkedin"
+- [x] Add blue LI badge on Swipe job cards when source contains "linkedin"
+- [x] Add per-source applied jobs breakdown chart on Performance page (LinkedIn vs Fantastic Jobs)
+- [x] Add backend query for per-source applied counts (getAppliedBySource in db.ts)
+- [x] Add API source indicator (LINKEDIN / EXTERNAL badge) in Ingest Jobs fetch history rows
+- [x] Source derived from endpoint field in fetch_history (no schema change needed)

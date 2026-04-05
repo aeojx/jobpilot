@@ -451,6 +451,12 @@ function HistoryRow({
               {h.scheduleName ?? "AD-HOC FETCH"}
             </span>
             <Badge className="text-xs font-mono bg-gray-800 text-gray-400 border-gray-600">{h.endpoint}</Badge>
+            {/* API source badge */}
+            {["active-jb-7d", "active-jb-24h"].includes(h.endpoint) ? (
+              <Badge className="text-xs font-mono border" style={{ background: "rgba(10,102,194,0.15)", color: "#4d9de0", borderColor: "rgba(10,102,194,0.5)" }}>LINKEDIN</Badge>
+            ) : (
+              <Badge className="text-xs font-mono bg-amber-400/10 text-amber-400 border-amber-400/40">EXTERNAL</Badge>
+            )}
             {!h.scheduleId && (
               <Badge className="text-xs font-mono bg-cyan-400/10 text-cyan-400 border-cyan-400/50">AD-HOC</Badge>
             )}

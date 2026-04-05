@@ -196,6 +196,11 @@ function JobCard({
 
       {/* Tags */}
       <div className="flex flex-wrap gap-1 mt-3">
+        {job.source && job.source.toLowerCase().includes("linkedin") && (
+          <span className="brutal-tag" style={{ borderColor: "#0a66c2", color: "#0a66c2", background: "rgba(10,102,194,0.12)", fontWeight: 700, letterSpacing: "0.08em" }}>
+            LI
+          </span>
+        )}
         {job.source && (
           <span className="brutal-tag" style={{ borderColor: "var(--atari-cyan)", color: "var(--atari-cyan)" }}>
             {job.source}

@@ -887,6 +887,11 @@ export default function SwipeView() {
                   gap: "0.35rem",
                   padding: "0.5rem 1.25rem 0",
                 }}>
+                  {currentJob.source && currentJob.source.toLowerCase().includes("linkedin") && (
+                    <span className="brutal-tag" style={{ borderColor: "#0a66c2", color: "#0a66c2", background: "rgba(10,102,194,0.12)", fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.08em" }}>
+                      LI
+                    </span>
+                  )}
                   {currentJob.source && (
                     <span className="brutal-tag" style={{ borderColor: "var(--atari-cyan)", color: "var(--atari-cyan)", fontSize: "0.58rem" }}>
                       <Briefcase size={8} style={{ display: "inline", marginRight: 3 }} />
