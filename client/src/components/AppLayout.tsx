@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import CampaignBar from "./CampaignBar";
+import { TopProgressBar } from "./TopProgressBar";
 import { Link, useLocation, useRouter } from "wouter";
 
 const ownerNav = [
@@ -282,6 +283,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: "var(--atari-black)" }}>
+      {/* Top progress bar — shows during ingestion / background LLM scoring */}
+      <TopProgressBar />
       {/* Applier Preview Banner (Owner only, when in applier view) */}
       {isOwner && isApplierView && (
         <div

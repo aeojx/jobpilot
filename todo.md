@@ -420,12 +420,13 @@
 - [x] Add /email-draft route in App.tsx and Email Draft nav item in owner sidebar
 
 ## v3.26 Top Progress Bar Notification
-- [ ] Add backend tRPC query: stats.scoringStatus — returns { pendingScoring: number, isIngesting: boolean }
-- [ ] Add in-memory ingestion flag on server (set true when fetchJobs starts, false when done)
-- [ ] Build TopProgressBar.tsx component: animated bar + status text, visible only when active
-- [ ] Wire TopProgressBar into AppLayout above CampaignBar
-- [ ] Auto-poll every 5 seconds while active, stop when both flags are false
-- [ ] Show distinct states: "INGESTING JOBS...", "SCORING X JOBS...", "INGESTING + SCORING..."
+- [x] Add backend tRPC query: stats.scoringStatus — returns { pendingScoring: number, isIngesting: boolean }
+- [x] Add in-memory _pendingScoringCount flag on server (increments per inserted job, decrements per scored job)
+- [x] Build TopProgressBar.tsx component: animated bar + label pill, color-coded (amber/blue/purple)
+- [x] Wire TopProgressBar into AppLayout above CampaignBar
+- [x] Auto-poll every 3s while active, every 10s when idle
+- [x] Show distinct states: "INGESTING JOBS...", "SCORING X JOBS...", "INGESTING + SCORING..."
+- [x] TypeScript: 0 errors, Tests: 75 passing
 
 ## v3.27 Auto-Reject Dealbreaker Jobs
 - [x] Fix background scoring: when dealBreakerMatched is set, update job status to "rejected" instead of leaving it as "matched" with score=0

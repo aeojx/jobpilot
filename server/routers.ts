@@ -539,10 +539,11 @@ async function executeFetch(
 
   // ── Phase 2: Score inserted jobs asynchronously in the background ─────────────
   // Fire-and-forget: does not block the HTTP response.
+  if (insertedJobIds.length > 0) _pendingScoringCount += insertedJobIds.length;
   setImmediate(async () => {
     try {
       const skills = await getSkillsProfile();
-      if (!skills || insertedJobIds.length === 0) return;
+      if (!skills || insertedJobIds.length === 0) { _pendingScoringCount = Math.max(0, _pendingScoringCount - insertedJobIds.length); return; }
       console.log(`[fetchJobs] Background scoring ${insertedJobIds.length} jobs...`);
       for (const jobId of insertedJobIds) {
         try {
@@ -566,11 +567,14 @@ async function executeFetch(
           }
         } catch (scoreErr) {
           console.error(`[fetchJobs] Background scoring failed for job ${jobId}:`, (scoreErr as Error).message);
+        } finally {
+          _pendingScoringCount = Math.max(0, _pendingScoringCount - 1);
         }
       }
       console.log(`[fetchJobs] Background scoring complete for ${insertedJobIds.length} jobs.`);
     } catch (bgErr) {
       console.error("[fetchJobs] Background scoring loop error:", (bgErr as Error).message);
+      _pendingScoringCount = 0; // Reset on catastrophic failure
     }
   });
 
@@ -590,6 +594,15 @@ async function executeFetch(
   });
 
   return { jobsFetched: rawJobs.length, jobsIngested, jobsDuplicate, jobsRemaining, requestsRemaining };
+}
+
+// ─── In-memory ingestion/scoring status (used by TopProgressBar) ─────────────
+
+let _isIngesting = false;
+let _pendingScoringCount = 0;
+
+export function getIngestionStatus() {
+  return { isIngesting: _isIngesting, pendingScoring: _pendingScoringCount };
 }
 
 // ─── Scheduled Fetch Runner (called on server startup and periodically) ───────
@@ -1247,6 +1260,9 @@ export const appRouter = router({
       return { totalApplied, remaining, pct, goal: 1000, appliedToday };
     }),
     sourceBreakdown: protectedProcedure.query(async () => getAppliedBySource()),
+
+    // Lightweight poll for the top progress bar
+    scoringStatus: protectedProcedure.query(() => getIngestionStatus()),
   }),
 
   // ─── Notifications (email) ───────────────────────────────────────────────────────────────────
