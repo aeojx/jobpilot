@@ -401,3 +401,10 @@
 - [x] Add backend query for per-source applied counts (getAppliedBySource in db.ts)
 - [x] Add API source indicator (LINKEDIN / EXTERNAL badge) in Ingest Jobs fetch history rows
 - [x] Source derived from endpoint field in fetch_history (no schema change needed)
+
+## v3.23 Fix /ingest 504 Gateway Timeout
+- [x] Diagnose root cause: 504 Gateway Timeout from AWS load balancer after 300s (100 jobs × ~3s LLM = 300s > 5min limit)
+- [x] Fix: decouple LLM scoring from fetch loop — insert all jobs immediately with score=0, then score asynchronously via setImmediate background task
+- [x] Background scorer fetches each inserted job by ID and calls updateJobMatchScore after LLM result
+- [x] HTTP response now returns in <10s regardless of batch size
+- [x] Verify with TypeScript check (0 errors) and tests (75 passing)

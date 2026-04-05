@@ -483,7 +483,10 @@ async function executeFetch(
   let jobsIngested = 0;
   let jobsDuplicate = 0;
 
-      const skills = await getSkillsProfile();
+  // ── Phase 1: Insert all jobs immediately (no LLM scoring yet) ────────────────
+  // This keeps the HTTP response fast and avoids 504 gateway timeouts when
+  // fetching large batches (100 jobs × ~3s LLM call = 300s > 5min timeout).
+  const insertedJobIds: number[] = [];
 
   for (const job of rawJobs as Record<string, unknown>[]) {
     try {
@@ -498,35 +501,18 @@ async function executeFetch(
       const descText = (job.description_text as string) ?? (job.description as string) ?? "";
       const emailFound = extractEmailFromText(descText) ?? (job.ai_hiring_manager_email_address as string) ?? null;
       const hasEmail = !!emailFound;
-      let matchScore = 0;
-      let dimensionScores: Partial<DimensionScores> = {};
-      // Always land in "matched" — "ingested" is no longer a visible column.
-      // If scoring succeeds and composite > 0 and no deal-breaker, score is set.
-      // If no skills profile or scoring fails, job still lands in matched with score 0.
-      const status: "matched" = "matched";
-      if (skills && descText) {
-        try {
-          const result = await scoreJobWithLLM(descText, skills, title, company);
-          matchScore = result.composite;
-          dimensionScores = result;
-        } catch (scoreErr) {
-          console.error("[fetchJobs] Scoring failed for job, inserting with score 0:", (scoreErr as Error).message);
-        }
-      }
       // locations_derived is an array of strings like ["Abu Dhabi, Abu Dhabi, United Arab Emirates"]
       const locRaw = job.locations_derived as string[] | undefined;
       const locationStr = locRaw?.[0] ?? (job.location as string) ?? "";
-      // Alternative: if locations_derived is an array of objects, use this:
-      // const locationStr = locRaw?.[0] ? [locRaw[0].city, locRaw[0].admin, locRaw[0].country].filter(Boolean).join(", ") : (job.location as string) ?? "";
       // Ensure tags is null (not []) when empty — TiDB JSON columns accept null
       const tagsRaw = (job.ai_taxonomies_a as string[]) ?? null;
       const tags = Array.isArray(tagsRaw) && tagsRaw.length > 0 ? tagsRaw : null;
-      // Log location extraction for debugging
       if (!locationStr) {
         console.log("[fetchJobs] Warning: No location extracted for job", job.id, "locations_derived:", locRaw, "location:", job.location);
       }
-      await insertJob({
-        externalId: (job.id as string) ?? undefined,
+      // Insert with matchScore=0; background scorer will update it shortly
+      const inserted = await insertJob({
+        externalId,
         title,
         company,
         location: locationStr,
@@ -534,26 +520,52 @@ async function executeFetch(
         descriptionHtml: (job.description_html as string) ?? undefined,
         applyUrl: (job.url as string) ?? undefined,
         source: isLinkedIn ? "linkedin" : ((job.source as string) ?? undefined),
-        isDuplicate: false, // Always false now — duplicates are skipped before insert
+        isDuplicate: false,
         hasEmail,
         emailFound: emailFound ?? undefined,
-        matchScore,
-        status,
+        matchScore: 0,
+        status: "matched",
         tags,
         rawJson: job,
-        scoreSkills: dimensionScores.scoreSkills,
-        scoreSeniority: dimensionScores.scoreSeniority,
-        scoreLocation: dimensionScores.scoreLocation,
-        scoreIndustry: dimensionScores.scoreIndustry,
-        scoreCompensation: dimensionScores.scoreCompensation,
-        dealBreakerMatched: dimensionScores.dealBreakerMatched ?? undefined,
       });
+      // MySqlRawQueryResult = [ResultSetHeader, FieldPacket[]]
+      const newId = (inserted as unknown as [{ insertId: number }])[0]?.insertId;
+      if (newId) insertedJobIds.push(newId);
       jobsIngested++;
     } catch (jobErr) {
       console.error("[fetchJobs] Failed to insert job:", (jobErr as Error).message, job);
-      // Continue processing remaining jobs — don't abort the whole batch
     }
   }
+
+  // ── Phase 2: Score inserted jobs asynchronously in the background ─────────────
+  // Fire-and-forget: does not block the HTTP response.
+  setImmediate(async () => {
+    try {
+      const skills = await getSkillsProfile();
+      if (!skills || insertedJobIds.length === 0) return;
+      console.log(`[fetchJobs] Background scoring ${insertedJobIds.length} jobs...`);
+      for (const jobId of insertedJobIds) {
+        try {
+          const jobRow = await getJobById(jobId);
+          if (!jobRow || !jobRow.description) continue;
+          const result = await scoreJobWithLLM(jobRow.description, skills, jobRow.title, jobRow.company);
+          await updateJobMatchScore(jobId, result.composite, {
+            scoreSkills: result.scoreSkills,
+            scoreSeniority: result.scoreSeniority,
+            scoreLocation: result.scoreLocation,
+            scoreIndustry: result.scoreIndustry,
+            scoreCompensation: result.scoreCompensation,
+            dealBreakerMatched: result.dealBreakerMatched ?? undefined,
+          });
+        } catch (scoreErr) {
+          console.error(`[fetchJobs] Background scoring failed for job ${jobId}:`, (scoreErr as Error).message);
+        }
+      }
+      console.log(`[fetchJobs] Background scoring complete for ${insertedJobIds.length} jobs.`);
+    } catch (bgErr) {
+      console.error("[fetchJobs] Background scoring loop error:", (bgErr as Error).message);
+    }
+  });
 
   await insertFetchHistory({
     scheduleId: scheduleId ?? null,
