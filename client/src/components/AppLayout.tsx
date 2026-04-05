@@ -10,7 +10,6 @@ import {
   HelpCircle,
   LayoutGrid,
   LogOut,
-  Mail,
   Menu,
   MessageCircleQuestion,
   Radar,
@@ -32,7 +31,6 @@ const ownerNav = [
   { href: "/performance", label: "Performance", icon: BarChart3 },
   { href: "/faq", label: "FAQ", icon: MessageCircleQuestion },
   { href: "/release-notes", label: "Release Notes", icon: Rocket },
-  { href: "/email-draft", label: "Email Draft", icon: Mail },
 ];
 
 const applierNav = [
