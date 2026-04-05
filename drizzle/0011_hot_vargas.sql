@@ -1,0 +1,1 @@
+ALTER TABLE `fetch_schedules` MODIFY COLUMN `endpoint` enum('active-ats-7d','active-ats-24h','active-jb-7d','active-jb-24h') NOT NULL DEFAULT 'active-ats-7d';

@@ -381,3 +381,15 @@
 - [x] Update scheduled time from 9 PM to 7 PM GST as requested
 - [x] Apply same DB persistence fix to weekly report scheduler
 - [x] Update Release Notes in FAQ (v3.13–v3.20)
+
+## v3.21 LinkedIn Jobs API Integration
+- [x] Add "linkedin" as a source type in the backend fetch logic (new API host: linkedin-job-search-api.p.rapidapi.com)
+- [x] Support both active-jb-24h and active-jb-7d LinkedIn endpoints
+- [x] Map LinkedIn API fields to existing job schema (id→externalId, title, organization→company, locations_derived→location, description_text→description, url→applyUrl, source→source, linkedin_id for dedup)
+- [x] Add separate apiUsage tracking for LinkedIn (month key prefixed with "li-")
+- [x] Add "LinkedIn" source selector to Ingestion UI (toggle between Fantastic Jobs / LinkedIn)
+- [x] Add LinkedIn-specific filter fields: seniority, directApply, orgSlugFilter
+- [x] Show LinkedIn source tag on job cards (LINKEDIN badge via source field)
+- [x] Support LinkedIn in fetch schedules (active-jb-7d / active-jb-24h endpoints)
+- [x] Update FAQ Release Notes with v3.21
+- [x] DB migrations applied: fetch_schedules endpoint enum extended, api_usage monthKey length extended

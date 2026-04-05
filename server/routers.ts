@@ -272,8 +272,17 @@ export async function scoreJobWithLLM(
 
 // ─── Core Fetch Logic (shared by manual + scheduled runs) ─────────────────────
 
+// LinkedIn endpoints use a different API host
+const LINKEDIN_ENDPOINTS = ["active-jb-7d", "active-jb-24h"] as const;
+const FANTASTIC_ENDPOINTS = ["active-ats-7d", "active-ats-24h"] as const;
+const ALL_ENDPOINTS = [...FANTASTIC_ENDPOINTS, ...LINKEDIN_ENDPOINTS] as const;
+
 const FetchFiltersSchema = z.object({
-  endpoint: z.enum(["active-ats-7d", "active-ats-24h"]).default("active-ats-7d"),
+  endpoint: z.enum(ALL_ENDPOINTS).default("active-ats-7d"),
+  // LinkedIn-specific filters (only used when endpoint is active-jb-*)
+  linkedinSeniority: z.string().optional(),
+  linkedinDirectApply: z.boolean().optional(),
+  linkedinOrgSlugFilter: z.string().optional(),
   titleFilter: z.string().optional(),
   advancedTitleFilter: z.string().optional(),
   locationFilter: z.string().optional(),
@@ -351,13 +360,25 @@ async function executeFetch(
   if (input.dateFilter) params["date_filter"] = input.dateFilter;
 
   const endpoint = input.endpoint ?? "active-ats-7d";
-  const queryString = new URLSearchParams(params).toString();
-  const url = `https://active-jobs-db.p.rapidapi.com/${endpoint}?${queryString}`;
+  const isLinkedIn = (LINKEDIN_ENDPOINTS as readonly string[]).includes(endpoint);
 
+  // LinkedIn API uses different host and has different param names
+  if (isLinkedIn) {
+    // LinkedIn-specific params override
+    if (input.linkedinSeniority) params["seniority"] = input.linkedinSeniority;
+    if (input.linkedinDirectApply !== undefined) params["directapply"] = String(input.linkedinDirectApply);
+    if (input.linkedinOrgSlugFilter) params["organization_slug_filter"] = input.linkedinOrgSlugFilter;
+    // LinkedIn API doesn't use include_ai
+    delete params["include_ai"];
+  }
+
+  const apiHost = isLinkedIn ? "linkedin-job-search-api.p.rapidapi.com" : "active-jobs-db.p.rapidapi.com";
+  const queryString = new URLSearchParams(params).toString();
+  const url = `https://${apiHost}/${endpoint}?${queryString}`;
   const response = await fetch(url, {
     method: "GET",
     headers: {
-      "x-rapidapi-host": "active-jobs-db.p.rapidapi.com",
+      "x-rapidapi-host": apiHost,
       "x-rapidapi-key": resolvedKey,
     },
   });
@@ -369,8 +390,9 @@ async function executeFetch(
   const requestsLimit = parseInt(response.headers.get("x-ratelimit-requests-limit") ?? "0") || undefined;
   const quotaResetSeconds = parseInt(response.headers.get("x-ratelimit-jobs-reset") ?? "0") || undefined;
 
-  // Update quota in DB
-  const monthKey = getCurrentMonthKey();
+  // Update quota in DB — use separate month keys for each API source
+  const isLinkedInEndpoint = (LINKEDIN_ENDPOINTS as readonly string[]).includes(input.endpoint ?? "");
+  const monthKey = isLinkedInEndpoint ? `li-${getCurrentMonthKey()}` : getCurrentMonthKey();
   await incrementApiUsage(monthKey);
   await updateApiQuota(monthKey, { jobsLimit, jobsRemaining, requestsLimit, requestsRemaining, quotaResetSeconds });
 
@@ -510,7 +532,7 @@ async function executeFetch(
         description: descText,
         descriptionHtml: (job.description_html as string) ?? undefined,
         applyUrl: (job.url as string) ?? undefined,
-        source: (job.source as string) ?? undefined,
+        source: isLinkedIn ? "linkedin" : ((job.source as string) ?? undefined),
         isDuplicate: false, // Always false now — duplicates are skipped before insert
         hasEmail,
         emailFound: emailFound ?? undefined,
@@ -564,7 +586,7 @@ export function startScheduledFetchRunner() {
         console.log(`[Scheduler] Running scheduled fetch: ${schedule.name}`);
         try {
           const filters = schedule.filters as FetchFilters;
-          await executeFetch({ ...filters, endpoint: schedule.endpoint }, schedule.id, schedule.name);
+          await executeFetch({ ...filters, endpoint: schedule.endpoint as FetchFilters["endpoint"] }, schedule.id, schedule.name);
           const nextRun = computeNextRun(
             schedule.intervalType,
             schedule.scheduleHour ?? 9,
@@ -976,7 +998,12 @@ export const appRouter = router({
 
     getUsage: adminProcedure.query(async () => {
       const monthKey = getCurrentMonthKey();
-      return getOrCreateApiUsage(monthKey);
+      const liMonthKey = `li-${monthKey}`;
+      const [fantastic, linkedin] = await Promise.all([
+        getOrCreateApiUsage(monthKey),
+        getOrCreateApiUsage(liMonthKey),
+      ]);
+      return { fantastic, linkedin };
     }),
 
     // Fetch Schedules CRUD
@@ -985,7 +1012,7 @@ export const appRouter = router({
     createSchedule: adminProcedure
       .input(z.object({
         name: z.string().min(1),
-        endpoint: z.enum(["active-ats-7d", "active-ats-24h"]).default("active-ats-7d"),
+        endpoint: z.enum(ALL_ENDPOINTS).default("active-ats-7d"),
         filters: FetchFiltersSchema,
         intervalType: z.enum(["manual", "daily", "weekly"]).default("manual"),
         scheduleHour: z.number().min(0).max(23).default(9),
@@ -1029,7 +1056,7 @@ export const appRouter = router({
         if (!schedule) throw new TRPCError({ code: "NOT_FOUND", message: "Schedule not found" });
         try {
           const filters = schedule.filters as FetchFilters;
-          const result = await executeFetch({ ...filters, endpoint: schedule.endpoint }, schedule.id, schedule.name);
+          const result = await executeFetch({ ...filters, endpoint: schedule.endpoint as FetchFilters["endpoint"] }, schedule.id, schedule.name);
           const nextRun = computeNextRun(schedule.intervalType, schedule.scheduleHour ?? 9, schedule.scheduleMinute ?? 0, schedule.scheduleDayOfWeek, true);
           await updateFetchSchedule(schedule.id, { lastRunAt: new Date(), nextRunAt: nextRun ?? undefined });
           return { success: true, ...result };

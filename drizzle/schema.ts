@@ -121,7 +121,7 @@ export type InsertQuestion = typeof questionBank.$inferInsert;
 
 export const apiUsage = mysqlTable("api_usage", {
   id: int("id").autoincrement().primaryKey(),
-  monthKey: varchar("monthKey", { length: 7 }).notNull().unique(), // "YYYY-MM"
+  monthKey: varchar("monthKey", { length: 16 }).notNull().unique(), // "YYYY-MM" or "li-YYYY-MM"
   callCount: int("callCount").default(0).notNull(),
   // Quota fields from API response headers
   jobsLimit: int("jobsLimit"),
@@ -139,7 +139,7 @@ export type ApiUsage = typeof apiUsage.$inferSelect;
 export const fetchSchedules = mysqlTable("fetch_schedules", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
-  endpoint: mysqlEnum("endpoint", ["active-ats-7d", "active-ats-24h"]).default("active-ats-7d").notNull(),
+  endpoint: mysqlEnum("endpoint", ["active-ats-7d", "active-ats-24h", "active-jb-7d", "active-jb-24h"]).default("active-ats-7d").notNull(),
   filters: json("filters").notNull(), // full filter object
   // Schedule: interval type and time-of-day
   intervalType: mysqlEnum("intervalType", ["manual", "daily", "weekly"]).default("manual").notNull(),

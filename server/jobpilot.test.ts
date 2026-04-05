@@ -265,8 +265,13 @@ describe("ingestion", () => {
   it("owner can get API usage", async () => {
     const caller = appRouter.createCaller(makeOwnerCtx());
     const usage = await caller.ingestion.getUsage();
-    expect(usage).toHaveProperty("callCount");
-    expect(usage).toHaveProperty("monthKey");
+    // New shape: { fantastic: {...}, linkedin: {...} }
+    expect(usage).toHaveProperty("fantastic");
+    expect(usage).toHaveProperty("linkedin");
+    expect(usage.fantastic).toHaveProperty("callCount");
+    expect(usage.fantastic).toHaveProperty("monthKey");
+    expect(usage.linkedin).toHaveProperty("callCount");
+    expect(usage.linkedin).toHaveProperty("monthKey");
   });
 
   it("applier cannot access API usage", async () => {

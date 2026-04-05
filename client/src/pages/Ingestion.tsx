@@ -296,8 +296,11 @@ function TriToggle({ label, value, onChange, disabled }: {
 
 // ── Default filter state ──────────────────────────────────────────────────────
 
+type AllEndpoints = "active-ats-7d" | "active-ats-24h" | "active-jb-7d" | "active-jb-24h";
+const isLinkedInEndpoint = (ep: string) => ep === "active-jb-7d" || ep === "active-jb-24h";
+
 const defaultFilters = () => ({
-  endpoint: "active-ats-7d" as "active-ats-7d" | "active-ats-24h",
+  endpoint: "active-ats-7d" as AllEndpoints,
   titleFilter: "",
   advancedTitleFilter: "",
   locationFilter: [] as string[],
@@ -325,6 +328,10 @@ const defaultFilters = () => ({
   limit: "100",
   offset: "0",
   descriptionType: "text" as "text" | "html",
+  // LinkedIn-specific filters
+  linkedinSeniority: "",
+  linkedinDirectApply: undefined as TriState,
+  linkedinOrgSlugFilter: "",
 });
 
 type Filters = ReturnType<typeof defaultFilters>;
@@ -359,6 +366,9 @@ function filtersToInput(f: Filters) {
     limit: parseInt(f.limit) || 100,
     offset: parseInt(f.offset) || 0,
     descriptionType: f.descriptionType,
+    linkedinSeniority: f.linkedinSeniority || undefined,
+    linkedinDirectApply: f.linkedinDirectApply,
+    linkedinOrgSlugFilter: f.linkedinOrgSlugFilter || undefined,
   };
 }
 
@@ -649,11 +659,14 @@ export default function Ingestion() {
 
   const isFetching = fetchJobsMut.isPending || runNowMut.isPending;
 
-  // Quota calculations
-  const jobsRemaining = apiUsage && 'jobsRemaining' in apiUsage ? apiUsage.jobsRemaining : undefined;
-  const jobsLimit = apiUsage && 'jobsLimit' in apiUsage ? apiUsage.jobsLimit : undefined;
-  const requestsRemaining = apiUsage && 'requestsRemaining' in apiUsage ? apiUsage.requestsRemaining : undefined;
-  const requestsLimit = apiUsage && 'requestsLimit' in apiUsage ? apiUsage.requestsLimit : undefined;
+  // Quota calculations — pick the active API's quota
+  const isLI = isLinkedInEndpoint(filters.endpoint);
+  const activeUsage = apiUsage ? (isLI ? apiUsage.linkedin : apiUsage.fantastic) : undefined;
+  const jobsRemaining = activeUsage?.jobsRemaining ?? undefined;
+  const jobsLimit = activeUsage?.jobsLimit ?? undefined;
+  const requestsRemaining = activeUsage?.requestsRemaining ?? undefined;
+  const requestsLimit = activeUsage?.requestsLimit ?? undefined;
+  const callCount = activeUsage?.callCount ?? 0;
   const jobsPct = jobsLimit && jobsRemaining != null ? Math.round((jobsRemaining / jobsLimit) * 100) : null;
   const quotaWarning = jobsPct !== null && jobsPct < 20;
   const quotaCritical = jobsPct !== null && jobsPct < 5;
@@ -696,7 +709,11 @@ export default function Ingestion() {
           <h1 className="text-2xl font-black tracking-widest text-amber-400 uppercase">INGEST JOBS</h1>
         </div>
         <div className="h-0.5 w-full bg-amber-400 mb-3" />
-        <p className="text-xs text-gray-400">ACTIVE JOBS DB · active-jobs-db.p.rapidapi.com · 175K+ ORGS</p>
+        <p className="text-xs text-gray-400">
+          {isLinkedInEndpoint(filters.endpoint)
+            ? "LINKEDIN JOBS API · linkedin-job-search-api.p.rapidapi.com · DIRECT LINKEDIN LISTINGS"
+            : "ACTIVE JOBS DB · active-jobs-db.p.rapidapi.com · 175K+ ORGS"}
+        </p>
       </div>
 
       {/* Quota Warning Banner */}
@@ -726,7 +743,7 @@ export default function Ingestion() {
               </span>
               <span>
                 <span className="text-gray-400">CALLS THIS MONTH: </span>
-                <span className="text-white font-bold">{apiUsage.callCount}</span>
+                <span className="text-white font-bold">{callCount}</span>
               </span>
             </div>
             {quotaCritical && <p className="text-red-400 text-xs mt-1 font-bold">⚠ CRITICAL: Less than 5% of job credits remaining!</p>}
@@ -775,16 +792,51 @@ export default function Ingestion() {
         <div className={`space-y-6 transition-opacity ${isFetching ? "opacity-50 pointer-events-none" : ""}`}>
           {/* Endpoint + Limit + Offset */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <SelectInput
-              label="ENDPOINT"
-              value={filters.endpoint}
-              onChange={(v) => setFilter("endpoint", v as "active-ats-7d" | "active-ats-24h")}
-              options={[
-                { value: "active-ats-7d", label: "active-ats-7d (Last 7 days)" },
-                { value: "active-ats-24h", label: "active-ats-24h (Last 24 hours)" },
-              ]}
-              disabled={isFetching}
-            />
+            <div className="md:col-span-1">
+              <label className="block text-xs font-mono text-amber-400 mb-1">API SOURCE</label>
+              <div className="grid grid-cols-2 gap-1 mb-2">
+                <button
+                  type="button"
+                  onClick={() => setFilter("endpoint", "active-ats-7d" as AllEndpoints)}
+                  disabled={isFetching}
+                  className={`px-2 py-1.5 text-xs font-mono font-bold border-2 transition-colors ${
+                    !isLinkedInEndpoint(filters.endpoint)
+                      ? "border-amber-400 text-amber-400 bg-amber-400/10"
+                      : "border-gray-700 text-gray-500 hover:border-gray-500"
+                  }`}
+                >
+                  FANTASTIC JOBS
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilter("endpoint", "active-jb-7d" as AllEndpoints)}
+                  disabled={isFetching}
+                  className={`px-2 py-1.5 text-xs font-mono font-bold border-2 transition-colors ${
+                    isLinkedInEndpoint(filters.endpoint)
+                      ? "border-blue-400 text-blue-400 bg-blue-400/10"
+                      : "border-gray-700 text-gray-500 hover:border-gray-500"
+                  }`}
+                >
+                  LINKEDIN JOBS
+                </button>
+              </div>
+              <SelectInput
+                label="ENDPOINT"
+                value={filters.endpoint}
+                onChange={(v) => setFilter("endpoint", v as AllEndpoints)}
+                options={isLinkedInEndpoint(filters.endpoint)
+                  ? [
+                      { value: "active-jb-7d", label: "active-jb-7d (Last 7 days)" },
+                      { value: "active-jb-24h", label: "active-jb-24h (Last 24 hours)" },
+                    ]
+                  : [
+                      { value: "active-ats-7d", label: "active-ats-7d (Last 7 days)" },
+                      { value: "active-ats-24h", label: "active-ats-24h (Last 24 hours)" },
+                    ]
+                }
+                disabled={isFetching}
+              />
+            </div>
             <SelectInput
               label="LIMIT (10–100 per call)"
               value={filters.limit}
@@ -918,9 +970,45 @@ export default function Ingestion() {
               <TriToggle label="AGENCY" value={filters.agency} onChange={(v) => setFilter("agency", v)} disabled={isFetching} />
               <TriToggle label="VISA SPONSORSHIP" value={filters.aiVisaSponsorshipFilter} onChange={(v) => setFilter("aiVisaSponsorshipFilter", v)} disabled={isFetching} />
               <TriToggle label="HAS SALARY" value={filters.aiHasSalary} onChange={(v) => setFilter("aiHasSalary", v)} disabled={isFetching} />
-              <TriToggle label="INCLUDE LINKEDIN" value={filters.includeLi} onChange={(v) => setFilter("includeLi", v)} disabled={isFetching} />
+              {!isLinkedInEndpoint(filters.endpoint) && (
+                <TriToggle label="INCLUDE LINKEDIN" value={filters.includeLi} onChange={(v) => setFilter("includeLi", v)} disabled={isFetching} />
+              )}
             </div>
           </div>
+
+          {/* LinkedIn-specific filters (shown only when LinkedIn endpoint selected) */}
+          {isLinkedInEndpoint(filters.endpoint) && (
+            <div className="border-2 border-blue-900 p-4 space-y-4">
+              <p className="text-xs font-mono text-blue-400 font-bold tracking-widest">▌ LINKEDIN-SPECIFIC FILTERS</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SelectInput
+                  label="SENIORITY"
+                  value={filters.linkedinSeniority}
+                  onChange={(v) => setFilter("linkedinSeniority", v)}
+                  placeholder="Any seniority"
+                  options={[
+                    { value: "Internship", label: "Internship" },
+                    { value: "Entry level", label: "Entry level" },
+                    { value: "Associate", label: "Associate" },
+                    { value: "Mid-Senior level", label: "Mid-Senior level" },
+                    { value: "Director", label: "Director" },
+                    { value: "Executive", label: "Executive" },
+                  ]}
+                  disabled={isFetching}
+                />
+                <TextInput
+                  label="ORG SLUG FILTER"
+                  value={filters.linkedinOrgSlugFilter}
+                  onChange={(v) => setFilter("linkedinOrgSlugFilter", v)}
+                  placeholder="e.g. google,microsoft"
+                  disabled={isFetching}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <TriToggle label="DIRECT APPLY" value={filters.linkedinDirectApply} onChange={(v) => setFilter("linkedinDirectApply", v)} disabled={isFetching} />
+              </div>
+            </div>
+          )}
 
           {/* Advanced Filters (collapsible) */}
           <div className="border-2 border-gray-800">

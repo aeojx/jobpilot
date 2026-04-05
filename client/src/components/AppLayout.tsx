@@ -131,10 +131,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Quota info
-  const jobsRemaining = apiUsage && "jobsRemaining" in apiUsage ? apiUsage.jobsRemaining : null;
-  const jobsLimit = apiUsage && "jobsLimit" in apiUsage ? apiUsage.jobsLimit : null;
-  const quotaPct = jobsLimit && jobsRemaining != null ? Math.round((jobsRemaining / jobsLimit) * 100) : null;
+  // Quota info — use Fantastic Jobs (primary) quota for sidebar display
+  const fantUsage = apiUsage?.fantastic;
+  const jobsRemaining = (fantUsage && "jobsRemaining" in fantUsage) ? (fantUsage.jobsRemaining ?? null) : null;
+  const jobsLimit = (fantUsage && "jobsLimit" in fantUsage) ? (fantUsage.jobsLimit ?? null) : null;
+  const callCount = fantUsage?.callCount ?? 0;
+  const quotaPct = (jobsLimit != null && jobsLimit > 0 && jobsRemaining != null) ? Math.round((jobsRemaining / jobsLimit) * 100) : null;
   const quotaWarning = quotaPct !== null && quotaPct < 20;
 
   const SidebarContent = () => (
@@ -227,7 +229,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             API CALLS / MONTH
           </p>
           <p className="font-pixel mb-1" style={{ color: quotaWarning ? "var(--atari-red)" : "var(--atari-amber)", fontSize: "10px" }}>
-            {apiUsage.callCount}
+            {callCount}
           </p>
           {jobsRemaining != null && (
             <>

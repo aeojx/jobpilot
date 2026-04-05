@@ -261,7 +261,7 @@ export async function answerQuestion(id: number, answer: string) {
 
 export async function getOrCreateApiUsage(monthKey: string) {
   const db = await getDb();
-  if (!db) return { id: 0, monthKey, callCount: 0, updatedAt: new Date() };
+  if (!db) return { id: 0, monthKey, callCount: 0, jobsLimit: null as number | null, jobsRemaining: null as number | null, requestsLimit: null as number | null, requestsRemaining: null as number | null, quotaResetSeconds: null as number | null, updatedAt: new Date() };
   const result = await db.select().from(apiUsage).where(eq(apiUsage.monthKey, monthKey)).limit(1);
   if (result[0]) return result[0];
   await db.insert(apiUsage).values({ monthKey, callCount: 0 });
