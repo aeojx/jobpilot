@@ -10,9 +10,11 @@ import {
   HelpCircle,
   LayoutGrid,
   LogOut,
+  Mail,
   Menu,
   MessageCircleQuestion,
   Radar,
+  Rocket,
   Shuffle,
   X,
   Zap,
@@ -29,6 +31,8 @@ const ownerNav = [
   { href: "/questions", label: "Question Bank", icon: HelpCircle },
   { href: "/performance", label: "Performance", icon: BarChart3 },
   { href: "/faq", label: "FAQ", icon: MessageCircleQuestion },
+  { href: "/release-notes", label: "Release Notes", icon: Rocket },
+  { href: "/email-draft", label: "Email Draft", icon: Mail },
 ];
 
 const applierNav = [
@@ -36,6 +40,7 @@ const applierNav = [
   { href: "/performance", label: "Performance", icon: BarChart3 },
   { href: "/questions", label: "Questions", icon: HelpCircle },
   { href: "/faq", label: "FAQ", icon: MessageCircleQuestion },
+  { href: "/release-notes", label: "Release Notes", icon: Rocket },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

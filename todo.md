@@ -408,3 +408,13 @@
 - [x] Background scorer fetches each inserted job by ID and calls updateJobMatchScore after LLM result
 - [x] HTTP response now returns in <10s regardless of batch size
 - [x] Verify with TypeScript check (0 errors) and tests (75 passing)
+
+## v3.24 Release Notes Page & Week 1 Email Draft
+- [x] Extract Release Notes content from FAQ.tsx
+- [x] Create standalone public ReleaseNotes.tsx page (visible without login, 24 entries v3.0–v3.23)
+- [x] Add /release-notes route in App.tsx (outside auth guard, in PUBLIC_ROUTES)
+- [x] Add Release Notes link in AppLayout sidebar nav (both owner and applier)
+- [x] Keep Release Notes section in FAQ as link (not removed)
+- [x] Draft Week 1 recap + Week 2 plan email with live metrics (total applied, avg/day, source breakdown, daily breakdown)
+- [x] Create EmailDraft.tsx page (owner-only) with stats cards and copy-to-clipboard button
+- [x] Add /email-draft route in App.tsx and Email Draft nav item in owner sidebar

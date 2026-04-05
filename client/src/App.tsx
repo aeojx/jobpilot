@@ -14,6 +14,8 @@ import AppLayout from "./components/AppLayout";
 import PasswordGate from "./pages/PasswordGate";
 import SwipeView from "./pages/SwipeView";
 import FAQ from "./pages/FAQ";
+import ReleaseNotes from "./pages/ReleaseNotes";
+import EmailDraft from "./pages/EmailDraft";
 import Landing from "./pages/Landing";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
@@ -103,6 +105,10 @@ function Router() {
       <Route path="/faq">
         {() => <AppLayout><FAQ /></AppLayout>}
       </Route>
+      <Route path="/release-notes" component={ReleaseNotes} />
+      <Route path="/email-draft">
+        {() => <AppLayout><EmailDraft /></AppLayout>}
+      </Route>
       <Route path="/landing" component={Landing} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
@@ -111,7 +117,7 @@ function Router() {
 }
 
 // Routes that are publicly accessible without the password gate
-const PUBLIC_ROUTES = ["/landing"];
+const PUBLIC_ROUTES = ["/landing", "/release-notes"];
 
 function GatedApp() {
   const [location] = useLocation();
