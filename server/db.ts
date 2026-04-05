@@ -560,3 +560,15 @@ export async function setSystemConfig(key: string, value: string): Promise<void>
     .values({ key, value })
     .onDuplicateKeyUpdate({ set: { value } });
 }
+
+// ─── Pending Scoring Count ──────────────────────────────────────────────────
+/** Count jobs with matchScore=0 in 'matched' status (awaiting background LLM scoring). */
+export async function getPendingScoringCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db
+    .select({ c: count() })
+    .from(jobs)
+    .where(sql`${jobs.matchScore} = 0 AND ${jobs.status} = 'matched'`);
+  return result[0]?.c ?? 0;
+}

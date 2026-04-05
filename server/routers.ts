@@ -549,14 +549,21 @@ async function executeFetch(
           const jobRow = await getJobById(jobId);
           if (!jobRow || !jobRow.description) continue;
           const result = await scoreJobWithLLM(jobRow.description, skills, jobRow.title, jobRow.company);
-          await updateJobMatchScore(jobId, result.composite, {
-            scoreSkills: result.scoreSkills,
-            scoreSeniority: result.scoreSeniority,
-            scoreLocation: result.scoreLocation,
-            scoreIndustry: result.scoreIndustry,
-            scoreCompensation: result.scoreCompensation,
-            dealBreakerMatched: result.dealBreakerMatched ?? undefined,
-          });
+          if (result.dealBreakerMatched) {
+            // Dealbreaker hit — reject the job immediately instead of leaving it in Matched with score=0
+            await updateJobStatus(jobId, "rejected");
+            await updateJobMatchScore(jobId, 0, { dealBreakerMatched: result.dealBreakerMatched });
+            console.log(`[fetchJobs] Auto-rejected job ${jobId} (dealbreaker: "${result.dealBreakerMatched}")`);
+          } else {
+            await updateJobMatchScore(jobId, result.composite, {
+              scoreSkills: result.scoreSkills,
+              scoreSeniority: result.scoreSeniority,
+              scoreLocation: result.scoreLocation,
+              scoreIndustry: result.scoreIndustry,
+              scoreCompensation: result.scoreCompensation,
+              dealBreakerMatched: null,
+            });
+          }
         } catch (scoreErr) {
           console.error(`[fetchJobs] Background scoring failed for job ${jobId}:`, (scoreErr as Error).message);
         }
@@ -1129,14 +1136,22 @@ export const appRouter = router({
         if (needsScoring && job.description) {
           try {
             const result = await scoreJobWithLLM(job.description, skills, job.title, job.company);
-            await updateJobMatchScore(job.id, result.composite, {
-              scoreSkills: result.scoreSkills,
-              scoreSeniority: result.scoreSeniority,
-              scoreLocation: result.scoreLocation,
-              scoreIndustry: result.scoreIndustry,
-              scoreCompensation: result.scoreCompensation,
-              dealBreakerMatched: result.dealBreakerMatched,
-            });
+            if (result.dealBreakerMatched) {
+              // Auto-reject dealbreaker jobs — don't leave them in Matched with score=0
+              if (job.status === "matched" || job.status === "ingested") {
+                await updateJobStatus(job.id, "rejected");
+              }
+              await updateJobMatchScore(job.id, 0, { dealBreakerMatched: result.dealBreakerMatched });
+            } else {
+              await updateJobMatchScore(job.id, result.composite, {
+                scoreSkills: result.scoreSkills,
+                scoreSeniority: result.scoreSeniority,
+                scoreLocation: result.scoreLocation,
+                scoreIndustry: result.scoreIndustry,
+                scoreCompensation: result.scoreCompensation,
+                dealBreakerMatched: null,
+              });
+            }
             updated++;
           } catch (err) {
             console.error("[rescoreAll] Scoring failed for job", job.id, (err as Error).message);
