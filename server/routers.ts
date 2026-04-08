@@ -235,7 +235,7 @@ export async function scoreJobWithLLM(
             "=== JOB TO SCORE ===",
             jobTitle ? `TITLE: ${jobTitle}` : "",
             jobCompany ? `COMPANY: ${jobCompany}` : "",
-            jobLocation ? `LOCATION: ${normalizeLocation(jobLocation)}` : "",
+            jobLocation ? `LOCATION: ${normalizeLocation(jobLocation)}` : "LOCATION: Remote (no location specified — treat as remote-friendly)",
             `DESCRIPTION:\n${jobDescription}`,
             "",
             "=== SCORING DIMENSIONS ===",
@@ -297,6 +297,9 @@ export async function scoreJobWithLLM(
 }
 
 // ─── Core Fetch Logic (shared by manual + scheduled runs) ─────────────────────
+
+/** Minimum composite score for a job to stay in "matched" status. Jobs below this are auto-rejected. */
+const MIN_MATCH_SCORE = 55;
 
 // LinkedIn endpoints use a different API host
 const LINKEDIN_ENDPOINTS = ["active-jb-7d", "active-jb-24h"] as const;
@@ -592,6 +595,18 @@ async function executeFetch(
               dealBreakerMatched: null,
             });
             console.log(`[fetchJobs] Auto-rejected job ${jobId} (low seniority: ${result.scoreSeniority})`);
+          } else if (result.composite < MIN_MATCH_SCORE) {
+            // Score below minimum threshold — auto-reject to reduce swipe noise
+            await updateJobStatus(jobId, "rejected");
+            await updateJobMatchScore(jobId, result.composite, {
+              scoreSkills: result.scoreSkills,
+              scoreSeniority: result.scoreSeniority,
+              scoreLocation: result.scoreLocation,
+              scoreIndustry: result.scoreIndustry,
+              scoreCompensation: result.scoreCompensation,
+              dealBreakerMatched: null,
+            });
+            console.log(`[fetchJobs] Auto-rejected job ${jobId} (low score: ${result.composite} < ${MIN_MATCH_SCORE})`);
           } else {
             await updateJobMatchScore(jobId, result.composite, {
               scoreSkills: result.scoreSkills,
@@ -1200,6 +1215,19 @@ export const appRouter = router({
               await updateJobMatchScore(job.id, 0, { dealBreakerMatched: result.dealBreakerMatched });
             } else if (result.scoreSeniority < 50) {
               // Seniority post-filter — auto-reject low-seniority matches
+              if (job.status === "matched" || job.status === "ingested") {
+                await updateJobStatus(job.id, "rejected");
+              }
+              await updateJobMatchScore(job.id, result.composite, {
+                scoreSkills: result.scoreSkills,
+                scoreSeniority: result.scoreSeniority,
+                scoreLocation: result.scoreLocation,
+                scoreIndustry: result.scoreIndustry,
+                scoreCompensation: result.scoreCompensation,
+                dealBreakerMatched: null,
+              });
+            } else if (result.composite < MIN_MATCH_SCORE) {
+              // Score below minimum threshold — auto-reject
               if (job.status === "matched" || job.status === "ingested") {
                 await updateJobStatus(job.id, "rejected");
               }

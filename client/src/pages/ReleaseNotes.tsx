@@ -14,6 +14,109 @@ interface ReleaseEntry {
 // ─── Release Data ─────────────────────────────────────────────────────────────
 const RELEASES: ReleaseEntry[] = [
   {
+    version: "v3.31",
+    date: "Apr 8, 2026",
+    title: "Ingestion Schedule Analysis + 5 Pipeline Improvements",
+    tag: "feature",
+    content: (
+      <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+        <li><strong>Ingestion schedule analysis</strong> — analyzed 1,505 ingested jobs and 159 applied jobs to produce data-driven daily fetch schedule recommendations (see INGESTION_SCHEDULE_ANALYSIS.md).</li>
+        <li><strong>3 new dealbreakers added</strong> — <code style={{ color: "var(--atari-cyan)" }}>co-founder</code>, <code style={{ color: "var(--atari-cyan)" }}>sales director</code>, <code style={{ color: "var(--atari-cyan)" }}>account executive</code> added to the dealbreaker list. 1 existing matched job retroactively rejected.</li>
+        <li><strong>Matched threshold raised: 40 → 55</strong> — jobs scoring below 55 composite are now auto-rejected during background scoring. 108 existing matched jobs retroactively rejected. Supported by data: jobs scoring 50–59 had only 11% approval rate.</li>
+        <li><strong>Empty-location fix</strong> — when a job has no location, the LLM scoring prompt now passes <code style={{ color: "var(--atari-cyan)" }}>"Remote (no location specified — treat as remote-friendly)"</code> instead of omitting the field. This prevents remote-eligible jobs from scoring 0 on location. Data shows no-location jobs have 18.8% approval rate.</li>
+        <li><strong>Skills profile cache invalidated</strong> — new dealbreakers take effect immediately for all new ingestion runs.</li>
+      </ul>
+    ),
+  },
+  {
+    version: "v3.30",
+    date: "Apr 7, 2026",
+    title: "Minimum Seniority Post-Filter",
+    tag: "feature",
+    content: (
+      <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+        <li><strong>Seniority post-filter</strong> — jobs scoring below 50 on <code style={{ color: "var(--atari-cyan)" }}>scoreSeniority</code> are now auto-rejected after LLM evaluation (same pattern as dealbreaker filter).</li>
+        <li><strong>Applied to background scoring and rescoreAll</strong> — both the async background scorer and the manual Rescore All operation enforce this filter.</li>
+        <li><strong>Retroactive cleanup</strong> — 114 existing matched jobs with <code style={{ color: "var(--atari-cyan)" }}>scoreSeniority &lt; 50</code> were retroactively rejected.</li>
+        <li><strong>1 new unit test added</strong> — 82 tests passing total.</li>
+      </ul>
+    ),
+  },
+  {
+    version: "v3.29",
+    date: "Apr 7, 2026",
+    title: "Location Normalization",
+    tag: "feature",
+    content: (
+      <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+        <li><strong>normalizeLocation() helper</strong> — converts verbose API location strings to clean short forms before passing to LLM scoring. Example: <code style={{ color: "var(--atari-cyan)" }}>"Dubai, Dubai, United Arab Emirates"</code> → <code style={{ color: "var(--atari-cyan)" }}>"Dubai, UAE"</code>.</li>
+        <li><strong>Supported country aliases</strong> — United Arab Emirates → UAE, United States → US, United Kingdom → UK.</li>
+        <li><strong>6 new unit tests</strong> — 81 tests passing total.</li>
+      </ul>
+    ),
+  },
+  {
+    version: "v3.28",
+    date: "Apr 7, 2026",
+    title: "4 Cost Optimizations",
+    tag: "infra",
+    content: (
+      <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+        <li><strong>Removed owner self-notification on question answer</strong> — eliminated unnecessary notification when the owner answers their own questions.</li>
+        <li><strong>Slowed getUsage poll: 30s → 5 min</strong> — API usage stats on the Ingest page now refresh every 5 minutes instead of every 30 seconds.</li>
+        <li><strong>5-min in-memory cache for getSkillsProfile()</strong> — avoids 100+ DB reads per scoring batch; cache invalidated on profile update.</li>
+        <li><strong>rescoreAll skips already-scored jobs by default</strong> — only re-scores jobs with <code style={{ color: "var(--atari-cyan)" }}>matchScore = 0</code> unless <code style={{ color: "var(--atari-cyan)" }}>forceRescore: true</code> is passed.</li>
+      </ul>
+    ),
+  },
+  {
+    version: "v3.27",
+    date: "Apr 6, 2026",
+    title: "Auto-Reject Dealbreaker Jobs During Scoring",
+    tag: "feature",
+    content: (
+      <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+        <li><strong>Auto-reject on dealbreaker match</strong> — jobs matching a dealbreaker keyword during background scoring are now immediately moved to Rejected instead of staying in Matched with score=0.</li>
+        <li><strong>Applied to rescoreAll</strong> — the manual Rescore All operation also enforces this rule.</li>
+        <li><strong>Retroactive cleanup</strong> — 121 existing matched jobs with dealbreaker keywords were retroactively rejected.</li>
+      </ul>
+    ),
+  },
+  {
+    version: "v3.26",
+    date: "Apr 6, 2026",
+    title: "TopProgressBar — Live Ingestion & Scoring Status",
+    tag: "feature",
+    content: (
+      <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+        <li><strong>TopProgressBar component</strong> — a slim animated bar appears at the top of every page during job ingestion (amber) and background LLM scoring (blue/purple).</li>
+        <li><strong>Smart polling</strong> — polls the <code style={{ color: "var(--atari-cyan)" }}>scoringStatus</code> tRPC endpoint every 3 seconds while active, slowing to 10 seconds when idle.</li>
+        <li><strong>Integrated in AppLayout</strong> — visible on all pages without any per-page setup.</li>
+      </ul>
+    ),
+  },
+  {
+    version: "v3.25",
+    date: "Apr 6, 2026",
+    title: "Removed Email Draft Tab",
+    tag: "infra",
+    content: (
+      <p>Removed the Email Draft nav item from the owner sidebar and the <code style={{ color: "var(--atari-cyan)" }}>/email-draft</code> route. The EmailDraft.tsx file is kept in the codebase but is no longer accessible via the UI.</p>
+    ),
+  },
+  {
+    version: "v3.24",
+    date: "Apr 6, 2026",
+    title: "Standalone Release Notes Page",
+    tag: "feature",
+    content: (
+      <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+        <li><strong>Public Release Notes page</strong> — standalone page at <code style={{ color: "var(--atari-cyan)" }}>/release-notes</code> listing all versions (v3.0–v3.23), accessible without login.</li>
+        <li><strong>Release Notes link added to sidebar</strong> — available for both Owner and Applier roles.</li>
+      </ul>
+    ),
+  },
+  {
     version: "v3.23",
     date: "Apr 6, 2026",
     title: "Fix 504 Gateway Timeout on Ingest",

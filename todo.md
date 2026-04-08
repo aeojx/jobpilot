@@ -457,3 +457,12 @@
 - [x] Retroactively rejected 114 existing matched jobs with scoreSeniority < 50
 - [x] Added unit test for seniority post-filter (82 tests total passing)
 - [x] TypeScript: 0 errors (watcher errors are stale)
+
+## v3.31 Pipeline Improvements
+- [x] Analyze 1,505 ingested jobs + swipe patterns to produce daily ingestion schedule recommendations
+- [x] Add 3 new dealbreakers: co-founder, sales director, account executive
+- [x] Raise matched threshold from 40 → 55 (auto-reject composite score < 55)
+- [x] Retroactively reject 108 matched jobs with score 1-54
+- [x] Retroactively reject 1 matched job with new dealbreaker (co-founder)
+- [x] Fix empty-location scoring: pass "Remote (no location specified)" to LLM instead of omitting location
+- [x] Update Release Notes page with v3.24 through v3.31 entries
