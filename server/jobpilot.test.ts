@@ -565,7 +565,7 @@ describe("v3.1 LLM scoring: multi-dimension scores", () => {
       updatedAt: new Date(),
     });
 
-    await caller.skills.rescoreAll();
+    await caller.skills.rescoreAll({ forceRescore: true });
     expect(updateJobMatchScore).toHaveBeenCalledWith(
       1,
       expect.any(Number),
@@ -610,7 +610,7 @@ describe("v3.1 LLM scoring: multi-dimension scores", () => {
     });
 
     const caller = appRouter.createCaller(makeOwnerCtx());
-    await caller.skills.rescoreAll();
+    await caller.skills.rescoreAll({ forceRescore: true });
 
     // LLM should NOT have been called for a dealbreaker-matched job
     expect(llmSpy).not.toHaveBeenCalled();

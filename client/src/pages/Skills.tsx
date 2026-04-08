@@ -184,7 +184,10 @@ export default function Skills() {
 
   const rescore = trpc.skills.rescoreAll.useMutation({
     onSuccess: (data) => {
-      toast.success(`Re-scored ${data.updated} jobs`);
+      const msg = data.skipped > 0
+        ? `Re-scored ${data.updated} jobs (${data.skipped} already scored, skipped)`
+        : `Re-scored ${data.updated} jobs`;
+      toast.success(msg);
       utils.jobs.kanban.invalidate();
     },
     onError: (e) => toast.error(e.message),
@@ -409,7 +412,7 @@ export default function Skills() {
           </button>
 
           <button
-            onClick={() => rescore.mutate()}
+            onClick={() => rescore.mutate({ forceRescore: false })}
             disabled={rescore.isPending || !profile}
             className="py-3 px-4 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 transition-all"
             style={{

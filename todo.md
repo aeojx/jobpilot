@@ -434,3 +434,11 @@
 - [x] Retroactively verified: 0 matched jobs with score=0 (DB was already clean from bulk auto-reject)
 - [x] All 121 dealbreaker jobs correctly in Rejected column, 0 in Matched with score=0
 - [x] TypeScript: 0 errors, Tests: 75 passing
+
+## v3.28 Cost Optimizations
+- [x] #2: Removed notifyOwner call when a question is answered (applier email still fires)
+- [x] #3: Slowed getUsage poll in AppLayout from 30s to 5 minutes (10× fewer DB queries/hour)
+- [x] #4: Added 5-min in-memory cache for getSkillsProfile() in db.ts; invalidated on upsert
+- [x] #5: rescoreAll now skips already-scored jobs by default; pass forceRescore:true to override
+- [x] Updated Skills.tsx toast to show skip count; updated tests to pass forceRescore:true
+- [x] TypeScript: 0 errors, Tests: 75 passing

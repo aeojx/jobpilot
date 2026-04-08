@@ -1132,20 +1132,26 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    rescoreAll: adminProcedure.mutation(async () => {
+    rescoreAll: adminProcedure
+      .input(z.object({ forceRescore: z.boolean().optional().default(false) }))
+      .mutation(async ({ input }) => {
       const skills = await getSkillsProfile();
       if (!skills) throw new TRPCError({ code: "BAD_REQUEST", message: "No skills profile found" });
       const allJobs = await getAllJobs();
       let updated = 0;
       let migrated = 0;
+      let skipped = 0;
       for (const job of allJobs) {
         // Migrate any remaining "ingested" jobs to "matched" regardless of score
         if (job.status === "ingested") {
           await updateJobStatus(job.id, "matched");
           migrated++;
         }
-        // Score jobs that have no score yet (score === 0) or are ingested
-        const needsScoring = (job.matchScore === 0 || job.matchScore === null) && job.description;
+        // Cost opt #5: skip already-scored jobs unless forceRescore is set
+        const needsScoring = input.forceRescore
+          ? !!job.description
+          : (job.matchScore === 0 || job.matchScore === null) && !!job.description;
+        if (!needsScoring) { skipped++; }
         if (needsScoring && job.description) {
           try {
             const result = await scoreJobWithLLM(job.description, skills, job.title, job.company);
@@ -1171,7 +1177,7 @@ export const appRouter = router({
           }
         }
       }
-      return { success: true, updated, migrated };
+      return { success: true, updated, migrated, skipped };
     }),
   }),
 
@@ -1224,11 +1230,7 @@ export const appRouter = router({
             html,
           });
         }
-        // Also push Manus notification to owner
-        await notifyOwner({
-          title: "✅ Question Answered",
-          content: `A question was answered by ${ctx.user.name ?? "a user"}.`,
-        });
+        // Owner self-notification removed (cost opt #2) — applier email above is sufficient
         return { success: true };
       }),
   }),

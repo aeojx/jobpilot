@@ -50,7 +50,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const { data: apiUsage } = trpc.ingestion.getUsage.useQuery(undefined, {
     enabled: user?.role === "admin",
-    refetchInterval: 30000,
+    refetchInterval: 5 * 60 * 1000, // cost opt #3: was 30s, now 5 min
   });
 
   const isOwner = user?.role === "admin";

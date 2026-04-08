@@ -150,13 +150,31 @@ export async function getKanbanJobs() {
   return db.select().from(jobs).orderBy(desc(jobs.matchScore), desc(jobs.createdAt));
 }
 
-// ─── Skills Profile ───────────────────────────────────────────────────────────
+// ─── Skills Profile ─────────────────────────────────────────────────────
 
-export async function getSkillsProfile() {
+// 5-minute in-memory cache — avoids 100 DB reads per scoring batch
+let _skillsProfileCache: { value: Awaited<ReturnType<typeof _fetchSkillsProfile>> | null; expiresAt: number } | null = null;
+const SKILLS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function _fetchSkillsProfile() {
   const db = await getDb();
   if (!db) return null;
   const result = await db.select().from(skillsProfile).limit(1);
   return result[0] ?? null;
+}
+
+export async function getSkillsProfile() {
+  const now = Date.now();
+  if (_skillsProfileCache && now < _skillsProfileCache.expiresAt) {
+    return _skillsProfileCache.value;
+  }
+  const value = await _fetchSkillsProfile();
+  _skillsProfileCache = { value, expiresAt: now + SKILLS_CACHE_TTL_MS };
+  return value;
+}
+
+export function invalidateSkillsProfileCache() {
+  _skillsProfileCache = null;
 }
 
 export type SkillsProfileInput = {
@@ -180,12 +198,14 @@ export async function upsertSkillsProfile(input: SkillsProfileInput | string) {
   if (!db) throw new Error("Database not available");
   // Accept legacy string or new structured input
   const data: SkillsProfileInput = typeof input === "string" ? { content: input } : input;
-  const existing = await getSkillsProfile();
+  const existing = await _fetchSkillsProfile(); // bypass cache for accurate upsert
   if (existing) {
     await db.update(skillsProfile).set(data).where(eq(skillsProfile.id, existing.id));
   } else {
     await db.insert(skillsProfile).values(data);
   }
+  // Invalidate cache so next read reflects the new profile immediately
+  invalidateSkillsProfileCache();
 }
 
 // ─── Question Bank ────────────────────────────────────────────────────────────
