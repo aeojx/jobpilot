@@ -580,6 +580,18 @@ async function executeFetch(
             await updateJobStatus(jobId, "rejected");
             await updateJobMatchScore(jobId, 0, { dealBreakerMatched: result.dealBreakerMatched });
             console.log(`[fetchJobs] Auto-rejected job ${jobId} (dealbreaker: "${result.dealBreakerMatched}")`);
+          } else if (result.scoreSeniority < 50) {
+            // Seniority post-filter — jobs scoring below 50 on seniority have <5% approval rate
+            await updateJobStatus(jobId, "rejected");
+            await updateJobMatchScore(jobId, result.composite, {
+              scoreSkills: result.scoreSkills,
+              scoreSeniority: result.scoreSeniority,
+              scoreLocation: result.scoreLocation,
+              scoreIndustry: result.scoreIndustry,
+              scoreCompensation: result.scoreCompensation,
+              dealBreakerMatched: null,
+            });
+            console.log(`[fetchJobs] Auto-rejected job ${jobId} (low seniority: ${result.scoreSeniority})`);
           } else {
             await updateJobMatchScore(jobId, result.composite, {
               scoreSkills: result.scoreSkills,
@@ -1186,6 +1198,19 @@ export const appRouter = router({
                 await updateJobStatus(job.id, "rejected");
               }
               await updateJobMatchScore(job.id, 0, { dealBreakerMatched: result.dealBreakerMatched });
+            } else if (result.scoreSeniority < 50) {
+              // Seniority post-filter — auto-reject low-seniority matches
+              if (job.status === "matched" || job.status === "ingested") {
+                await updateJobStatus(job.id, "rejected");
+              }
+              await updateJobMatchScore(job.id, result.composite, {
+                scoreSkills: result.scoreSkills,
+                scoreSeniority: result.scoreSeniority,
+                scoreLocation: result.scoreLocation,
+                scoreIndustry: result.scoreIndustry,
+                scoreCompensation: result.scoreCompensation,
+                dealBreakerMatched: null,
+              });
             } else {
               await updateJobMatchScore(job.id, result.composite, {
                 scoreSkills: result.scoreSkills,

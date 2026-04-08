@@ -625,6 +625,48 @@ describe("v3.1 LLM scoring: multi-dimension scores", () => {
       })
     );
   });
+
+  it("seniority post-filter: job with scoreSeniority < 50 is auto-rejected after LLM", async () => {
+    const { invokeLLM } = await import("./_core/llm");
+    const llmSpy = invokeLLM as ReturnType<typeof vi.fn>;
+    llmSpy.mockClear();
+    // Mock LLM to return low seniority score
+    llmSpy.mockResolvedValueOnce({
+      choices: [{ message: { content: JSON.stringify({
+        scoreSkills: 80, scoreSeniority: 30, scoreLocation: 90,
+        scoreIndustry: 75, scoreCompensation: 70, composite: 72,
+        reasoning: "Junior role",
+      }) } }],
+    });
+
+    const { getAllJobs, getSkillsProfile, updateJobMatchScore: updateScoreMock, updateJobStatus: updateStatusMock } = await import("./db");
+    (getAllJobs as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{
+      id: 101, title: "Junior Product Manager", company: "Startup",
+      description: "Entry level PM role for recent graduates.",
+      status: "matched", matchScore: 0,
+    }]);
+    (getSkillsProfile as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 1, content: "Senior PM",
+      mustHaveSkills: JSON.stringify([]), niceToHaveSkills: JSON.stringify([]),
+      dealbreakers: JSON.stringify([]), seniority: "senior", salaryMin: null,
+      targetIndustries: JSON.stringify([]), remotePreference: "any",
+      weightSkills: 40, weightSeniority: 25, weightLocation: 15,
+      weightIndustry: 10, weightCompensation: 10, updatedAt: new Date(),
+    });
+
+    const caller = appRouter.createCaller(makeOwnerCtx());
+    await caller.skills.rescoreAll({ forceRescore: true });
+
+    // LLM SHOULD have been called (seniority filter is post-LLM)
+    expect(llmSpy).toHaveBeenCalledOnce();
+    // updateJobStatus should be called with "rejected"
+    expect(updateStatusMock).toHaveBeenCalledWith(101, "rejected");
+    // updateJobMatchScore should be called with the actual composite score
+    expect(updateScoreMock).toHaveBeenCalledWith(
+      101, expect.any(Number),
+      expect.objectContaining({ scoreSeniority: expect.any(Number) })
+    );
+  });
 });
 
 // ─── normalizeLocation Tests ─────────────────────────────────────────────────

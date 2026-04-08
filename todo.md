@@ -450,3 +450,10 @@
 - [x] Export normalizeLocation() for unit testing
 - [x] Added 6 unit tests for normalizeLocation (81 tests total passing)
 - [x] TypeScript: 0 errors
+
+## v3.30 Minimum Seniority Post-Filter
+- [x] Add seniority post-filter in background scoring: if scoreSeniority < 50 after LLM, auto-reject
+- [x] Apply same filter in rescoreAll procedure
+- [x] Retroactively rejected 114 existing matched jobs with scoreSeniority < 50
+- [x] Added unit test for seniority post-filter (82 tests total passing)
+- [x] TypeScript: 0 errors (watcher errors are stale)
