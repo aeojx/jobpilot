@@ -103,6 +103,8 @@ export async function updateJobStatus(id: number, status: Job["status"], extra?:
   if (!db) throw new Error("Database not available");
   const updates: Partial<InsertJob> = { status, statusChangedAt: new Date(), ...extra };
   if (status === "applied") updates.appliedAt = new Date();
+  // Clear blockedReason when moving out of blocked status
+  if (status !== "blocked" && !("blockedReason" in (extra ?? {}))) updates.blockedReason = null;
   await db.update(jobs).set(updates).where(eq(jobs.id, id));
 }
 
@@ -232,11 +234,12 @@ export async function insertQuestion(q: InsertQuestion) {
 
 export async function getPipelineStats() {
   const db = await getDb();
-  if (!db) return { matched: 0, toApply: 0, applied: 0, totalApplied: 0 };
+  if (!db) return { matched: 0, toApply: 0, blocked: 0, applied: 0, totalApplied: 0 };
 
-  const [matchedRows, toApplyRows, appliedRows] = await Promise.all([
+  const [matchedRows, toApplyRows, blockedRows, appliedRows] = await Promise.all([
     db.select({ c: count() }).from(jobs).where(eq(jobs.status, "matched")),
     db.select({ c: count() }).from(jobs).where(eq(jobs.status, "to_apply")),
+    db.select({ c: count() }).from(jobs).where(eq(jobs.status, "blocked")),
     db.select({ c: count() }).from(jobs).where(eq(jobs.status, "applied")),
   ]);
 
@@ -245,6 +248,7 @@ export async function getPipelineStats() {
   return {
     matched: matchedRows[0]?.c ?? 0,
     toApply: toApplyRows[0]?.c ?? 0,
+    blocked: blockedRows[0]?.c ?? 0,
     applied: appliedCount,
     totalApplied: appliedCount,
   };

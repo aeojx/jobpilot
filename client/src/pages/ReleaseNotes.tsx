@@ -14,6 +14,21 @@ interface ReleaseEntry {
 // ─── Release Data ─────────────────────────────────────────────────────────────
 const RELEASES: ReleaseEntry[] = [
   {
+    version: "3.33",
+    date: "Apr 8, 2026",
+    title: "Blocked Reason + Daily Report Blocked Count",
+    tag: "feature" as const,
+    content: (
+      <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+        <li><strong>Blocked reason field added</strong> — Applier can now type an optional reason when blocking a job (e.g. 'portal broken', 'requires UAE national'). Reason is saved to the database and displayed on the card and in the Job Detail Modal.</li>
+        <li><strong>Reason prompt modal</strong> — clicking the 🚫 BLOCKED quick-action button on a Kanban card opens a focused input modal. Press Enter to confirm or Escape to cancel.</li>
+        <li><strong>Block Reason in Job Detail Modal</strong> — an optional reason input is shown in the modal body for To Apply jobs. Blocked jobs display the saved reason in a highlighted box.</li>
+        <li><strong>Auto-clear on unblock</strong> — moving a job back to To Apply automatically clears the blocked reason.</li>
+        <li><strong>Blocked count in daily/weekly report emails</strong> — Pipeline Snapshot now shows 4 cells: Matched, To Apply, Blocked, Applied.</li>
+      </ul>
+    ),
+  },
+  {
     version: "v3.32",
     date: "Apr 8, 2026",
     title: "Applier Dashboard Access + Blocked Column",

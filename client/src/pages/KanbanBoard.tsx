@@ -239,6 +239,13 @@ function JobCard({
         </p>
       )}
 
+      {/* Blocked reason */}
+      {job.status === "blocked" && job.blockedReason && (
+        <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--atari-magenta)", marginTop: "0.35rem", letterSpacing: "0.04em", fontStyle: "italic" }}>
+          🚫 {job.blockedReason}
+        </p>
+      )}
+
       {/* Quick action buttons — on To Apply and Blocked cards */}
       {(isToApply || job.status === "blocked") && onQuickAction && (
         <div
@@ -403,6 +410,11 @@ export default function KanbanBoard() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("default");
 
+  // Blocked reason prompt state
+  const [blockingJobId, setBlockingJobId] = useState<number | null>(null);
+  const [blockReason, setBlockReason] = useState("");
+  const blockReasonRef = useRef<HTMLInputElement>(null);
+
   // Manual Add form state
   const [showManualForm, setShowManualForm] = useState(false);
   const [manualTitle, setManualTitle] = useState("");
@@ -442,7 +454,14 @@ export default function KanbanBoard() {
 
   const handleQuickAction = useCallback(
     (id: number, status: KanbanStatus) => {
-      const label = status === "applied" ? "APPLIED" : "EXPIRED";
+      if (status === "blocked") {
+        // Show reason prompt instead of immediately blocking
+        setBlockingJobId(id);
+        setBlockReason("");
+        setTimeout(() => blockReasonRef.current?.focus(), 50);
+        return;
+      }
+      const label = status === "applied" ? "APPLIED" : status === "expired" ? "EXPIRED" : status.toUpperCase();
       moveStatus.mutate(
         { id, status },
         {
@@ -455,6 +474,21 @@ export default function KanbanBoard() {
     },
     [moveStatus, utils]
   );
+
+  const confirmBlock = useCallback(() => {
+    if (blockingJobId === null) return;
+    moveStatus.mutate(
+      { id: blockingJobId, status: "blocked", blockedReason: blockReason.trim() || undefined },
+      {
+        onSuccess: () => {
+          toast.success("Job moved to Blocked");
+          utils.jobs.kanban.invalidate();
+          setBlockingJobId(null);
+          setBlockReason("");
+        },
+      }
+    );
+  }, [blockingJobId, blockReason, moveStatus, utils]);
 
   const jobsByStatus = useMemo(
     () =>
@@ -656,14 +690,46 @@ export default function KanbanBoard() {
         </div>
       )}
 
+      {/* Blocked Reason Prompt */}
+      {blockingJobId !== null && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setBlockingJobId(null); setBlockReason(""); } }}
+        >
+          <div style={{ background: "var(--atari-bg)", border: "1px solid var(--atari-magenta)", boxShadow: "0 0 20px var(--atari-magenta)33", padding: "1.5rem", width: "min(420px, 95vw)", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span className="font-pixel" style={{ color: "var(--atari-magenta)", fontSize: "10px" }}>🚫 BLOCK JOB</span>
+              <button onClick={() => { setBlockingJobId(null); setBlockReason(""); }} style={{ background: "none", border: "none", color: "var(--atari-gray)", cursor: "pointer", fontSize: "1rem" }}>✕</button>
+            </div>
+            <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--atari-gray)", letterSpacing: "0.04em" }}>
+              Why can't you apply? <span style={{ color: "var(--atari-gray)" }}>(optional — helps track patterns)</span>
+            </p>
+            <input
+              ref={blockReasonRef}
+              value={blockReason}
+              onChange={(e) => setBlockReason(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") confirmBlock(); if (e.key === "Escape") { setBlockingJobId(null); setBlockReason(""); } }}
+              placeholder="e.g. portal broken, requires UAE national, referral needed..."
+              style={{ background: "transparent", border: "1px solid var(--atari-border)", color: "var(--atari-white)", fontFamily: "var(--font-mono)", fontSize: "0.75rem", padding: "6px 8px", outline: "none", width: "100%" }}
+            />
+            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+              <button onClick={() => { setBlockingJobId(null); setBlockReason(""); }} style={{ background: "transparent", border: "1px solid var(--atari-border)", color: "var(--atari-gray)", fontFamily: "var(--font-mono)", fontSize: "0.65rem", padding: "5px 14px", cursor: "pointer", letterSpacing: "0.06em" }}>CANCEL</button>
+              <button onClick={confirmBlock} disabled={moveStatus.isPending} style={{ background: "var(--atari-magenta)", border: "1px solid var(--atari-magenta)", color: "var(--atari-black)", fontFamily: "var(--font-mono)", fontSize: "0.65rem", padding: "5px 14px", cursor: "pointer", letterSpacing: "0.06em", fontWeight: 700 }}>
+                {moveStatus.isPending ? "BLOCKING..." : "▶ CONFIRM BLOCK"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Job Detail Modal */}
       {selectedJob && (
         <JobDetailModal
           job={selectedJob}
           isOwner={isOwner}
           onClose={() => setSelectedJob(null)}
-          onStatusChange={(status) => {
-            moveStatus.mutate({ id: selectedJob.id, status });
+          onStatusChange={(status, blockedReason) => {
+            moveStatus.mutate({ id: selectedJob.id, status, blockedReason });
             setSelectedJob(null);
           }}
         />

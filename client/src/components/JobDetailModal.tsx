@@ -15,9 +15,10 @@ export default function JobDetailModal({
   job: Job;
   isOwner: boolean;
   onClose: () => void;
-  onStatusChange: (status: KanbanStatus) => void;
+  onStatusChange: (status: KanbanStatus, blockedReason?: string) => void;
 }) {
   const [question, setQuestion] = useState("");
+  const [blockReason, setBlockReason] = useState("");
   const utils = trpc.useUtils();
 
   const askQuestion = trpc.questions.ask.useMutation({
@@ -231,6 +232,39 @@ export default function JobDetailModal({
             </div>
           )}
 
+          {/* Applier: Block reason input (shown on to_apply jobs) */}
+          {!isOwner && job.status === "to_apply" && (
+            <div>
+              <p
+                className="mb-2"
+                style={{ fontFamily: "Press Start 2P, monospace", fontSize: "0.7rem", letterSpacing: "0.1em", color: "var(--atari-magenta)", textTransform: "uppercase" }}
+              >
+                Block Reason (optional)
+              </p>
+              <input
+                className="brutal-input w-full text-sm"
+                placeholder="e.g. portal broken, requires UAE national..."
+                value={blockReason}
+                onChange={(e) => setBlockReason(e.target.value)}
+              />
+            </div>
+          )}
+
+          {/* Show existing block reason on blocked jobs */}
+          {job.status === "blocked" && job.blockedReason && (
+            <div>
+              <p
+                className="mb-2"
+                style={{ fontFamily: "Press Start 2P, monospace", fontSize: "0.7rem", letterSpacing: "0.1em", color: "var(--atari-magenta)", textTransform: "uppercase" }}
+              >
+                Block Reason
+              </p>
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.82rem", color: "var(--atari-white)", background: "var(--atari-dark)", padding: "8px 12px", border: "1px solid var(--atari-magenta)33" }}>
+                {job.blockedReason}
+              </p>
+            </div>
+          )}
+
           {/* Applier: Ask Question */}
           {!isOwner && job.status === "to_apply" && (
             <div>
@@ -314,7 +348,7 @@ export default function JobDetailModal({
           {/* Applier: Block a to_apply job */}
           {!isOwner && job.status === "to_apply" && (
             <button
-              onClick={() => onStatusChange("blocked")}
+              onClick={() => onStatusChange("blocked", blockReason.trim() || undefined)}
               className="py-3 px-4 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 transition-all"
               style={{
                 fontFamily: "Press Start 2P, monospace",

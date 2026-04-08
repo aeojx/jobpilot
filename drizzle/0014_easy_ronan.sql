@@ -1,0 +1,1 @@
+ALTER TABLE `jobs` ADD `blockedReason` varchar(512);

@@ -475,3 +475,14 @@
 - [x] Applier can drag jobs: to_apply ↔ blocked, to_apply → applied/expired
 - [x] Unlock /dashboard route for Applier role in App.tsx
 - [x] Update sidebar to show Dashboard nav item for Applier
+
+## v3.33 Blocked Reason + Daily Report Blocked Count
+- [x] Add blockedReason varchar column to jobs table in drizzle/schema.ts
+- [x] Generate and apply DB migration for blockedReason column
+- [x] Extend moveStatus procedure to accept optional blockedReason, save to DB
+- [x] Update getPipelineStats to include blocked count
+- [x] Update daily report email to show blocked count
+- [x] Kanban: show reason input modal when clicking BLOCKED quick-action button
+- [x] Job Detail Modal: show reason input when clicking "Can't Apply"
+- [x] Display blockedReason on Blocked column cards
+- [x] Update release notes with v3.33 entry

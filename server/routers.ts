@@ -730,6 +730,7 @@ export async function sendDailyReport(): Promise<void> {
       date: formatDateKey(dateKey),
       matchedCount: pipeline.matched,
       toApplyCount: pipeline.toApply,
+      blockedCount: pipeline.blocked,
       appliedCount: pipeline.applied,
       appliedToday,
       weeklyApplied,
@@ -790,6 +791,7 @@ export async function sendWeeklyReport(): Promise<void> {
       date: formatDateKey(dateKey),
       matchedCount: pipeline.matched,
       toApplyCount: pipeline.toApply,
+      blockedCount: pipeline.blocked,
       appliedCount: pipeline.applied,
       appliedToday,
       weeklyApplied,
@@ -903,12 +905,21 @@ export const appRouter = router({
       .query(async ({ input }) => getJobsByStatus(input.status)),
 
     moveStatus: protectedProcedure
-      .input(z.object({ id: z.number(), status: z.enum(["ingested", "matched", "to_apply", "blocked", "applied", "rejected", "expired"]), fromSwipe: z.boolean().optional() }))
+      .input(z.object({
+        id: z.number(),
+        status: z.enum(["ingested", "matched", "to_apply", "blocked", "applied", "rejected", "expired"]),
+        fromSwipe: z.boolean().optional(),
+        blockedReason: z.string().max(512).optional(),
+      }))
       .mutation(async ({ input, ctx }) => {
         // Appliers can move jobs between to_apply, blocked, applied, and expired
         const applierAllowed: string[] = ["to_apply", "blocked", "applied", "expired"];
         if (ctx.user.role !== "admin" && !applierAllowed.includes(input.status)) throw new TRPCError({ code: "FORBIDDEN" });
-        await updateJobStatus(input.id, input.status);
+        // Save blockedReason when blocking, clear it otherwise
+        const extra = input.status === "blocked" && input.blockedReason
+          ? { blockedReason: input.blockedReason }
+          : undefined;
+        await updateJobStatus(input.id, input.status, extra);
         // Track swipe stats when swiping from the swipe view
         if (input.fromSwipe) {
           const dateKey = getCurrentDateKey();

@@ -67,6 +67,7 @@ export const jobs = mysqlTable("jobs", {
   appliedAt: timestamp("appliedAt"),
   statusChangedAt: timestamp("statusChangedAt"),
   autoRejected: boolean("autoRejected").default(false).notNull(),
+  blockedReason: varchar("blockedReason", { length: 512 }),
   manuallyAdded: boolean("manuallyAdded").default(false).notNull(),
   addedBy: varchar("addedBy", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

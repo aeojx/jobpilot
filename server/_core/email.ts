@@ -91,6 +91,7 @@ export function buildDailyReportEmail(opts: {
   date: string;
   matchedCount: number;
   toApplyCount: number;
+  blockedCount?: number;
   appliedCount: number;
   appliedToday: number;
   weeklyApplied: number;
@@ -124,17 +125,22 @@ export function buildDailyReportEmail(opts: {
     <h2 style="color:#fbbf24;font-size:13px;letter-spacing:2px;margin:0 0 16px 0;text-transform:uppercase;">Pipeline Snapshot</h2>
     <table style="width:100%;border-collapse:collapse;margin-bottom:28px;">
       <tr>
-        <td style="padding:10px 16px;background:#0f0f1a;border-radius:6px;text-align:center;width:33%;">
+        <td style="padding:10px 16px;background:#0f0f1a;border-radius:6px;text-align:center;width:25%;">
           <div style="color:#00ff9f;font-size:28px;font-weight:bold;">${opts.matchedCount}</div>
           <div style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Matched</div>
         </td>
-        <td style="width:8px;"></td>
-        <td style="padding:10px 16px;background:#0f0f1a;border-radius:6px;text-align:center;width:33%;">
+        <td style="width:6px;"></td>
+        <td style="padding:10px 16px;background:#0f0f1a;border-radius:6px;text-align:center;width:25%;">
           <div style="color:#fbbf24;font-size:28px;font-weight:bold;">${opts.toApplyCount}</div>
           <div style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">To Apply</div>
         </td>
-        <td style="width:8px;"></td>
-        <td style="padding:10px 16px;background:#0f0f1a;border-radius:6px;text-align:center;width:33%;">
+        <td style="width:6px;"></td>
+        <td style="padding:10px 16px;background:#0f0f1a;border-radius:6px;text-align:center;width:25%;">
+          <div style="color:#e879f9;font-size:28px;font-weight:bold;">${opts.blockedCount ?? 0}</div>
+          <div style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Blocked</div>
+        </td>
+        <td style="width:6px;"></td>
+        <td style="padding:10px 16px;background:#0f0f1a;border-radius:6px;text-align:center;width:25%;">
           <div style="color:#60a5fa;font-size:28px;font-weight:bold;">${opts.appliedCount}</div>
           <div style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Applied</div>
         </td>

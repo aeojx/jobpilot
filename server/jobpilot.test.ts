@@ -34,7 +34,7 @@ vi.mock("./db", () => ({
   countAutoRejectPreview: vi.fn().mockResolvedValue(5),
   bulkAutoReject: vi.fn().mockResolvedValue(5),
   getQuestionById: vi.fn().mockResolvedValue({ id: 1, question: "What tech stack?", jobTitle: "Engineer", jobCompany: "Acme", answer: null, answeredAt: null, createdAt: new Date() }),
-  getPipelineStats: vi.fn().mockResolvedValue({ matched: 10, toApply: 5, applied: 20, totalApplied: 20 }),
+  getPipelineStats: vi.fn().mockResolvedValue({ matched: 10, toApply: 5, blocked: 2, applied: 20, totalApplied: 20 }),
   getAppliedTodayCount: vi.fn().mockResolvedValue(3),
 }));
 
