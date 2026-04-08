@@ -22,7 +22,6 @@ const RELEASES: ReleaseEntry[] = [
       <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
         <li><strong>Ingestion schedule analysis</strong> — analyzed 1,505 ingested jobs and 159 applied jobs to produce data-driven daily fetch schedule recommendations (see INGESTION_SCHEDULE_ANALYSIS.md).</li>
         <li><strong>3 new dealbreakers added</strong> — <code style={{ color: "var(--atari-cyan)" }}>co-founder</code>, <code style={{ color: "var(--atari-cyan)" }}>sales director</code>, <code style={{ color: "var(--atari-cyan)" }}>account executive</code> added to the dealbreaker list. 1 existing matched job retroactively rejected.</li>
-        <li><strong>Matched threshold raised: 40 → 55</strong> — jobs scoring below 55 composite are now auto-rejected during background scoring. 108 existing matched jobs retroactively rejected. Supported by data: jobs scoring 50–59 had only 11% approval rate.</li>
         <li><strong>Empty-location fix</strong> — when a job has no location, the LLM scoring prompt now passes <code style={{ color: "var(--atari-cyan)" }}>"Remote (no location specified — treat as remote-friendly)"</code> instead of omitting the field. This prevents remote-eligible jobs from scoring 0 on location. Data shows no-location jobs have 18.8% approval rate.</li>
         <li><strong>Skills profile cache invalidated</strong> — new dealbreakers take effect immediately for all new ingestion runs.</li>
       </ul>
