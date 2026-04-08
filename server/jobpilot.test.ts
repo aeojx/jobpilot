@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { appRouter } from "./routers";
+import { normalizeLocation } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
 // ─── Mock DB & LLM ────────────────────────────────────────────────────────────
@@ -623,6 +624,29 @@ describe("v3.1 LLM scoring: multi-dimension scores", () => {
         dealBreakerMatched: expect.any(String), // matched keyword string
       })
     );
+  });
+});
+
+// ─── normalizeLocation Tests ─────────────────────────────────────────────────
+
+describe("normalizeLocation", () => {
+  it("normalizes Dubai, Dubai, United Arab Emirates", () => {
+    expect(normalizeLocation("Dubai, Dubai, United Arab Emirates")).toBe("Dubai, UAE");
+  });
+  it("normalizes Abu Dhabi, Abu Dhabi Emirate, United Arab Emirates", () => {
+    expect(normalizeLocation("Abu Dhabi, Abu Dhabi Emirate, United Arab Emirates")).toBe("Abu Dhabi, UAE");
+  });
+  it("normalizes New York, New York, United States", () => {
+    expect(normalizeLocation("New York, New York, United States")).toBe("New York, US");
+  });
+  it("normalizes London, England, United Kingdom", () => {
+    expect(normalizeLocation("London, England, United Kingdom")).toBe("London, UK");
+  });
+  it("passes through single-part location unchanged", () => {
+    expect(normalizeLocation("Remote")).toBe("Remote");
+  });
+  it("handles empty string", () => {
+    expect(normalizeLocation("")).toBe("");
   });
 });
 

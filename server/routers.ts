@@ -147,11 +147,35 @@ function checkDealbreakers(text: string, dealbreakers: string[]): string | null 
  * Uses the FULL description (no character cap).
  * Passes title + company as explicit fields.
  */
+/**
+ * Normalise verbose location strings from API responses.
+ * "Dubai, Dubai, United Arab Emirates" → "Dubai, UAE"
+ * "Abu Dhabi, Abu Dhabi Emirate, United Arab Emirates" → "Abu Dhabi, UAE"
+ * "New York, New York, United States" → "New York, US"
+ */
+export function normalizeLocation(raw: string): string {
+  if (!raw) return raw;
+  const countryAliases: Record<string, string> = {
+    "United Arab Emirates": "UAE",
+    "United States": "US",
+    "United Kingdom": "UK",
+    "United States of America": "US",
+  };
+  const parts = raw.split(",").map(p => p.trim()).filter(Boolean);
+  if (parts.length === 1) return parts[0];
+  const city = parts[0];
+  const country = parts[parts.length - 1];
+  const countryShort = countryAliases[country] ?? country;
+  if (city.toLowerCase() === countryShort.toLowerCase()) return countryShort;
+  return `${city}, ${countryShort}`;
+}
+
 export async function scoreJobWithLLM(
   jobDescription: string,
   skillsProfile: SkillsProfile,
   jobTitle?: string,
-  jobCompany?: string
+  jobCompany?: string,
+  jobLocation?: string
 ): Promise<DimensionScores> {
   const empty: DimensionScores = {
     composite: 0, scoreSkills: 0, scoreSeniority: 0,
@@ -211,6 +235,7 @@ export async function scoreJobWithLLM(
             "=== JOB TO SCORE ===",
             jobTitle ? `TITLE: ${jobTitle}` : "",
             jobCompany ? `COMPANY: ${jobCompany}` : "",
+            jobLocation ? `LOCATION: ${normalizeLocation(jobLocation)}` : "",
             `DESCRIPTION:\n${jobDescription}`,
             "",
             "=== SCORING DIMENSIONS ===",
@@ -549,7 +574,7 @@ async function executeFetch(
         try {
           const jobRow = await getJobById(jobId);
           if (!jobRow || !jobRow.description) continue;
-          const result = await scoreJobWithLLM(jobRow.description, skills, jobRow.title, jobRow.company);
+          const result = await scoreJobWithLLM(jobRow.description, skills, jobRow.title, jobRow.company, jobRow.location ?? undefined);
           if (result.dealBreakerMatched) {
             // Dealbreaker hit — reject the job immediately instead of leaving it in Matched with score=0
             await updateJobStatus(jobId, "rejected");
@@ -997,7 +1022,7 @@ export const appRouter = router({
         let dimensionScores: Partial<DimensionScores> = {};
         let status: "ingested" | "matched" = "ingested";
         if (skills && descText) {
-          const result = await scoreJobWithLLM(descText, skills, input.title, input.company);
+          const result = await scoreJobWithLLM(descText, skills, input.title, input.company, input.location ?? undefined);
           matchScore = result.composite;
           dimensionScores = result;
           if (matchScore > 0 && !result.dealBreakerMatched) status = "matched";
@@ -1154,7 +1179,7 @@ export const appRouter = router({
         if (!needsScoring) { skipped++; }
         if (needsScoring && job.description) {
           try {
-            const result = await scoreJobWithLLM(job.description, skills, job.title, job.company);
+            const result = await scoreJobWithLLM(job.description, skills, job.title, job.company, job.location ?? undefined);
             if (result.dealBreakerMatched) {
               // Auto-reject dealbreaker jobs — don't leave them in Matched with score=0
               if (job.status === "matched" || job.status === "ingested") {

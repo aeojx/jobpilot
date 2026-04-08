@@ -442,3 +442,11 @@
 - [x] #5: rescoreAll now skips already-scored jobs by default; pass forceRescore:true to override
 - [x] Updated Skills.tsx toast to show skip count; updated tests to pass forceRescore:true
 - [x] TypeScript: 0 errors, Tests: 75 passing
+
+## v3.29 Location Normalization Fix
+- [x] Add normalizeLocation() helper: "Dubai, Dubai, United Arab Emirates" → "Dubai, UAE", "New York, New York, United States" → "New York, US", etc.
+- [x] Apply normalizeLocation() to job location before passing to LLM scoring prompt
+- [x] Apply normalizeLocation() to profile location context in the LLM prompt
+- [x] Export normalizeLocation() for unit testing
+- [x] Added 6 unit tests for normalizeLocation (81 tests total passing)
+- [x] TypeScript: 0 errors
