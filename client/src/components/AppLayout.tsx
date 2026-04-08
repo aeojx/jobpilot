@@ -35,6 +35,7 @@ const ownerNav = [
 ];
 
 const applierNav = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
   { href: "/apply", label: "My Queue", icon: Zap },
   { href: "/performance", label: "Performance", icon: BarChart3 },
   { href: "/questions", label: "Questions", icon: HelpCircle },

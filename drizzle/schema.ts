@@ -51,6 +51,7 @@ export const jobs = mysqlTable("jobs", {
     "ingested",
     "matched",
     "to_apply",
+    "blocked",
     "applied",
     "rejected",
     "expired",

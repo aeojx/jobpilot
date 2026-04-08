@@ -17,16 +17,20 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import JobDetailModal from "@/components/JobDetailModal";
 
-type KanbanStatus = "ingested" | "matched" | "to_apply" | "applied" | "rejected" | "expired";
+type KanbanStatus = "ingested" | "matched" | "to_apply" | "blocked" | "applied" | "rejected" | "expired";
 type SortKey = "default" | "score_desc" | "score_asc" | "dwell_desc" | "dwell_asc";
 
 const COLUMNS: { id: KanbanStatus; label: string; color: string }[] = [
   { id: "matched",   label: "Matched",      color: "var(--atari-green)" },
   { id: "to_apply",  label: "To Apply",     color: "var(--atari-amber)" },
+  { id: "blocked",   label: "Blocked",      color: "var(--atari-magenta)" },
   { id: "applied",   label: "Applied",      color: "var(--atari-cyan)" },
   { id: "rejected",  label: "Rejected",     color: "var(--atari-red)" },
   { id: "expired",   label: "Expired Jobs", color: "#6b6b6b" },
 ];
+
+/** Columns the Applier role is allowed to drag into */
+const APPLIER_DROP_TARGETS: KanbanStatus[] = ["to_apply", "blocked", "applied", "expired"];
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "default",    label: "DEFAULT" },
@@ -117,11 +121,11 @@ function JobCard({
   return (
     <div
       className="kanban-card"
-      draggable={isOwner}
+      draggable={true}
       onDragStart={(e) => onDragStart(e, job)}
       onDragEnd={onDragEnd}
       onClick={() => onClick(job)}
-      style={{ cursor: isOwner ? "grab" : "pointer" }}
+      style={{ cursor: "grab" }}
     >
       {/* Title + Dwell badge row */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.4rem", marginBottom: "0.25rem" }}>
@@ -235,8 +239,8 @@ function JobCard({
         </p>
       )}
 
-      {/* Quick action buttons — only on To Apply cards */}
-      {isToApply && onQuickAction && (
+      {/* Quick action buttons — on To Apply and Blocked cards */}
+      {(isToApply || job.status === "blocked") && onQuickAction && (
         <div
           className="flex gap-2 mt-4 pt-2"
           style={{ borderTop: "1px solid var(--atari-border)", paddingTop: "0.5rem" }}
@@ -258,6 +262,23 @@ function JobCard({
             <CheckCircle size={10} />
             APPLIED
           </button>
+          {isToApply && (
+            <button
+              className="flex items-center gap-1 flex-1 justify-center py-1 px-2 text-xs font-pixel transition-all"
+              style={{
+                background: "transparent",
+                border: "1px solid var(--atari-magenta)",
+                color: "var(--atari-magenta)",
+                fontSize: "7px",
+                cursor: "pointer",
+                letterSpacing: "0.05em",
+              }}
+              onClick={() => onQuickAction(job.id, "blocked")}
+              title="Can't apply to this job"
+            >
+              🚫 BLOCKED
+            </button>
+          )}
           <button
             className="flex items-center gap-1 flex-1 justify-center py-1 px-2 text-xs font-pixel transition-all"
             style={{
@@ -359,7 +380,7 @@ function KanbanColumn({
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
             onClick={onCardClick}
-            onQuickAction={column.id === "to_apply" ? onQuickAction : undefined}
+            onQuickAction={(column.id === "to_apply" || column.id === "blocked") ? onQuickAction : undefined}
           />
         ))}
       </div>
@@ -411,10 +432,12 @@ export default function KanbanBoard() {
   const handleDrop = useCallback(
     (status: KanbanStatus) => {
       if (!draggingJob || draggingJob.status === status) return;
+      // Appliers can only drop into their allowed columns
+      if (!isOwner && !APPLIER_DROP_TARGETS.includes(status)) return;
       moveStatus.mutate({ id: draggingJob.id, status });
       setDraggingJob(null);
     },
-    [draggingJob, moveStatus]
+    [draggingJob, moveStatus, isOwner]
   );
 
   const handleQuickAction = useCallback(
@@ -505,20 +528,18 @@ export default function KanbanBoard() {
               {opt.label}
             </button>
           ))}
-          {isOwner && (
-            <span
-              style={{
-                fontFamily: "Share Tech Mono, monospace",
-                fontSize: "0.6rem",
-                letterSpacing: "0.08em",
-                color: "var(--atari-gray)",
-                marginLeft: "auto",
-                textTransform: "uppercase",
-              }}
-            >
-              ▶ DRAG TO MOVE · <Clock size={8} style={{ display: "inline" }} /> = DWELL DAYS
-            </span>
-          )}
+          <span
+            style={{
+              fontFamily: "Share Tech Mono, monospace",
+              fontSize: "0.6rem",
+              letterSpacing: "0.08em",
+              color: "var(--atari-gray)",
+              marginLeft: "auto",
+              textTransform: "uppercase",
+            }}
+          >
+            ▶ DRAG TO MOVE · <Clock size={8} style={{ display: "inline" }} /> = DWELL DAYS
+          </span>
         </div>
       </div>
 

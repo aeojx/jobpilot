@@ -4,7 +4,7 @@ import { AtSign, Copy, ExternalLink, HelpCircle, X, CheckCircle, XCircle, ArrowR
 import { useState } from "react";
 import { toast } from "sonner";
 
-type KanbanStatus = "ingested" | "matched" | "to_apply" | "applied" | "rejected" | "expired";
+type KanbanStatus = "ingested" | "matched" | "to_apply" | "blocked" | "applied" | "rejected" | "expired";
 
 export default function JobDetailModal({
   job,
@@ -308,6 +308,42 @@ export default function JobDetailModal({
             >
               <CheckCircle size={16} />
               {markApplied.isPending ? "Marking..." : "Mark as Applied"}
+            </button>
+          )}
+
+          {/* Applier: Block a to_apply job */}
+          {!isOwner && job.status === "to_apply" && (
+            <button
+              onClick={() => onStatusChange("blocked")}
+              className="py-3 px-4 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 transition-all"
+              style={{
+                fontFamily: "Press Start 2P, monospace",
+                background: "transparent",
+                color: "var(--atari-magenta)",
+                border: "2px solid var(--atari-magenta)",
+                letterSpacing: "0.1em",
+              }}
+            >
+              <XCircle size={14} />
+              Can't Apply
+            </button>
+          )}
+
+          {/* Applier: Unblock a blocked job back to to_apply */}
+          {!isOwner && job.status === "blocked" && (
+            <button
+              onClick={() => onStatusChange("to_apply")}
+              className="flex-1 py-3 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 transition-all"
+              style={{
+                fontFamily: "Press Start 2P, monospace",
+                background: "transparent",
+                color: "var(--atari-amber)",
+                border: "2px solid var(--atari-amber)",
+                letterSpacing: "0.1em",
+              }}
+            >
+              <ArrowRight size={14} />
+              Move Back to Queue
             </button>
           )}
 

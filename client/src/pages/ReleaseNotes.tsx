@@ -14,6 +14,22 @@ interface ReleaseEntry {
 // ─── Release Data ─────────────────────────────────────────────────────────────
 const RELEASES: ReleaseEntry[] = [
   {
+    version: "v3.32",
+    date: "Apr 8, 2026",
+    title: "Applier Dashboard Access + Blocked Column",
+    tag: "feature",
+    content: (
+      <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+        <li><strong>Dashboard now accessible to Applier</strong> — the Applier role can now navigate to the full Kanban Dashboard via the sidebar. Dashboard link added to Applier nav.</li>
+        <li><strong>Applier drag-and-drop enabled</strong> — Applier can drag cards between <code style={{ color: "var(--atari-cyan)" }}>To Apply</code>, <code style={{ color: "var(--atari-cyan)" }}>Blocked</code>, <code style={{ color: "var(--atari-cyan)" }}>Applied</code>, and <code style={{ color: "var(--atari-cyan)" }}>Expired</code> columns. Owner-only columns (Matched, Rejected, Ingested) remain protected.</li>
+        <li><strong>New “Blocked” column</strong> — a magenta-colored column placed immediately after To Apply for jobs the Applier cannot apply to (e.g., requires referral, portal broken, already applied elsewhere). Jobs can be dragged back to To Apply from Blocked.</li>
+        <li><strong>Quick-action buttons updated</strong> — To Apply cards now show a 🚫 BLOCKED button alongside APPLIED and EXPIRED. Blocked cards show APPLIED and EXPIRED buttons.</li>
+        <li><strong>Job Detail Modal updated</strong> — Applier sees a “Can't Apply” button on To Apply jobs and a “Move Back to Queue” button on Blocked jobs.</li>
+        <li><strong>DB migration applied</strong> — <code style={{ color: "var(--atari-cyan)" }}>jobs.status</code> enum extended to include <code style={{ color: "var(--atari-cyan)" }}>blocked</code>. 83 tests passing.</li>
+      </ul>
+    ),
+  },
+  {
     version: "v3.31",
     date: "Apr 8, 2026",
     title: "Ingestion Schedule Analysis + 5 Pipeline Improvements",

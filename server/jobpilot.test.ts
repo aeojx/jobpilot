@@ -140,9 +140,16 @@ describe("jobs", () => {
     expect(result.success).toBe(true);
   });
 
-  it("applier cannot move job to non-applied status", async () => {
+  it("applier can move job to allowed statuses (to_apply, blocked, applied, expired)", async () => {
     const caller = appRouter.createCaller(makeApplierCtx());
-    await expect(caller.jobs.moveStatus({ id: 1, status: "to_apply" })).rejects.toThrow();
+    // Appliers are now allowed to move jobs between to_apply, blocked, applied, and expired
+    const result = await caller.jobs.moveStatus({ id: 1, status: "blocked" });
+    expect(result.success).toBe(true);
+  });
+
+  it("applier cannot move job to owner-only statuses (matched, rejected, ingested)", async () => {
+    const caller = appRouter.createCaller(makeApplierCtx());
+    await expect(caller.jobs.moveStatus({ id: 1, status: "matched" })).rejects.toThrow();
   });
 
   it("applier can mark job as applied", async () => {
@@ -301,9 +308,9 @@ describe("jobs.byStatus", () => {
     await expect(caller.jobs.byStatus({ status: "matched" })).rejects.toThrow();
   });
 
-  it("accepts all valid status values", () => {
-    const validStatuses = ["ingested", "matched", "to_apply", "applied", "rejected", "expired"] as const;
-    expect(validStatuses).toHaveLength(6);
+  it("accepts all valid status values including blocked", () => {
+    const validStatuses = ["ingested", "matched", "to_apply", "blocked", "applied", "rejected", "expired"] as const;
+    expect(validStatuses).toHaveLength(7);
   });
 });
 

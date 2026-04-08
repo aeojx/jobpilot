@@ -887,7 +887,10 @@ export const appRouter = router({
 
   jobs: router({
     kanban: protectedProcedure.query(async ({ ctx }) => {
-      if (ctx.user.role !== "admin") return getJobsByStatus("to_apply");
+      if (ctx.user.role !== "admin") {
+        // Appliers see the full kanban but only to_apply and blocked columns
+        return getKanbanJobs();
+      }
       return getKanbanJobs();
     }),
 
@@ -896,13 +899,15 @@ export const appRouter = router({
     byId: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getJobById(input.id)),
 
     byStatus: adminProcedure
-      .input(z.object({ status: z.enum(["ingested", "matched", "to_apply", "applied", "rejected", "expired"]) }))
+      .input(z.object({ status: z.enum(["ingested", "matched", "to_apply", "blocked", "applied", "rejected", "expired"]) }))
       .query(async ({ input }) => getJobsByStatus(input.status)),
 
     moveStatus: protectedProcedure
-      .input(z.object({ id: z.number(), status: z.enum(["ingested", "matched", "to_apply", "applied", "rejected", "expired"]), fromSwipe: z.boolean().optional() }))
+      .input(z.object({ id: z.number(), status: z.enum(["ingested", "matched", "to_apply", "blocked", "applied", "rejected", "expired"]), fromSwipe: z.boolean().optional() }))
       .mutation(async ({ input, ctx }) => {
-        if (ctx.user.role !== "admin" && input.status !== "applied") throw new TRPCError({ code: "FORBIDDEN" });
+        // Appliers can move jobs between to_apply, blocked, applied, and expired
+        const applierAllowed: string[] = ["to_apply", "blocked", "applied", "expired"];
+        if (ctx.user.role !== "admin" && !applierAllowed.includes(input.status)) throw new TRPCError({ code: "FORBIDDEN" });
         await updateJobStatus(input.id, input.status);
         // Track swipe stats when swiping from the swipe view
         if (input.fromSwipe) {

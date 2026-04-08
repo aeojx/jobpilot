@@ -466,3 +466,12 @@
 - [x] Retroactively reject 1 matched job with new dealbreaker (co-founder)
 - [x] Fix empty-location scoring: pass "Remote (no location specified)" to LLM instead of omitting location
 - [x] Update Release Notes page with v3.24 through v3.31 entries
+
+## v3.32 Applier Dashboard + Blocked Column
+- [x] Add 'blocked' to jobs.status enum in drizzle/schema.ts
+- [x] Generate and apply DB migration for new status value
+- [x] Allow Applier role to call moveStatus procedure (not admin-only)
+- [x] Add 'blocked' column to kanban board beside 'to_apply'
+- [x] Applier can drag jobs: to_apply ↔ blocked, to_apply → applied/expired
+- [x] Unlock /dashboard route for Applier role in App.tsx
+- [x] Update sidebar to show Dashboard nav item for Applier
