@@ -483,8 +483,9 @@ export default function ApplierView() {
                           Generating...
                         </button>
                       ) : resumeDoneIds.has(job.id) ? (
-                        <button
-                          disabled
+                        <a
+                          href={`/api/resume/download/${job.id}`}
+                          download
                           className="flex items-center gap-1 px-3 py-2 font-bold text-xs tracking-widest uppercase transition-all"
                           style={{
                             fontFamily: "Press Start 2P, monospace",
@@ -493,11 +494,13 @@ export default function ApplierView() {
                             border: "2px solid var(--atari-green)",
                             letterSpacing: "0.08em",
                             whiteSpace: "nowrap",
+                            textDecoration: "none",
+                            cursor: "pointer",
                           }}
                         >
                           <CheckCircle size={12} />
-                          Generation Done
-                        </button>
+                          Download Resume
+                        </a>
                       ) : (
                         <button
                           onClick={() => {

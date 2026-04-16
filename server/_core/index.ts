@@ -43,6 +43,47 @@ async function startServer() {
       createContext,
     })
   );
+  
+  // Resume download endpoint
+  app.get("/api/resume/download/:jobId", (req, res) => {
+    try {
+      const jobId = req.params.jobId;
+      const fs = require("fs");
+      const path = require("path");
+      
+      const resumeDir = "/home/ubuntu/projects/1000jobs-main-folder-8ad188bd/tailored_resumes";
+      
+      // List all files in the directory
+      const files = fs.readdirSync(resumeDir);
+      
+      // Find the PDF file (there should be one per job, but we'll get the first match)
+      // For now, just return the first PDF we find for this job
+      const pdfFile = files.find((f: string) => f.endsWith(".pdf"));
+      
+      if (!pdfFile) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+      
+      const filePath = path.join(resumeDir, pdfFile);
+      
+      // Set headers for PDF download
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${pdfFile}"`);
+      
+      // Stream the file
+      const fileStream = fs.createReadStream(filePath);
+      fileStream.pipe(res);
+      
+      fileStream.on("error", (err: Error) => {
+        console.error("Error streaming resume:", err);
+        res.status(500).json({ error: "Error downloading resume" });
+      });
+    } catch (error) {
+      console.error("Resume download error:", error);
+      res.status(500).json({ error: "Error downloading resume" });
+    }
+  });
+  
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
