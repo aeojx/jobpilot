@@ -486,3 +486,14 @@
 - [x] Job Detail Modal: show reason input when clicking "Can't Apply"
 - [x] Display blockedReason on Blocked column cards
 - [x] Update release notes with v3.33 entry
+
+## v3.34 Generate Resume Feature
+
+- [x] Add resumeGeneratedPath column to jobs table schema
+- [x] Generate DB migration and apply resumeGeneratedPath column
+- [x] Create resume-generator.ts service with LLM + PDF conversion
+- [x] Add generateResume endpoint to jobs router (non-blocking mutation)
+- [x] Add Generate Resume button to ApplierView My Queue cards
+- [x] Implement polling logic to detect when resume is ready
+- [x] Show "Generating..." state, then "Download Resume" link
+- [x] All 83 tests passing, TypeScript clean

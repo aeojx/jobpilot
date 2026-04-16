@@ -1066,6 +1066,16 @@ export const appRouter = router({
         });
         return { success: true, isDuplicate, matchScore };
       }),
+
+    generateResume: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        // Import here to avoid circular dependencies
+        const { generateResumeAsync } = await import("./resume-generator");
+        // Trigger async generation (non-blocking)
+        generateResumeAsync(input.id).catch(err => console.error("Resume generation error:", err));
+        return { success: true, message: "Resume generation started" };
+      }),
   }),
 
   // ─── API Ingestion (Active Jobs DB) ──────────────────────────────────────────
