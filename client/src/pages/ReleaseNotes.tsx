@@ -14,6 +14,23 @@ interface ReleaseEntry {
 // ─── Release Data ─────────────────────────────────────────────────────────────
 const RELEASES: ReleaseEntry[] = [
   {
+    version: "3.38",
+    date: "Apr 16, 2026",
+    title: "Applier Full Access, Performance Cleanup, Resume Generation System",
+    tag: "feature" as const,
+    content: (
+      <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+        <li><strong>Applier full tab access</strong> — Applier role now sees all sidebar tabs (Dashboard, Swiping, My Queue, Ingest Jobs, Skills Profile, Question Bank, Performance, Resume Generation, FAQ, Release Notes) — same as the Owner.</li>
+        <li><strong>Performance tab simplified</strong> — removed gamification points, daily targets, and ramp-up schedule. Only the "Recent History" section remains, showing total jobs applied per day.</li>
+        <li><strong>Resume Generation system rebuilt</strong> — complete backend rewrite using the platform LLM helper (invokeLLM) with proper async generation, logging, and PDF conversion via manus-md-to-pdf.</li>
+        <li><strong>Generate Resume button</strong> — available on job cards in both My Queue (/apply) and Dashboard To Apply column. Shows "Generating..." spinner, then "Download Resume" link when complete.</li>
+        <li><strong>Resume Generation tab</strong> — new sidebar tab accessible to all users with two sub-tabs: Resume Log (tracks all generation requests with time, user, status, duration, download link) and Configuration (edit prompt template and CSS styling in-app).</li>
+        <li><strong>resume_generation_log table</strong> — new DB table tracking every resume generation request with jobId, jobTitle, jobCompany, requestedBy, status, filePath, durationMs, and errorMessage.</li>
+        <li><strong>Resume download endpoint</strong> — <code style={{ color: "var(--atari-cyan)" }}>/api/resume/download/:jobId</code> serves generated PDFs directly from the server.</li>
+      </ul>
+    ),
+  },
+  {
     version: "3.33",
     date: "Apr 8, 2026",
     title: "Blocked Reason + Daily Report Blocked Count",

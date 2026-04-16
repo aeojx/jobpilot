@@ -1,64 +1,58 @@
-import * as fs from "fs";
-import * as path from "path";
-import { exec } from "child_process";
-import { promisify } from "util";
-import { getDb } from "./db";
-import { jobs } from "../drizzle/schema";
-import { eq } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
+import { join } from "path";
+import { execSync } from "child_process";
+import MarkdownIt from "markdown-it";
 
-const execAsync = promisify(exec);
+const RESUME_ENGINE_DIR = "/home/ubuntu/projects/1000jobs-main-folder-8ad188bd/resume_engine";
+const OUTPUT_DIR = "/home/ubuntu/projects/1000jobs-main-folder-8ad188bd/tailored_resumes";
 
-const RESUME_ENGINE_PATH = "/home/ubuntu/projects/1000jobs-main-folder-8ad188bd/resume_engine";
-const TAILORED_RESUMES_PATH = "/home/ubuntu/projects/1000jobs-main-folder-8ad188bd/tailored_resumes";
+const md = new MarkdownIt({ html: true, breaks: false });
 
-/**
- * Generate a tailored resume for a job
- * This runs asynchronously and saves to the project folder
- */
-export async function generateResumeAsync(jobId: number): Promise<void> {
+function sanitizeFilename(str: string): string {
+  return str
+    .replace(/[^a-zA-Z0-9\s\-_]/g, "")
+    .replace(/\s+/g, "_")
+    .substring(0, 80);
+}
+
+export interface ResumeGenerationResult {
+  success: boolean;
+  filePath?: string;
+  error?: string;
+  durationMs: number;
+}
+
+export async function generateResumeForJob(
+  jobTitle: string,
+  jobCompany: string,
+  jobDescription: string
+): Promise<ResumeGenerationResult> {
+  const startTime = Date.now();
+
   try {
-    console.log(`[Resume] Starting generation for job ${jobId}`);
-    
-    // Fetch job details
-    const db = await getDb();
-    if (!db) {
-      console.error(`[Resume] Database not available for job ${jobId}`);
-      return;
+    if (!existsSync(OUTPUT_DIR)) {
+      mkdirSync(OUTPUT_DIR, { recursive: true });
     }
 
-    const [job] = await db.select().from(jobs).where(eq(jobs.id, jobId)).limit(1);
-    if (!job) {
-      console.error(`[Resume] Job ${jobId} not found`);
-      return;
+    const profilePath = join(RESUME_ENGINE_DIR, "AlanAbbas_Complete_Profile.md");
+    if (!existsSync(profilePath)) {
+      throw new Error(`Master profile not found at ${profilePath}`);
     }
+    const profile = readFileSync(profilePath, "utf-8");
 
-    // Read master profile
-    const profilePath = path.join(RESUME_ENGINE_PATH, "AlanAbbas_Complete_Profile.md");
-    if (!fs.existsSync(profilePath)) {
-      console.error(`[Resume] Master profile not found at ${profilePath}`);
-      return;
+    const templatePath = join(RESUME_ENGINE_DIR, "prompt_template.txt");
+    if (!existsSync(templatePath)) {
+      throw new Error(`Prompt template not found at ${templatePath}`);
     }
-    const masterProfile = fs.readFileSync(profilePath, "utf-8");
-    console.log(`[Resume] Master profile loaded (${masterProfile.length} chars)`);
+    const template = readFileSync(templatePath, "utf-8");
 
-    // Read prompt template
-    const promptPath = path.join(RESUME_ENGINE_PATH, "prompt_template.txt");
-    if (!fs.existsSync(promptPath)) {
-      console.error(`[Resume] Prompt template not found at ${promptPath}`);
-      return;
-    }
-    const promptTemplate = fs.readFileSync(promptPath, "utf-8");
-    console.log(`[Resume] Prompt template loaded (${promptTemplate.length} chars)`);
+    const filledPrompt = template
+      .replace("{{PROFILE_PLACEHOLDER}}", profile)
+      .replace("{{JD_PLACEHOLDER}}", jobDescription);
 
-    // Fill in placeholders
-    const filledPrompt = promptTemplate
-      .replace("{{PROFILE_PLACEHOLDER}}", masterProfile)
-      .replace("{{JD_PLACEHOLDER}}", job.description || "");
-    console.log(`[Resume] Prompt filled (${filledPrompt.length} chars)`);
+    console.log(`[Resume] Calling LLM for ${jobTitle} at ${jobCompany}...`);
 
-    // Call LLM via built-in service
-    console.log(`[Resume] Calling LLM for job: ${job.title} at ${job.company}`);
     const response = await invokeLLM({
       messages: [
         {
@@ -73,117 +67,71 @@ export async function generateResumeAsync(jobId: number): Promise<void> {
       ],
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const resumeMarkdown = typeof (response.choices[0]?.message as any)?.content === "string" 
-      ? (response.choices[0]?.message as any).content 
-      : "";
-    console.log(`[Resume] LLM response received (${resumeMarkdown.length} chars)`);
+    const markdownContent =
+      typeof response.choices[0].message.content === "string"
+        ? response.choices[0].message.content
+        : Array.isArray(response.choices[0].message.content)
+          ? response.choices[0].message.content
+              .filter((p: any): p is { type: "text"; text: string } => p.type === "text")
+              .map((p: any) => p.text)
+              .join("\n")
+          : "";
 
-    // Convert Markdown to PDF
-    const pdfPath = await convertMarkdownToPdf(resumeMarkdown, job.title, job.company);
-    console.log(`[Resume] PDF generated at: ${pdfPath}`);
-
-    // Update job record with resume path
-    const dbConn = await getDb();
-    if (dbConn) {
-      await dbConn.update(jobs).set({ resumeGeneratedPath: pdfPath }).where(eq(jobs.id, jobId));
-      console.log(`[Resume] Job ${jobId} updated with resume path`);
+    if (!markdownContent || markdownContent.length < 100) {
+      throw new Error("LLM returned empty or too-short response");
     }
 
-    console.log(`✓ Resume generated for job ${jobId}: ${pdfPath}`);
-  } catch (error) {
-    console.error(`[Resume] Error generating resume for job ${jobId}:`, error);
-  }
-}
+    console.log(`[Resume] LLM returned ${markdownContent.length} chars of markdown`);
 
-/**
- * Convert Markdown to PDF using manus-md-to-pdf
- */
-async function convertMarkdownToPdf(
-  markdownContent: string,
-  jobTitle: string,
-  company: string
-): Promise<string> {
-  // Sanitize filename
-  const safeTitle = (jobTitle || "job").replace(/[^a-z0-9]/gi, "_").substring(0, 50);
-  const safeCompany = (company || "company").replace(/[^a-z0-9]/gi, "_").substring(0, 50);
-  const filename = `${safeTitle}_${safeCompany}_AlanAbbas.pdf`;
-  const outputPath = path.join(TAILORED_RESUMES_PATH, filename);
+    const htmlBody = md.render(markdownContent);
 
-  // Ensure output directory exists
-  if (!fs.existsSync(TAILORED_RESUMES_PATH)) {
-    fs.mkdirSync(TAILORED_RESUMES_PATH, { recursive: true });
-    console.log(`[Resume] Created output directory: ${TAILORED_RESUMES_PATH}`);
-  }
+    const cssPath = join(RESUME_ENGINE_DIR, "resume_style.css");
+    const css = existsSync(cssPath) ? readFileSync(cssPath, "utf-8") : "";
 
-  // Read CSS (with fallback to empty string if not found)
-  let css = "";
-  const cssPath = path.join(RESUME_ENGINE_PATH, "resume_style.css");
-  if (fs.existsSync(cssPath)) {
-    css = fs.readFileSync(cssPath, "utf-8");
-    console.log(`[Resume] CSS loaded (${css.length} chars)`);
-  }
-
-  // Convert Markdown to HTML using markdown-it
-  let markdownToHtml: (content: string) => string;
-  try {
-    // Try to use markdown-it if available
-    const mdModule = await import("markdown-it");
-    const md = new mdModule.default();
-    markdownToHtml = (content: string) => md.render(content);
-    console.log(`[Resume] Using markdown-it for conversion`);
-  } catch {
-    // Fallback: simple regex-based conversion
-    console.log(`[Resume] Using fallback HTML conversion`);
-    markdownToHtml = (content: string) => {
-      return content
-        .replace(/^### (.*?)$/gm, "<h3>$1</h3>")
-        .replace(/^## (.*?)$/gm, "<h2>$1</h2>")
-        .replace(/^# (.*?)$/gm, "<h1>$1</h1>")
-        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-        .replace(/\*(.*?)\*/g, "<em>$1</em>")
-        .replace(/\n/g, "<br>");
-    };
-  }
-
-  const html = markdownToHtml(markdownContent);
-
-  // Wrap in HTML document with CSS
-  const fullHtml = `<!DOCTYPE html>
-<html>
+    const fullHtml = `<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <style>
-    ${css}
-  </style>
+<meta charset="UTF-8">
+<style>${css}</style>
 </head>
-<body>
-  ${html}
-</body>
+<body>${htmlBody}</body>
 </html>`;
 
-  // Write HTML to temp file
-  const tempHtmlPath = path.join(TAILORED_RESUMES_PATH, `${filename}.html`);
-  fs.writeFileSync(tempHtmlPath, fullHtml);
-  console.log(`[Resume] Temp HTML written to: ${tempHtmlPath}`);
+    const safeName = `${sanitizeFilename(jobTitle)}_${sanitizeFilename(jobCompany)}_AlanAbbas`;
+    const mdPath = join(OUTPUT_DIR, `${safeName}.md`);
+    const htmlPath = join(OUTPUT_DIR, `${safeName}.html`);
+    const pdfPath = join(OUTPUT_DIR, `${safeName}.pdf`);
 
-  // Use manus-md-to-pdf
-  try {
-    const tempMdPath = path.join(TAILORED_RESUMES_PATH, `${filename}.md`);
-    fs.writeFileSync(tempMdPath, markdownContent);
-    console.log(`[Resume] Calling manus-md-to-pdf: ${tempMdPath} -> ${outputPath}`);
-    await execAsync(`manus-md-to-pdf ${tempMdPath} ${outputPath}`);
-    fs.unlinkSync(tempMdPath);
-    console.log(`[Resume] PDF successfully created at: ${outputPath}`);
-  } catch (e) {
-    console.error(`[Resume] Failed to convert markdown to PDF: ${e}`);
-    throw e;
+    writeFileSync(mdPath, markdownContent, "utf-8");
+    writeFileSync(htmlPath, fullHtml, "utf-8");
+
+    try {
+      execSync(`manus-md-to-pdf "${mdPath}" "${pdfPath}"`, {
+        timeout: 30000,
+        stdio: "pipe",
+      });
+      console.log(`[Resume] PDF generated: ${pdfPath}`);
+    } catch (pdfErr: any) {
+      console.error(`[Resume] manus-md-to-pdf failed, trying WeasyPrint...`, pdfErr.message);
+      try {
+        execSync(`python3 -c "from weasyprint import HTML; HTML(filename='${htmlPath}').write_pdf('${pdfPath}')"`, {
+          timeout: 30000,
+          stdio: "pipe",
+        });
+        console.log(`[Resume] PDF generated via WeasyPrint: ${pdfPath}`);
+      } catch (wpErr: any) {
+        console.error(`[Resume] WeasyPrint also failed:`, wpErr.message);
+        throw new Error("PDF conversion failed with both manus-md-to-pdf and WeasyPrint");
+      }
+    }
+
+    const durationMs = Date.now() - startTime;
+    console.log(`[Resume] Resume generated for ${jobTitle} at ${jobCompany} in ${durationMs}ms`);
+
+    return { success: true, filePath: pdfPath, durationMs };
+  } catch (error: any) {
+    const durationMs = Date.now() - startTime;
+    console.error(`[Resume] Failed for ${jobTitle} at ${jobCompany}:`, error.message);
+    return { success: false, error: error.message, durationMs };
   }
-
-  // Clean up temp HTML
-  if (fs.existsSync(tempHtmlPath)) {
-    fs.unlinkSync(tempHtmlPath);
-  }
-
-  return outputPath;
 }

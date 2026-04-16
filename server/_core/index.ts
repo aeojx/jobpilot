@@ -35,6 +35,40 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  // Resume PDF download endpoint
+  app.get("/api/resume/download/:jobId", async (req, res) => {
+    try {
+      const jobId = parseInt(req.params.jobId, 10);
+      if (isNaN(jobId)) { res.status(400).send("Invalid job ID"); return; }
+      const { getDb } = await import("../db");
+      const db = await getDb();
+      if (!db) { res.status(500).send("Database not available"); return; }
+      const { resumeGenerationLog } = await import("../../drizzle/schema");
+      const { eq, desc } = await import("drizzle-orm");
+      const [latest] = await db.select().from(resumeGenerationLog)
+        .where(eq(resumeGenerationLog.jobId, jobId))
+        .orderBy(desc(resumeGenerationLog.requestedAt))
+        .limit(1);
+      if (!latest || latest.status !== "completed" || !latest.filePath) {
+        res.status(404).send("Resume not found or not yet generated"); return;
+      }
+      const { existsSync, createReadStream, statSync } = await import("fs");
+      const { basename } = await import("path");
+      if (!existsSync(latest.filePath)) {
+        res.status(404).send("Resume file not found on disk"); return;
+      }
+      const stat = statSync(latest.filePath);
+      const filename = basename(latest.filePath);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Content-Length", stat.size);
+      createReadStream(latest.filePath).pipe(res);
+    } catch (err: any) {
+      console.error("[Resume Download] Error:", err.message);
+      res.status(500).send("Internal server error");
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
@@ -43,69 +77,6 @@ async function startServer() {
       createContext,
     })
   );
-  
-  // Resume download endpoint
-  app.get("/api/resume/download/:jobId", (req, res) => {
-    try {
-      const fs = require("fs");
-      const path = require("path");
-      
-      const resumeDir = "/home/ubuntu/projects/1000jobs-main-folder-8ad188bd/tailored_resumes";
-      
-      // List all files in the directory
-      const files = fs.readdirSync(resumeDir);
-      
-      // Find the most recently modified PDF file
-      const pdfFiles = files.filter((f: string) => f.endsWith(".pdf"));
-      
-      if (pdfFiles.length === 0) {
-        res.status(404).send("Resume not found");
-        return;
-      }
-      
-      // Get the most recent PDF
-      const pdfFile = pdfFiles.reduce((latest: string, current: string) => {
-        const latestPath = path.join(resumeDir, latest);
-        const currentPath = path.join(resumeDir, current);
-        const latestTime = fs.statSync(latestPath).mtime.getTime();
-        const currentTime = fs.statSync(currentPath).mtime.getTime();
-        return currentTime > latestTime ? current : latest;
-      });
-      
-      const filePath = path.join(resumeDir, pdfFile);
-      
-      // Check if file exists
-      if (!fs.existsSync(filePath)) {
-        res.status(404).send("Resume file not found");
-        return;
-      }
-      
-      // Get file size
-      const stats = fs.statSync(filePath);
-      const fileSize = stats.size;
-      
-      // Set headers for PDF download
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="${pdfFile}"`);
-      res.setHeader("Content-Length", fileSize);
-      
-      // Stream the file
-      const fileStream = fs.createReadStream(filePath);
-      fileStream.on("error", (err: Error) => {
-        console.error("Error streaming resume:", err);
-        if (!res.headersSent) {
-          res.status(500).send("Error downloading resume");
-        }
-      });
-      fileStream.pipe(res);
-    } catch (error) {
-      console.error("Resume download error:", error);
-      if (!res.headersSent) {
-        res.status(500).send("Error downloading resume");
-      }
-    }
-  });
-  
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);

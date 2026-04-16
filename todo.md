@@ -487,13 +487,14 @@
 - [x] Display blockedReason on Blocked column cards
 - [x] Update release notes with v3.33 entry
 
-## v3.34 Generate Resume Feature
+## v3.38 Multi-Update: Applier Access, Performance Tab, Resume Generation
 
-- [x] Add resumeGeneratedPath column to jobs table schema
-- [x] Generate DB migration and apply resumeGeneratedPath column
-- [x] Create resume-generator.ts service with LLM + PDF conversion
-- [x] Add generateResume endpoint to jobs router (non-blocking mutation)
-- [x] Add Generate Resume button to ApplierView My Queue cards
-- [x] Implement polling logic to detect when resume is ready
-- [x] Show "Generating..." state, then "Download Resume" link
-- [x] All 83 tests passing, TypeScript clean
+- [x] Give Applier full tab access (same tabs as owner)
+- [x] Performance Tab: remove gamification points and daily targets, keep only Recent History
+- [x] Add Generate Resume button to Dashboard "To Apply" cards
+- [x] Fix resume generation stuck in "Generating" state (rebuilt backend from scratch)
+- [x] Create Resume Generation tab accessible to all users
+- [x] Resume Generation tab: "Resume Log" sub-tab tracking all generation requests (time, user, download link)
+- [x] Resume Generation tab: "Configuration" sub-tab for editing resume generation config/template
+- [x] Add DB schema for resume generation log table
+- [x] Update release notes with v3.38 entry

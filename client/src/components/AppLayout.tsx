@@ -7,6 +7,7 @@ import {
   BookOpen,
   Eye,
   EyeOff,
+  FileText,
   HelpCircle,
   LayoutGrid,
   LogOut,
@@ -30,15 +31,20 @@ const ownerNav = [
   { href: "/skills", label: "Skills Profile", icon: BookOpen },
   { href: "/questions", label: "Question Bank", icon: HelpCircle },
   { href: "/performance", label: "Performance", icon: BarChart3 },
+  { href: "/resumes", label: "Resume Generation", icon: FileText },
   { href: "/faq", label: "FAQ", icon: MessageCircleQuestion },
   { href: "/release-notes", label: "Release Notes", icon: Rocket },
 ];
 
 const applierNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
+  { href: "/swiping", label: "Swiping", icon: Shuffle },
   { href: "/apply", label: "My Queue", icon: Zap },
+  { href: "/ingest", label: "Ingest Jobs", icon: Radar },
+  { href: "/skills", label: "Skills Profile", icon: BookOpen },
+  { href: "/questions", label: "Question Bank", icon: HelpCircle },
   { href: "/performance", label: "Performance", icon: BarChart3 },
-  { href: "/questions", label: "Questions", icon: HelpCircle },
+  { href: "/resumes", label: "Resume Generation", icon: FileText },
   { href: "/faq", label: "FAQ", icon: MessageCircleQuestion },
   { href: "/release-notes", label: "Release Notes", icon: Rocket },
 ];

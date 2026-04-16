@@ -228,3 +228,24 @@ export const systemConfig = mysqlTable("system_config", {
 });
 
 export type SystemConfig = typeof systemConfig.$inferSelect;
+
+// ─── Resume Generation Log ───────────────────────────────────────────────────
+
+export const resumeGenerationLog = mysqlTable("resume_generation_log", {
+  id: int("id").autoincrement().primaryKey(),
+  jobId: int("jobId").notNull(),
+  jobTitle: varchar("jobTitle", { length: 512 }),
+  jobCompany: varchar("jobCompany", { length: 512 }),
+  requestedBy: varchar("requestedBy", { length: 255 }).notNull(),
+  requestedByUserId: int("requestedByUserId"),
+  status: mysqlEnum("status", ["pending", "generating", "completed", "failed"]).default("pending").notNull(),
+  filePath: varchar("filePath", { length: 512 }),
+  fileUrl: text("fileUrl"),
+  errorMessage: text("errorMessage"),
+  durationMs: int("durationMs"),
+  requestedAt: timestamp("requestedAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+});
+
+export type ResumeGenerationLogEntry = typeof resumeGenerationLog.$inferSelect;
+export type InsertResumeGenerationLog = typeof resumeGenerationLog.$inferInsert;

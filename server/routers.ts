@@ -1067,14 +1067,127 @@ export const appRouter = router({
         return { success: true, isDuplicate, matchScore };
       }),
 
+    // ─── Resume Generation ─────────────────────────────────────────────────
     generateResume: protectedProcedure
-      .input(z.object({ id: z.number() }))
+      .input(z.object({ jobId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const job = await getJobById(input.jobId);
+        if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" });
+        if (!job.description) throw new TRPCError({ code: "BAD_REQUEST", message: "Job has no description" });
+
+        // Create log entry
+        const { getDb } = await import("./db");
+        const { resumeGenerationLog } = await import("../drizzle/schema");
+        const database = await getDb();
+        if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        const [logEntry] = await database.insert(resumeGenerationLog).values({
+          jobId: input.jobId,
+          jobTitle: job.title,
+          jobCompany: job.company,
+          requestedBy: ctx.user.name || ctx.user.email || "unknown",
+          requestedByUserId: ctx.user.id,
+          status: "generating",
+        }).$returningId();
+
+        // Run generation async (non-blocking)
+        const { generateResumeForJob } = await import("./resume-generator");
+        generateResumeForJob(job.title, job.company, job.description).then(async (result) => {
+          const { getDb: getDb2 } = await import("./db");
+          const db2 = await getDb2();
+          if (!db2) return;
+          const { resumeGenerationLog: rgl, jobs: jobsTable } = await import("../drizzle/schema");
+          const { eq } = await import("drizzle-orm");
+          if (result.success && result.filePath) {
+            await db2.update(rgl).set({
+              status: "completed",
+              filePath: result.filePath,
+              durationMs: result.durationMs,
+              completedAt: new Date(),
+            }).where(eq(rgl.id, logEntry.id));
+            await db2.update(jobsTable).set({
+              resumeGeneratedPath: result.filePath,
+            }).where(eq(jobsTable.id, input.jobId));
+          } else {
+            await db2.update(rgl).set({
+              status: "failed",
+              errorMessage: result.error || "Unknown error",
+              durationMs: result.durationMs,
+              completedAt: new Date(),
+            }).where(eq(rgl.id, logEntry.id));
+          }
+        }).catch(async (err) => {
+          console.error("[Resume] Unhandled error:", err);
+          const { getDb: getDb3 } = await import("./db");
+          const db3 = await getDb3();
+          if (!db3) return;
+          const { resumeGenerationLog: rgl2 } = await import("../drizzle/schema");
+          const { eq: eq2 } = await import("drizzle-orm");
+          await db3.update(rgl2).set({
+            status: "failed",
+            errorMessage: err.message || "Unhandled error",
+            completedAt: new Date(),
+          }).where(eq2(rgl2.id, logEntry.id));
+        });
+
+        return { logId: logEntry.id, status: "generating" };
+      }),
+
+    resumeStatus: protectedProcedure
+      .input(z.object({ jobId: z.number() }))
+      .query(async ({ input }) => {
+        const { getDb: getDbStatus } = await import("./db");
+        const dbStatus = await getDbStatus();
+        if (!dbStatus) return { status: "none" as const, filePath: null };
+        const { resumeGenerationLog } = await import("../drizzle/schema");
+        const { eq, desc } = await import("drizzle-orm");
+        const [latest] = await dbStatus.select()
+          .from(resumeGenerationLog)
+          .where(eq(resumeGenerationLog.jobId, input.jobId))
+          .orderBy(desc(resumeGenerationLog.requestedAt))
+          .limit(1);
+        if (!latest) return { status: "none" as const, filePath: null };
+        return {
+          status: latest.status as "pending" | "generating" | "completed" | "failed",
+          filePath: latest.filePath,
+          logId: latest.id,
+        };
+      }),
+
+    resumeLog: protectedProcedure.query(async () => {
+      const { getDb: getDbLog } = await import("./db");
+      const dbLog = await getDbLog();
+      if (!dbLog) return [];
+      const { resumeGenerationLog } = await import("../drizzle/schema");
+      const { desc } = await import("drizzle-orm");
+      return dbLog.select().from(resumeGenerationLog).orderBy(desc(resumeGenerationLog.requestedAt)).limit(100);
+    }),
+
+    resumeConfig: protectedProcedure.query(async () => {
+      const { readFileSync, existsSync } = await import("fs");
+      const dir = "/home/ubuntu/projects/1000jobs-main-folder-8ad188bd/resume_engine";
+      const promptPath = dir + "/prompt_template.txt";
+      const cssPath = dir + "/resume_style.css";
+      return {
+        promptTemplate: existsSync(promptPath) ? readFileSync(promptPath, "utf-8") : "",
+        cssTemplate: existsSync(cssPath) ? readFileSync(cssPath, "utf-8") : "",
+      };
+    }),
+
+    updateResumeConfig: protectedProcedure
+      .input(z.object({
+        promptTemplate: z.string().optional(),
+        cssTemplate: z.string().optional(),
+      }))
       .mutation(async ({ input }) => {
-        // Import here to avoid circular dependencies
-        const { generateResumeAsync } = await import("./resume-generator");
-        // Trigger async generation (non-blocking)
-        generateResumeAsync(input.id).catch(err => console.error("Resume generation error:", err));
-        return { success: true, message: "Resume generation started" };
+        const { writeFileSync } = await import("fs");
+        const dir = "/home/ubuntu/projects/1000jobs-main-folder-8ad188bd/resume_engine";
+        if (input.promptTemplate !== undefined) {
+          writeFileSync(dir + "/prompt_template.txt", input.promptTemplate, "utf-8");
+        }
+        if (input.cssTemplate !== undefined) {
+          writeFileSync(dir + "/resume_style.css", input.cssTemplate, "utf-8");
+        }
+        return { success: true };
       }),
   }),
 

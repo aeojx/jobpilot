@@ -16,6 +16,7 @@ import SwipeView from "./pages/SwipeView";
 import FAQ from "./pages/FAQ";
 import ReleaseNotes from "./pages/ReleaseNotes";
 import Landing from "./pages/Landing";
+import ResumeGeneration from "./pages/ResumeGeneration";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 
@@ -100,6 +101,9 @@ function Router() {
       </Route>
       <Route path="/swiping">
         {() => <AppLayout><SwipeView /></AppLayout>}
+      </Route>
+      <Route path="/resumes">
+        {() => <AppLayout><ResumeGeneration /></AppLayout>}
       </Route>
       <Route path="/faq">
         {() => <AppLayout><FAQ /></AppLayout>}
