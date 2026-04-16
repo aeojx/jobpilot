@@ -12,8 +12,9 @@ import {
   Trophy,
   XCircle,
   Zap,
+  FileText,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import JobDetailModal from "@/components/JobDetailModal";
 
@@ -38,11 +39,38 @@ export default function ApplierView() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [generatingResumeId, setGeneratingResumeId] = useState<number | null>(null);
+  const [resumeDoneIds, setResumeDoneIds] = useState<Set<number>>(new Set());
 
 
   const { data: allJobs = [], isLoading } = trpc.jobs.kanban.useQuery();
   const { data: todayStats } = trpc.stats.today.useQuery();
   const { data: gami } = trpc.stats.gamification.useQuery();
+
+  const generateResume = trpc.jobs.generateResume.useMutation({
+    onSuccess: () => {
+      toast.success("Resume generation started...");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  // Poll for resume generation status
+  useEffect(() => {
+    if (generatingResumeId === null) return;
+    const interval = setInterval(async () => {
+      const job = allJobs.find((j) => j.id === generatingResumeId);
+      if (job?.resumeGeneratedPath) {
+        setResumeDoneIds((prev) => {
+          const newSet = new Set(prev);
+          newSet.add(generatingResumeId);
+          return newSet;
+        });
+        setGeneratingResumeId(null);
+        toast.success("Generation Done! Check project files folder.");
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [generatingResumeId, allJobs]);
 
   const markApplied = trpc.jobs.markApplied.useMutation({
     onSuccess: () => {
@@ -433,6 +461,62 @@ export default function ApplierView() {
                         >
                           <XCircle size={12} />
                           Can't Apply
+                        </button>
+                      )}
+
+                      {/* Generate Resume Button */}
+                      {generatingResumeId === job.id ? (
+                        <button
+                          disabled
+                          className="flex items-center gap-1 px-3 py-2 font-bold text-xs tracking-widest uppercase transition-all"
+                          style={{
+                            fontFamily: "Press Start 2P, monospace",
+                            background: "var(--atari-cyan)",
+                            color: "var(--atari-black)",
+                            border: "2px solid var(--atari-cyan)",
+                            letterSpacing: "0.08em",
+                            whiteSpace: "nowrap",
+                            opacity: 0.7,
+                          }}
+                        >
+                          <Loader2 size={12} className="animate-spin" />
+                          Generating...
+                        </button>
+                      ) : resumeDoneIds.has(job.id) ? (
+                        <button
+                          disabled
+                          className="flex items-center gap-1 px-3 py-2 font-bold text-xs tracking-widest uppercase transition-all"
+                          style={{
+                            fontFamily: "Press Start 2P, monospace",
+                            background: "var(--atari-green)",
+                            color: "var(--atari-black)",
+                            border: "2px solid var(--atari-green)",
+                            letterSpacing: "0.08em",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <CheckCircle size={12} />
+                          Generation Done
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setGeneratingResumeId(job.id);
+                            generateResume.mutate({ id: job.id });
+                          }}
+                          disabled={generateResume.isPending}
+                          className="flex items-center gap-1 px-3 py-2 font-bold text-xs tracking-widest uppercase transition-all"
+                          style={{
+                            fontFamily: "Press Start 2P, monospace",
+                            background: "transparent",
+                            color: "var(--atari-cyan)",
+                            border: "1.5px solid var(--atari-cyan)",
+                            letterSpacing: "0.08em",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <FileText size={12} />
+                          Generate Resume
                         </button>
                       )}
 
