@@ -47,7 +47,6 @@ async function startServer() {
   // Resume download endpoint
   app.get("/api/resume/download/:jobId", (req, res) => {
     try {
-      const jobId = req.params.jobId;
       const fs = require("fs");
       const path = require("path");
       
@@ -56,31 +55,54 @@ async function startServer() {
       // List all files in the directory
       const files = fs.readdirSync(resumeDir);
       
-      // Find the PDF file (there should be one per job, but we'll get the first match)
-      // For now, just return the first PDF we find for this job
-      const pdfFile = files.find((f: string) => f.endsWith(".pdf"));
+      // Find the most recently modified PDF file
+      const pdfFiles = files.filter((f: string) => f.endsWith(".pdf"));
       
-      if (!pdfFile) {
-        return res.status(404).json({ error: "Resume not found" });
+      if (pdfFiles.length === 0) {
+        res.status(404).send("Resume not found");
+        return;
       }
       
+      // Get the most recent PDF
+      const pdfFile = pdfFiles.reduce((latest: string, current: string) => {
+        const latestPath = path.join(resumeDir, latest);
+        const currentPath = path.join(resumeDir, current);
+        const latestTime = fs.statSync(latestPath).mtime.getTime();
+        const currentTime = fs.statSync(currentPath).mtime.getTime();
+        return currentTime > latestTime ? current : latest;
+      });
+      
       const filePath = path.join(resumeDir, pdfFile);
+      
+      // Check if file exists
+      if (!fs.existsSync(filePath)) {
+        res.status(404).send("Resume file not found");
+        return;
+      }
+      
+      // Get file size
+      const stats = fs.statSync(filePath);
+      const fileSize = stats.size;
       
       // Set headers for PDF download
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${pdfFile}"`);
+      res.setHeader("Content-Length", fileSize);
       
       // Stream the file
       const fileStream = fs.createReadStream(filePath);
-      fileStream.pipe(res);
-      
       fileStream.on("error", (err: Error) => {
         console.error("Error streaming resume:", err);
-        res.status(500).json({ error: "Error downloading resume" });
+        if (!res.headersSent) {
+          res.status(500).send("Error downloading resume");
+        }
       });
+      fileStream.pipe(res);
     } catch (error) {
       console.error("Resume download error:", error);
-      res.status(500).json({ error: "Error downloading resume" });
+      if (!res.headersSent) {
+        res.status(500).send("Error downloading resume");
+      }
     }
   });
   
