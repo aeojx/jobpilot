@@ -1,3 +1,12 @@
+CREATE TABLE `resume_config` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`configKey` varchar(64) NOT NULL,
+	`configValue` text NOT NULL,
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `resume_config_id` PRIMARY KEY(`id`),
+	CONSTRAINT `resume_config_configKey_unique` UNIQUE(`configKey`)
+);
+--> statement-breakpoint
 CREATE TABLE `resume_generation_log` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`jobId` int NOT NULL,

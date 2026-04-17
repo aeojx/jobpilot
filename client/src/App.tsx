@@ -15,8 +15,8 @@ import PasswordGate from "./pages/PasswordGate";
 import SwipeView from "./pages/SwipeView";
 import FAQ from "./pages/FAQ";
 import ReleaseNotes from "./pages/ReleaseNotes";
-import Landing from "./pages/Landing";
 import ResumeGeneration from "./pages/ResumeGeneration";
+import Landing from "./pages/Landing";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 
@@ -102,11 +102,11 @@ function Router() {
       <Route path="/swiping">
         {() => <AppLayout><SwipeView /></AppLayout>}
       </Route>
-      <Route path="/resumes">
-        {() => <AppLayout><ResumeGeneration /></AppLayout>}
-      </Route>
       <Route path="/faq">
         {() => <AppLayout><FAQ /></AppLayout>}
+      </Route>
+      <Route path="/resume-generation">
+        {() => <AppLayout><ResumeGeneration /></AppLayout>}
       </Route>
       <Route path="/release-notes" component={ReleaseNotes} />
       <Route path="/landing" component={Landing} />

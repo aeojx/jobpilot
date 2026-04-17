@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "19c7a88d-b98b-4912-a2eb-da98c49f7b49",
+  "id": "fc349350-b557-43a8-9540-33f23e427333",
   "prevId": "de126747-76ff-4f85-8d67-43d24d09e96d",
   "tables": {
     "api_usage": {
@@ -676,13 +676,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "resumeGeneratedPath": {
-          "name": "resumeGeneratedPath",
-          "type": "varchar(512)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "manuallyAdded": {
           "name": "manuallyAdded",
           "type": "boolean",
@@ -694,6 +687,13 @@
         "addedBy": {
           "name": "addedBy",
           "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "resumeGeneratedPath": {
+          "name": "resumeGeneratedPath",
+          "type": "varchar(512)",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -808,6 +808,60 @@
         }
       },
       "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "resume_config": {
+      "name": "resume_config",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "configKey": {
+          "name": "configKey",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "configValue": {
+          "name": "configValue",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "resume_config_id": {
+          "name": "resume_config_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "resume_config_configKey_unique": {
+          "name": "resume_config_configKey_unique",
+          "columns": [
+            "configKey"
+          ]
+        }
+      },
       "checkConstraint": {}
     },
     "resume_generation_log": {

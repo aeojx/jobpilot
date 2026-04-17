@@ -13,10 +13,10 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import JobDetailModal from "@/components/JobDetailModal";
-import { FileText, Download } from "lucide-react";
+import ResumeButton from "@/components/ResumeButton";
 
 const TIERS = [
   { name: "Rookie", minXp: 0, color: "var(--atari-gray)" },
@@ -56,55 +56,6 @@ export default function ApplierView() {
   });
 
   const [confirmRejectId, setConfirmRejectId] = useState<number | null>(null);
-  const [generatingJobs, setGeneratingJobs] = useState<Set<number>>(new Set());
-  const [completedJobs, setCompletedJobs] = useState<Set<number>>(new Set());
-
-  const generateResume = trpc.jobs.generateResume.useMutation({
-    onSuccess: (_data, variables) => {
-      setGeneratingJobs((prev) => new Set([...Array.from(prev), variables.jobId]));
-      toast.success("Resume generation started!");
-    },
-    onError: (e) => toast.error(e.message),
-  });
-
-  // Poll for resume status on generating jobs
-  useEffect(() => {
-    if (generatingJobs.size === 0) return;
-    const interval = setInterval(async () => {
-      for (const jobId of Array.from(generatingJobs)) {
-        try {
-          const status = await utils.jobs.resumeStatus.fetch({ jobId });
-          if (status.status === "completed") {
-            setGeneratingJobs((prev) => { const n = new Set(Array.from(prev)); n.delete(jobId); return n; });
-            setCompletedJobs((prev) => new Set([...Array.from(prev), jobId]));
-            toast.success("Resume generated!");
-          } else if (status.status === "failed") {
-            setGeneratingJobs((prev) => { const n = new Set(Array.from(prev)); n.delete(jobId); return n; });
-            toast.error("Resume generation failed");
-          }
-        } catch { /* ignore polling errors */ }
-      }
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [generatingJobs, utils]);
-
-  // Check initial resume status for all jobs
-  useEffect(() => {
-    if (!allJobs.length) return;
-    const checkExisting = async () => {
-      for (const job of allJobs.filter(j => j.status === "to_apply")) {
-        try {
-          const status = await utils.jobs.resumeStatus.fetch({ jobId: job.id });
-          if (status.status === "completed") {
-            setCompletedJobs((prev) => new Set([...Array.from(prev), job.id]));
-          } else if (status.status === "generating") {
-            setGeneratingJobs((prev) => new Set([...Array.from(prev), job.id]));
-          }
-        } catch { /* ignore */ }
-      }
-    };
-    checkExisting();
-  }, [allJobs.length]);
 
   const applierReject = trpc.jobs.applierReject.useMutation({
     onSuccess: () => {
@@ -483,64 +434,7 @@ export default function ApplierView() {
                         </button>
                       )}
 
-                      {/* Generate Resume */}
-                      {completedJobs.has(job.id) ? (
-                        <a
-                          href={`/api/resume/download/${job.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 px-3 py-2 font-bold text-xs tracking-widest uppercase transition-all text-center justify-center"
-                          style={{
-                            fontFamily: "Press Start 2P, monospace",
-                            background: "var(--atari-cyan)",
-                            color: "var(--atari-black)",
-                            border: "2px solid var(--atari-cyan)",
-                            letterSpacing: "0.08em",
-                            whiteSpace: "nowrap",
-                            textDecoration: "none",
-                          }}
-                        >
-                          <Download size={12} />
-                          Download Resume
-                        </a>
-                      ) : generatingJobs.has(job.id) ? (
-                        <button
-                          disabled
-                          className="flex items-center gap-1 px-3 py-2 font-bold text-xs tracking-widest uppercase"
-                          style={{
-                            fontFamily: "Press Start 2P, monospace",
-                            background: "transparent",
-                            color: "var(--atari-amber)",
-                            border: "1.5px solid var(--atari-amber)",
-                            letterSpacing: "0.08em",
-                            whiteSpace: "nowrap",
-                            opacity: 0.8,
-                          }}
-                        >
-                          <Loader2 size={12} className="animate-spin" />
-                          Generating...
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => generateResume.mutate({ jobId: job.id })}
-                          disabled={generateResume.isPending}
-                          className="flex items-center gap-1 px-3 py-2 font-bold text-xs tracking-widest uppercase transition-all"
-                          style={{
-                            fontFamily: "Press Start 2P, monospace",
-                            background: "transparent",
-                            color: "var(--atari-cyan)",
-                            border: "1.5px solid var(--atari-cyan)",
-                            letterSpacing: "0.08em",
-                            whiteSpace: "nowrap",
-                            opacity: 0.7,
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                          onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
-                        >
-                          <FileText size={12} />
-                          Generate Resume
-                        </button>
-                      )}
+                      <ResumeButton jobId={job.id} />
 
                       <button
                         onClick={() => setSelectedJob(job)}

@@ -68,9 +68,9 @@ export const jobs = mysqlTable("jobs", {
   statusChangedAt: timestamp("statusChangedAt"),
   autoRejected: boolean("autoRejected").default(false).notNull(),
   blockedReason: varchar("blockedReason", { length: 512 }),
-  resumeGeneratedPath: varchar("resumeGeneratedPath", { length: 512 }),
   manuallyAdded: boolean("manuallyAdded").default(false).notNull(),
   addedBy: varchar("addedBy", { length: 255 }),
+  resumeGeneratedPath: varchar("resumeGeneratedPath", { length: 512 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -229,7 +229,7 @@ export const systemConfig = mysqlTable("system_config", {
 
 export type SystemConfig = typeof systemConfig.$inferSelect;
 
-// ─── Resume Generation Log ───────────────────────────────────────────────────
+// ─── Resume Generation Log ──────────────────────────────────────────────────
 
 export const resumeGenerationLog = mysqlTable("resume_generation_log", {
   id: int("id").autoincrement().primaryKey(),
@@ -248,4 +248,14 @@ export const resumeGenerationLog = mysqlTable("resume_generation_log", {
 });
 
 export type ResumeGenerationLogEntry = typeof resumeGenerationLog.$inferSelect;
-export type InsertResumeGenerationLog = typeof resumeGenerationLog.$inferInsert;
+
+// ─── Resume Config (Document Vault) ─────────────────────────────────────────
+
+export const resumeConfig = mysqlTable("resume_config", {
+  id: int("id").autoincrement().primaryKey(),
+  configKey: varchar("configKey", { length: 64 }).notNull().unique(),
+  configValue: text("configValue").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ResumeConfig = typeof resumeConfig.$inferSelect;

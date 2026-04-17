@@ -596,3 +596,97 @@ export async function getPendingScoringCount(): Promise<number> {
     .where(sql`${jobs.matchScore} = 0 AND ${jobs.status} = 'matched'`);
   return result[0]?.c ?? 0;
 }
+
+// ─── Resume Generation ──────────────────────────────────────────────────────
+
+import { resumeGenerationLog, resumeConfig } from "../drizzle/schema";
+
+/** Insert a new resume generation log entry and return its ID */
+export async function insertResumeLog(entry: {
+  jobId: number;
+  jobTitle: string | null;
+  jobCompany: string | null;
+  requestedBy: string;
+  requestedByUserId: number | null;
+}): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.insert(resumeGenerationLog).values({
+    jobId: entry.jobId,
+    jobTitle: entry.jobTitle,
+    jobCompany: entry.jobCompany,
+    requestedBy: entry.requestedBy,
+    requestedByUserId: entry.requestedByUserId,
+    status: "pending",
+  });
+  return (result as any)[0]?.insertId ?? 0;
+}
+
+/** Update a resume generation log entry */
+export async function updateResumeLog(
+  logId: number,
+  update: {
+    status?: "pending" | "generating" | "completed" | "failed";
+    filePath?: string | null;
+    fileUrl?: string | null;
+    errorMessage?: string | null;
+    durationMs?: number | null;
+    completedAt?: Date | null;
+  }
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const setObj: Record<string, unknown> = {};
+  if (update.status !== undefined) setObj.status = update.status;
+  if (update.filePath !== undefined) setObj.filePath = update.filePath;
+  if (update.fileUrl !== undefined) setObj.fileUrl = update.fileUrl;
+  if (update.errorMessage !== undefined) setObj.errorMessage = update.errorMessage;
+  if (update.durationMs !== undefined) setObj.durationMs = update.durationMs;
+  if (update.completedAt !== undefined) setObj.completedAt = update.completedAt;
+  if (Object.keys(setObj).length === 0) return;
+  await db.update(resumeGenerationLog).set(setObj).where(eq(resumeGenerationLog.id, logId));
+}
+
+/** Get all resume generation log entries, newest first */
+export async function getAllResumeLogs() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(resumeGenerationLog).orderBy(desc(resumeGenerationLog.requestedAt));
+}
+
+/** Get resume log entry by ID */
+export async function getResumeLogById(logId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(resumeGenerationLog).where(eq(resumeGenerationLog.id, logId)).limit(1);
+  return rows[0] ?? null;
+}
+
+/** Get a resume config value by key */
+export async function getResumeConfig(key: string): Promise<string | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select({ configValue: resumeConfig.configValue }).from(resumeConfig).where(eq(resumeConfig.configKey, key)).limit(1);
+  return rows[0]?.configValue ?? null;
+}
+
+/** Upsert a resume config value */
+export async function upsertResumeConfig(key: string, value: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(resumeConfig).values({ configKey: key, configValue: value }).onDuplicateKeyUpdate({ set: { configValue: value } });
+}
+
+/** Get all resume config entries */
+export async function getAllResumeConfigs() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(resumeConfig);
+}
+
+/** Update job's resumeGeneratedPath */
+export async function updateJobResumePath(jobId: number, path: string | null): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(jobs).set({ resumeGeneratedPath: path }).where(eq(jobs.id, jobId));
+}

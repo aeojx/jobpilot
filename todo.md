@@ -487,14 +487,17 @@
 - [x] Display blockedReason on Blocked column cards
 - [x] Update release notes with v3.33 entry
 
-## v3.38 Multi-Update: Applier Access, Performance Tab, Resume Generation
-
-- [x] Give Applier full tab access (same tabs as owner)
-- [x] Performance Tab: remove gamification points and daily targets, keep only Recent History
-- [x] Add Generate Resume button to Dashboard "To Apply" cards
-- [x] Fix resume generation stuck in "Generating" state (rebuilt backend from scratch)
-- [x] Create Resume Generation tab accessible to all users
-- [x] Resume Generation tab: "Resume Log" sub-tab tracking all generation requests (time, user, download link)
-- [x] Resume Generation tab: "Configuration" sub-tab for editing resume generation config/template
-- [x] Add DB schema for resume generation log table
-- [x] Update release notes with v3.38 entry
+## v3.39 Resume Generation Full Rebuild
+- [x] Store base profile in resume_config DB table (Document Vault)
+- [x] Store prompt template and CSS in resume_config DB table
+- [x] Create resume-generator.ts with invokeLLM + manus-md-to-pdf conversion
+- [x] Zero-hallucination + keyword-optimization instructions in prompt
+- [x] Add tRPC endpoints: generateResume, resumeStatus, resumeLog, resumeConfig, updateResumeConfig
+- [x] Add /api/resume/download/:jobId express route for PDF serving
+- [x] Add Generate Resume button to My Queue with 3 states (Generate/Generating/Download)
+- [x] Add Generate Resume button to Dashboard To Apply cards
+- [x] Create Resume Generation page with Resume Log sub-tab
+- [x] Create Resume Generation page with Configuration sub-tab
+- [x] Add Resume Generation nav item to sidebar for all users
+- [x] Log all generation requests in resume_generation_log table
+- [x] Update release notes with v3.39 entry

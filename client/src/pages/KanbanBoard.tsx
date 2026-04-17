@@ -13,10 +13,10 @@ import {
   PlusCircle,
   User,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import JobDetailModal from "@/components/JobDetailModal";
-import { FileText, Download } from "lucide-react";
+import ResumeButton from "@/components/ResumeButton";
 
 type KanbanStatus = "ingested" | "matched" | "to_apply" | "blocked" | "applied" | "rejected" | "expired";
 type SortKey = "default" | "score_desc" | "score_asc" | "dwell_desc" | "dwell_asc";
@@ -103,8 +103,6 @@ function JobCard({
   onDragEnd,
   onClick,
   onQuickAction,
-  resumeState,
-  onGenerateResume,
 }: {
   job: Job;
   isOwner: boolean;
@@ -112,8 +110,6 @@ function JobCard({
   onDragEnd: () => void;
   onClick: (job: Job) => void;
   onQuickAction?: (id: number, status: KanbanStatus) => void;
-  resumeState?: "idle" | "generating" | "completed";
-  onGenerateResume?: (jobId: number) => void;
 }) {
   const score = Math.round(job.matchScore ?? 0);
   const scoreColor = getScoreColor(score);
@@ -251,10 +247,21 @@ function JobCard({
         </p>
       )}
 
+      {/* Resume button — on To Apply and Applied cards */}
+      {(isToApply || job.status === "applied") && (
+        <div
+          className="mt-3 pt-2"
+          style={{ borderTop: "1px solid var(--atari-border)" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <ResumeButton jobId={job.id} compact />
+        </div>
+      )}
+
       {/* Quick action buttons — on To Apply and Blocked cards */}
       {(isToApply || job.status === "blocked") && onQuickAction && (
         <div
-          className="flex gap-2 mt-4 pt-2"
+          className="flex gap-2 mt-3 pt-2"
           style={{ borderTop: "1px solid var(--atari-border)", paddingTop: "0.5rem" }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -307,63 +314,6 @@ function JobCard({
             <XCircle size={10} />
             EXPIRED
           </button>
-          {/* Generate Resume button on To Apply cards */}
-          {isToApply && onGenerateResume && (
-            resumeState === "completed" ? (
-              <a
-                href={`/api/resume/download/${job.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 flex-1 justify-center py-1 px-2 text-xs font-pixel transition-all"
-                style={{
-                  background: "var(--atari-cyan)",
-                  border: "1px solid var(--atari-cyan)",
-                  color: "var(--atari-black)",
-                  fontSize: "7px",
-                  cursor: "pointer",
-                  letterSpacing: "0.05em",
-                  textDecoration: "none",
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Download size={10} />
-                DOWNLOAD
-              </a>
-            ) : resumeState === "generating" ? (
-              <button
-                disabled
-                className="flex items-center gap-1 flex-1 justify-center py-1 px-2 text-xs font-pixel"
-                style={{
-                  background: "transparent",
-                  border: "1px solid var(--atari-amber)",
-                  color: "var(--atari-amber)",
-                  fontSize: "7px",
-                  letterSpacing: "0.05em",
-                  opacity: 0.8,
-                }}
-              >
-                <Loader2 size={10} className="animate-spin" />
-                GENERATING
-              </button>
-            ) : (
-              <button
-                className="flex items-center gap-1 flex-1 justify-center py-1 px-2 text-xs font-pixel transition-all"
-                style={{
-                  background: "transparent",
-                  border: "1px solid var(--atari-cyan)",
-                  color: "var(--atari-cyan)",
-                  fontSize: "7px",
-                  cursor: "pointer",
-                  letterSpacing: "0.05em",
-                }}
-                onClick={(e) => { e.stopPropagation(); onGenerateResume(job.id); }}
-                title="Generate tailored resume"
-              >
-                <FileText size={10} />
-                RESUME
-              </button>
-            )
-          )}
         </div>
       )}
     </div>
@@ -380,8 +330,6 @@ function KanbanColumn({
   onCardClick,
   onQuickAction,
   sortKey,
-  resumeStates,
-  onGenerateResume,
 }: {
   column: (typeof COLUMNS)[0];
   jobs: Job[];
@@ -392,8 +340,6 @@ function KanbanColumn({
   onCardClick: (job: Job) => void;
   onQuickAction?: (id: number, status: KanbanStatus) => void;
   sortKey: SortKey;
-  resumeStates?: Record<number, "idle" | "generating" | "completed">;
-  onGenerateResume?: (jobId: number) => void;
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const sorted = useMemo(() => sortJobs(jobs, sortKey), [jobs, sortKey]);
@@ -454,8 +400,6 @@ function KanbanColumn({
             onDragEnd={onDragEnd}
             onClick={onCardClick}
             onQuickAction={(column.id === "to_apply" || column.id === "blocked") ? onQuickAction : undefined}
-            resumeState={resumeStates?.[job.id] ?? "idle"}
-            onGenerateResume={column.id === "to_apply" ? onGenerateResume : undefined}
           />
         ))}
       </div>
@@ -482,61 +426,6 @@ export default function KanbanBoard() {
   const [blockingJobId, setBlockingJobId] = useState<number | null>(null);
   const [blockReason, setBlockReason] = useState("");
   const blockReasonRef = useRef<HTMLInputElement>(null);
-
-  // Resume generation state
-  const [resumeStates, setResumeStates] = useState<Record<number, "idle" | "generating" | "completed">>({});
-  const generateResume = trpc.jobs.generateResume.useMutation({
-    onSuccess: (_data, variables) => {
-      setResumeStates((prev) => ({ ...prev, [variables.jobId]: "generating" }));
-      toast.success("Resume generation started!");
-    },
-    onError: (e) => toast.error(e.message),
-  });
-
-  // Poll for resume status on generating jobs
-  useEffect(() => {
-    const generatingIds = Object.entries(resumeStates).filter(([, s]) => s === "generating").map(([id]) => Number(id));
-    if (generatingIds.length === 0) return;
-    const interval = setInterval(async () => {
-      for (const jobId of generatingIds) {
-        try {
-          const status = await utils.jobs.resumeStatus.fetch({ jobId });
-          if (status.status === "completed") {
-            setResumeStates((prev) => ({ ...prev, [jobId]: "completed" }));
-            toast.success("Resume generated!");
-          } else if (status.status === "failed") {
-            setResumeStates((prev) => ({ ...prev, [jobId]: "idle" }));
-            toast.error("Resume generation failed");
-          }
-        } catch { /* ignore */ }
-      }
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [resumeStates, utils]);
-
-  // Check initial resume status for to_apply jobs
-  useEffect(() => {
-    if (!jobs.length) return;
-    const toApply = jobs.filter((j) => j.status === "to_apply");
-    if (toApply.length === 0) return;
-    const checkExisting = async () => {
-      for (const job of toApply) {
-        try {
-          const status = await utils.jobs.resumeStatus.fetch({ jobId: job.id });
-          if (status.status === "completed") {
-            setResumeStates((prev) => ({ ...prev, [job.id]: "completed" }));
-          } else if (status.status === "generating") {
-            setResumeStates((prev) => ({ ...prev, [job.id]: "generating" }));
-          }
-        } catch { /* ignore */ }
-      }
-    };
-    checkExisting();
-  }, [jobs.length]);
-
-  const handleGenerateResume = useCallback((jobId: number) => {
-    generateResume.mutate({ jobId });
-  }, [generateResume]);
 
   // Manual Add form state
   const [showManualForm, setShowManualForm] = useState(false);
@@ -715,8 +604,6 @@ export default function KanbanBoard() {
               onCardClick={setSelectedJob}
               onQuickAction={handleQuickAction}
               sortKey={sortKey}
-              resumeStates={resumeStates}
-              onGenerateResume={handleGenerateResume}
             />
           ))}
         </div>

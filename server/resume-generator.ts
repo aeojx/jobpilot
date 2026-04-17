@@ -1,137 +1,221 @@
-import { invokeLLM } from "./_core/llm";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
-import { join } from "path";
+/**
+ * Resume Generator Service
+ *
+ * Uses invokeLLM() to generate a tailored resume in Markdown,
+ * then converts to PDF using manus-md-to-pdf CLI tool.
+ * Uploads the PDF to S3 via storagePut and logs everything.
+ */
+
 import { execSync } from "child_process";
-import MarkdownIt from "markdown-it";
+import * as fs from "fs";
+import * as path from "path";
+import { invokeLLM } from "./_core/llm";
+import { storagePut } from "./storage";
+import {
+  getResumeConfig,
+  getJobById,
+  insertResumeLog,
+  updateResumeLog,
+  updateJobResumePath,
+} from "./db";
 
-const RESUME_ENGINE_DIR = "/home/ubuntu/projects/1000jobs-main-folder-8ad188bd/resume_engine";
-const OUTPUT_DIR = "/home/ubuntu/projects/1000jobs-main-folder-8ad188bd/tailored_resumes";
+const RESUME_DIR = path.join(process.cwd(), "resume_engine", "tailored_resumes");
 
-const md = new MarkdownIt({ html: true, breaks: false });
-
-function sanitizeFilename(str: string): string {
-  return str
-    .replace(/[^a-zA-Z0-9\s\-_]/g, "")
-    .replace(/\s+/g, "_")
-    .substring(0, 80);
+// Ensure output directory exists
+if (!fs.existsSync(RESUME_DIR)) {
+  fs.mkdirSync(RESUME_DIR, { recursive: true });
 }
 
-export interface ResumeGenerationResult {
-  success: boolean;
+export interface GenerateResumeInput {
+  jobId: number;
+  requestedBy: string;
+  requestedByUserId: number | null;
+}
+
+export interface GenerateResumeResult {
+  logId: number;
+  status: "completed" | "failed";
   filePath?: string;
+  fileUrl?: string;
   error?: string;
-  durationMs: number;
 }
 
-export async function generateResumeForJob(
-  jobTitle: string,
-  jobCompany: string,
-  jobDescription: string
-): Promise<ResumeGenerationResult> {
+/**
+ * Generate a tailored resume for a specific job.
+ * This is an async operation — call it and let it run in the background.
+ */
+export async function generateResume(
+  input: GenerateResumeInput
+): Promise<GenerateResumeResult> {
   const startTime = Date.now();
 
+  // 1. Get job details
+  const job = await getJobById(input.jobId);
+  if (!job) {
+    throw new Error(`Job not found: ${input.jobId}`);
+  }
+
+  // 2. Create log entry
+  const logId = await insertResumeLog({
+    jobId: job.id,
+    jobTitle: job.title,
+    jobCompany: job.company,
+    requestedBy: input.requestedBy,
+    requestedByUserId: input.requestedByUserId,
+  });
+
   try {
-    if (!existsSync(OUTPUT_DIR)) {
-      mkdirSync(OUTPUT_DIR, { recursive: true });
-    }
+    // 3. Update status to generating
+    await updateResumeLog(logId, { status: "generating" });
 
-    const profilePath = join(RESUME_ENGINE_DIR, "AlanAbbas_Complete_Profile.md");
-    if (!existsSync(profilePath)) {
-      throw new Error(`Master profile not found at ${profilePath}`);
-    }
-    const profile = readFileSync(profilePath, "utf-8");
+    // 4. Load config from DB (Document Vault)
+    const [profile, promptTemplate, resumeCss] = await Promise.all([
+      getResumeConfig("profile"),
+      getResumeConfig("prompt_template"),
+      getResumeConfig("resume_css"),
+    ]);
 
-    const templatePath = join(RESUME_ENGINE_DIR, "prompt_template.txt");
-    if (!existsSync(templatePath)) {
-      throw new Error(`Prompt template not found at ${templatePath}`);
-    }
-    const template = readFileSync(templatePath, "utf-8");
+    if (!profile) throw new Error("Master profile not found in resume_config");
+    if (!promptTemplate) throw new Error("Prompt template not found in resume_config");
 
-    const filledPrompt = template
-      .replace("{{PROFILE_PLACEHOLDER}}", profile)
-      .replace("{{JD_PLACEHOLDER}}", jobDescription);
+    // 5. Build the job description context
+    const jobContext = [
+      `JOB TITLE: ${job.title}`,
+      `COMPANY: ${job.company}`,
+      job.location ? `LOCATION: ${job.location}` : "",
+      job.source ? `SOURCE/ATS: ${job.source}` : "",
+      "",
+      "JOB DESCRIPTION:",
+      job.description || job.descriptionHtml || "(No description available)",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
-    console.log(`[Resume] Calling LLM for ${jobTitle} at ${jobCompany}...`);
+    // 6. Call LLM to generate tailored resume markdown
+    console.log(
+      `[Resume Generator] Starting LLM generation for job ${job.id}: ${job.title} @ ${job.company}`
+    );
 
     const response = await invokeLLM({
       messages: [
         {
           role: "system",
-          content:
-            "You are an elite executive resume writer and ATS/AEO optimization expert. You produce resumes that score 100% on JobScan by precisely mirroring JD keywords into real achievements. You write in clean, professional Markdown. You are extremely concise - every word earns its place.",
+          content: promptTemplate,
         },
         {
           role: "user",
-          content: filledPrompt,
+          content: [
+            "=== MASTER PROFILE (source of truth — use ONLY facts from here) ===",
+            profile,
+            "",
+            "=== TARGET JOB DESCRIPTION (optimize resume for this) ===",
+            jobContext,
+            "",
+            "Generate the tailored resume now in Markdown format. Remember: ZERO hallucination — every fact must come from the master profile above.",
+          ].join("\n"),
         },
       ],
+      maxTokens: 8192,
     });
 
-    const markdownContent =
-      typeof response.choices[0].message.content === "string"
+    const resumeMarkdown =
+      typeof response.choices?.[0]?.message?.content === "string"
         ? response.choices[0].message.content
-        : Array.isArray(response.choices[0].message.content)
-          ? response.choices[0].message.content
-              .filter((p: any): p is { type: "text"; text: string } => p.type === "text")
-              .map((p: any) => p.text)
-              .join("\n")
-          : "";
+        : "";
 
-    if (!markdownContent || markdownContent.length < 100) {
-      throw new Error("LLM returned empty or too-short response");
+    if (!resumeMarkdown || resumeMarkdown.length < 200) {
+      throw new Error("LLM returned insufficient resume content");
     }
 
-    console.log(`[Resume] LLM returned ${markdownContent.length} chars of markdown`);
+    console.log(
+      `[Resume Generator] LLM generated ${resumeMarkdown.length} chars of markdown`
+    );
 
-    const htmlBody = md.render(markdownContent);
+    // 7. Write markdown to temp file
+    const sanitizedCompany = job.company
+      .replace(/[^a-zA-Z0-9]/g, "_")
+      .substring(0, 30);
+    const sanitizedTitle = job.title
+      .replace(/[^a-zA-Z0-9]/g, "_")
+      .substring(0, 30);
+    const timestamp = Date.now();
+    const baseName = `AlanAbbas_${sanitizedCompany}_${sanitizedTitle}_${timestamp}`;
+    const mdPath = path.join(RESUME_DIR, `${baseName}.md`);
+    const pdfPath = path.join(RESUME_DIR, `${baseName}.pdf`);
 
-    const cssPath = join(RESUME_ENGINE_DIR, "resume_style.css");
-    const css = existsSync(cssPath) ? readFileSync(cssPath, "utf-8") : "";
+    // Write the markdown with embedded CSS
+    const fullMarkdown = resumeCss
+      ? `<style>\n${resumeCss}\n</style>\n\n${resumeMarkdown}`
+      : resumeMarkdown;
 
-    const fullHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<style>${css}</style>
-</head>
-<body>${htmlBody}</body>
-</html>`;
+    fs.writeFileSync(mdPath, fullMarkdown, "utf-8");
+    console.log(`[Resume Generator] Wrote markdown to ${mdPath}`);
 
-    const safeName = `${sanitizeFilename(jobTitle)}_${sanitizeFilename(jobCompany)}_AlanAbbas`;
-    const mdPath = join(OUTPUT_DIR, `${safeName}.md`);
-    const htmlPath = join(OUTPUT_DIR, `${safeName}.html`);
-    const pdfPath = join(OUTPUT_DIR, `${safeName}.pdf`);
-
-    writeFileSync(mdPath, markdownContent, "utf-8");
-    writeFileSync(htmlPath, fullHtml, "utf-8");
-
+    // 8. Convert to PDF using manus-md-to-pdf
     try {
       execSync(`manus-md-to-pdf "${mdPath}" "${pdfPath}"`, {
-        timeout: 30000,
+        timeout: 60000,
         stdio: "pipe",
       });
-      console.log(`[Resume] PDF generated: ${pdfPath}`);
-    } catch (pdfErr: any) {
-      console.error(`[Resume] manus-md-to-pdf failed, trying WeasyPrint...`, pdfErr.message);
-      try {
-        execSync(`python3 -c "from weasyprint import HTML; HTML(filename='${htmlPath}').write_pdf('${pdfPath}')"`, {
-          timeout: 30000,
-          stdio: "pipe",
-        });
-        console.log(`[Resume] PDF generated via WeasyPrint: ${pdfPath}`);
-      } catch (wpErr: any) {
-        console.error(`[Resume] WeasyPrint also failed:`, wpErr.message);
-        throw new Error("PDF conversion failed with both manus-md-to-pdf and WeasyPrint");
-      }
+      console.log(`[Resume Generator] PDF generated at ${pdfPath}`);
+    } catch (pdfError: any) {
+      console.error(
+        `[Resume Generator] PDF conversion error:`,
+        pdfError.stderr?.toString() || pdfError.message
+      );
+      throw new Error(
+        `PDF conversion failed: ${pdfError.stderr?.toString() || pdfError.message}`
+      );
     }
 
-    const durationMs = Date.now() - startTime;
-    console.log(`[Resume] Resume generated for ${jobTitle} at ${jobCompany} in ${durationMs}ms`);
+    // 9. Upload PDF to S3
+    let fileUrl = "";
+    try {
+      const pdfBuffer = fs.readFileSync(pdfPath);
+      const s3Key = `resumes/${baseName}.pdf`;
+      const result = await storagePut(s3Key, pdfBuffer, "application/pdf");
+      fileUrl = result.url;
+      console.log(`[Resume Generator] Uploaded to S3: ${fileUrl}`);
+    } catch (s3Error: any) {
+      console.warn(
+        `[Resume Generator] S3 upload failed, using local path:`,
+        s3Error.message
+      );
+      // Fall back to local path — the download endpoint will serve it
+    }
 
-    return { success: true, filePath: pdfPath, durationMs };
+    // 10. Update job and log
+    const durationMs = Date.now() - startTime;
+    await updateJobResumePath(job.id, fileUrl || pdfPath);
+    await updateResumeLog(logId, {
+      status: "completed",
+      filePath: pdfPath,
+      fileUrl: fileUrl || null,
+      durationMs,
+      completedAt: new Date(),
+    });
+
+    // Clean up markdown file
+    try {
+      fs.unlinkSync(mdPath);
+    } catch {}
+
+    console.log(
+      `[Resume Generator] Completed in ${durationMs}ms for job ${job.id}`
+    );
+
+    return { logId, status: "completed", filePath: pdfPath, fileUrl };
   } catch (error: any) {
     const durationMs = Date.now() - startTime;
-    console.error(`[Resume] Failed for ${jobTitle} at ${jobCompany}:`, error.message);
-    return { success: false, error: error.message, durationMs };
+    console.error(`[Resume Generator] Failed for job ${input.jobId}:`, error);
+
+    await updateResumeLog(logId, {
+      status: "failed",
+      errorMessage: error.message || "Unknown error",
+      durationMs,
+      completedAt: new Date(),
+    });
+
+    return { logId, status: "failed", error: error.message };
   }
 }

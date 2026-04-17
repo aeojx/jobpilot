@@ -35,40 +35,6 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
-  // Resume PDF download endpoint
-  app.get("/api/resume/download/:jobId", async (req, res) => {
-    try {
-      const jobId = parseInt(req.params.jobId, 10);
-      if (isNaN(jobId)) { res.status(400).send("Invalid job ID"); return; }
-      const { getDb } = await import("../db");
-      const db = await getDb();
-      if (!db) { res.status(500).send("Database not available"); return; }
-      const { resumeGenerationLog } = await import("../../drizzle/schema");
-      const { eq, desc } = await import("drizzle-orm");
-      const [latest] = await db.select().from(resumeGenerationLog)
-        .where(eq(resumeGenerationLog.jobId, jobId))
-        .orderBy(desc(resumeGenerationLog.requestedAt))
-        .limit(1);
-      if (!latest || latest.status !== "completed" || !latest.filePath) {
-        res.status(404).send("Resume not found or not yet generated"); return;
-      }
-      const { existsSync, createReadStream, statSync } = await import("fs");
-      const { basename } = await import("path");
-      if (!existsSync(latest.filePath)) {
-        res.status(404).send("Resume file not found on disk"); return;
-      }
-      const stat = statSync(latest.filePath);
-      const filename = basename(latest.filePath);
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      res.setHeader("Content-Length", stat.size);
-      createReadStream(latest.filePath).pipe(res);
-    } catch (err: any) {
-      console.error("[Resume Download] Error:", err.message);
-      res.status(500).send("Internal server error");
-    }
-  });
-
   // tRPC API
   app.use(
     "/api/trpc",
@@ -77,6 +43,45 @@ async function startServer() {
       createContext,
     })
   );
+
+  // Resume PDF download endpoint
+  app.get("/api/resume/download/:jobId", async (req, res) => {
+    try {
+      const jobId = parseInt(req.params.jobId, 10);
+      if (isNaN(jobId)) {
+        res.status(400).send("Invalid job ID");
+        return;
+      }
+      // Import getJobById dynamically to avoid circular deps
+      const { getJobById } = await import("../db");
+      const job = await getJobById(jobId);
+      if (!job || !job.resumeGeneratedPath) {
+        res.status(404).send("Resume not found");
+        return;
+      }
+      // If it's a URL (S3), redirect to it
+      if (job.resumeGeneratedPath.startsWith("http")) {
+        res.redirect(job.resumeGeneratedPath);
+        return;
+      }
+      // Otherwise serve the local file
+      const fs = await import("fs");
+      const path = await import("path");
+      const filePath = job.resumeGeneratedPath;
+      if (!fs.existsSync(filePath)) {
+        res.status(404).send("Resume file not found on disk");
+        return;
+      }
+      const fileName = `AlanAbbas_${job.company.replace(/[^a-zA-Z0-9]/g, "_")}_Resume.pdf`;
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+      res.setHeader("Content-Length", fs.statSync(filePath).size.toString());
+      fs.createReadStream(filePath).pipe(res);
+    } catch (err: any) {
+      console.error("[Resume Download] Error:", err);
+      res.status(500).send("Internal server error");
+    }
+  });
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
