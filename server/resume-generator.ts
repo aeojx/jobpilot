@@ -2,11 +2,13 @@
  * Resume Generator Service
  *
  * Uses invokeLLM() to generate a tailored resume in Markdown,
- * then converts to PDF using manus-md-to-pdf CLI tool.
+ * then converts to PDF using marked (MD→HTML) + puppeteer (HTML→PDF).
  * Uploads the PDF to S3 via storagePut and logs everything.
+ *
+ * NOTE: manus-md-to-pdf is a sandbox-only CLI tool and is NOT available
+ * in the deployed production environment. We use npm packages instead.
  */
 
-import { execSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { invokeLLM } from "./_core/llm";
@@ -50,6 +52,66 @@ function sanitizeForFilename(str: string): string {
     .replace(/[^a-zA-Z0-9\s]/g, "")
     .replace(/\s+/g, "_")
     .substring(0, 40);
+}
+
+/**
+ * Convert Markdown string to PDF buffer using marked + puppeteer.
+ * This approach works both in sandbox and in deployed production.
+ */
+async function markdownToPdf(
+  markdownContent: string,
+  cssContent: string | null
+): Promise<Buffer> {
+  // Dynamic imports to avoid top-level issues
+  const { marked } = await import("marked");
+  const puppeteer = await import("puppeteer");
+
+  // Convert markdown to HTML
+  const htmlBody = await marked.parse(markdownContent);
+
+  // Build full HTML document with embedded CSS
+  const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+${cssContent ? `<style>${cssContent}</style>` : ""}
+</head>
+<body>
+${htmlBody}
+</body>
+</html>`;
+
+  // Launch puppeteer and generate PDF
+  const browser = await puppeteer.default.launch({
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+    ],
+  });
+
+  try {
+    const page = await browser.newPage();
+    await page.setContent(fullHtml, { waitUntil: "networkidle0" });
+
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: {
+        top: "0.5in",
+        right: "0.5in",
+        bottom: "0.5in",
+        left: "0.5in",
+      },
+    });
+
+    return Buffer.from(pdfBuffer);
+  } finally {
+    await browser.close();
+  }
 }
 
 /**
@@ -148,38 +210,17 @@ export async function generateResume(
     const baseName = `${companyName}_AlanAbbas`;
     const timestamp = Date.now();
     const uniqueBaseName = `${baseName}_${timestamp}`;
-    const mdPath = path.join(RESUME_DIR, `${uniqueBaseName}.md`);
     const pdfPath = path.join(RESUME_DIR, `${uniqueBaseName}.pdf`);
 
-    // Write the markdown with embedded CSS
-    const fullMarkdown = resumeCss
-      ? `<style>\n${resumeCss}\n</style>\n\n${resumeMarkdown}`
-      : resumeMarkdown;
-
-    fs.writeFileSync(mdPath, fullMarkdown, "utf-8");
-    console.log(`[Resume Generator] Wrote markdown to ${mdPath}`);
-
-    // 8. Convert to PDF using manus-md-to-pdf
-    try {
-      execSync(`manus-md-to-pdf "${mdPath}" "${pdfPath}"`, {
-        timeout: 60000,
-        stdio: "pipe",
-      });
-      console.log(`[Resume Generator] PDF generated at ${pdfPath}`);
-    } catch (pdfError: any) {
-      console.error(
-        `[Resume Generator] PDF conversion error:`,
-        pdfError.stderr?.toString() || pdfError.message
-      );
-      throw new Error(
-        `PDF conversion failed: ${pdfError.stderr?.toString() || pdfError.message}`
-      );
-    }
+    // 8. Convert Markdown to PDF using marked + puppeteer (production-safe)
+    console.log(`[Resume Generator] Converting markdown to PDF via puppeteer...`);
+    const pdfBuffer = await markdownToPdf(resumeMarkdown, resumeCss);
+    fs.writeFileSync(pdfPath, pdfBuffer);
+    console.log(`[Resume Generator] PDF generated at ${pdfPath} (${pdfBuffer.length} bytes)`);
 
     // 9. Upload PDF to S3 with the clean filename
     let fileUrl = "";
     try {
-      const pdfBuffer = fs.readFileSync(pdfPath);
       const s3Key = `resumes/${baseName}_${timestamp}.pdf`;
       const result = await storagePut(s3Key, pdfBuffer, "application/pdf");
       fileUrl = result.url;
@@ -228,10 +269,12 @@ export async function generateResume(
       completedAt: new Date(),
     });
 
-    // Clean up markdown file
-    try {
-      fs.unlinkSync(mdPath);
-    } catch {}
+    // Clean up local PDF file after S3 upload
+    if (fileUrl) {
+      try {
+        fs.unlinkSync(pdfPath);
+      } catch {}
+    }
 
     console.log(
       `[Resume Generator] Completed in ${durationMs}ms for job ${job.id}`

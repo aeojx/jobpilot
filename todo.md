@@ -520,3 +520,6 @@
 ## v3.42 My Queue Add Job Fix & Resume Cost Column
 - [x] Change My Queue manual add to place jobs in 'to_apply' status instead of 'applied'
 - [x] Add credit cost column to Resume Gen log table
+
+## v3.43 Bug Fix: Resume Generation Error
+- [x] Diagnose and fix resume generation error (replaced manus-md-to-pdf CLI with marked+puppeteer npm packages)
