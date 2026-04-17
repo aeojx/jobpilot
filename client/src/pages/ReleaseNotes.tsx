@@ -14,6 +14,22 @@ interface ReleaseEntry {
 // ─── Release Data ─────────────────────────────────────────────────────────────
 const RELEASES: ReleaseEntry[] = [
   {
+    version: "3.40",
+    date: "Apr 17, 2026",
+    title: "Resume Generation v2 — Delete, Enhanced Prompt & Naming",
+    tag: "feature" as const,
+    content: (
+      <ul style={{ paddingLeft: "1.2rem", lineHeight: 1.8 }}>
+        <li><strong>Delete button on Resume Log</strong> — every completed or failed resume entry now has a red DEL button. Clicking it deletes the log entry, clears the job's resume path, and reverts the Generate Resume button back to its initial state.</li>
+        <li><strong>Updated LLM persona</strong> — the system prompt now uses the exact "Resume Agent" role with a primary objective of 90%+ ATS match, strict accuracy constraint, and zero-hallucination policy.</li>
+        <li><strong>Enhanced content structure</strong> — output now mirrors the OndoFinance baseline: EXECUTIVE SUMMARY (hard-hitting paragraph), CORE COMPETENCIES (4x3 grid), CAREER IMPACT AT A GLANCE (4 blockquote metrics), and all 6 professional experience roles with bold-label bullet patterns.</li>
+        <li><strong>No page-length restriction</strong> — the generator now prioritizes quality and comprehensive keyword coverage over brevity. maxTokens increased to 16,384.</li>
+        <li><strong>PDF naming convention</strong> — generated files now follow CompanyName_AlanAbbas.pdf format (e.g., Amazon_AlanAbbas.pdf).</li>
+        <li><strong>3 new vitest tests</strong> — covering resume.delete endpoint (find + delete, not found, failed entry cleanup). 94 total tests passing.</li>
+      </ul>
+    ),
+  },
+  {
     version: "3.39",
     date: "Apr 17, 2026",
     title: "Resume Generation — Tailored Resume Builder",

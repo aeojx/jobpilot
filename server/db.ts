@@ -690,3 +690,10 @@ export async function updateJobResumePath(jobId: number, path: string | null): P
   if (!db) return;
   await db.update(jobs).set({ resumeGeneratedPath: path }).where(eq(jobs.id, jobId));
 }
+
+/** Delete a resume generation log entry by ID */
+export async function deleteResumeLog(logId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(resumeGenerationLog).where(eq(resumeGenerationLog.id, logId));
+}

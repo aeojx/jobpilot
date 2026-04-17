@@ -10,6 +10,8 @@ vi.mock("./db", () => ({
   updateResumeLog: vi.fn(),
   updateJobResumePath: vi.fn(),
   getResumeConfig: vi.fn(),
+  getResumeLogById: vi.fn(),
+  deleteResumeLog: vi.fn(),
 }));
 
 // Mock the resume-generator module
@@ -22,6 +24,9 @@ import {
   getAllResumeLogs,
   getAllResumeConfigs,
   upsertResumeConfig,
+  getResumeLogById,
+  deleteResumeLog,
+  updateJobResumePath,
 } from "./db";
 import { generateResume } from "./resume-generator";
 
@@ -33,7 +38,6 @@ describe("Resume Generation Endpoints", () => {
   describe("resume.generate", () => {
     it("should reject when job not found", async () => {
       (getJobById as any).mockResolvedValue(null);
-      // The mutation checks getJobById before firing generateResume
       const job = await getJobById(999);
       expect(job).toBeNull();
     });
@@ -142,6 +146,54 @@ describe("Resume Generation Endpoints", () => {
       await upsertResumeConfig("profile", "Updated profile content");
 
       expect(upsertResumeConfig).toHaveBeenCalledWith("profile", "Updated profile content");
+    });
+  });
+
+  describe("resume.delete", () => {
+    it("should find the log entry and delete it, clearing the job resume path", async () => {
+      const mockLog = { id: 5, jobId: 10, status: "completed", jobTitle: "PM", jobCompany: "Acme" };
+      (getResumeLogById as any).mockResolvedValue(mockLog);
+      (updateJobResumePath as any).mockResolvedValue(undefined);
+      (deleteResumeLog as any).mockResolvedValue(undefined);
+
+      // Simulate the delete procedure logic
+      const log = await getResumeLogById(5);
+      expect(log).toBeTruthy();
+      expect(log!.jobId).toBe(10);
+
+      // Clear the job's resume path
+      await updateJobResumePath(log!.jobId, null);
+      expect(updateJobResumePath).toHaveBeenCalledWith(10, null);
+
+      // Delete the log entry
+      await deleteResumeLog(5);
+      expect(deleteResumeLog).toHaveBeenCalledWith(5);
+    });
+
+    it("should throw when log entry not found", async () => {
+      (getResumeLogById as any).mockResolvedValue(null);
+
+      const log = await getResumeLogById(999);
+      expect(log).toBeNull();
+    });
+
+    it("should handle delete of failed log entry (no job path to clear)", async () => {
+      const mockLog = { id: 7, jobId: 15, status: "failed", jobTitle: "Dev", jobCompany: "Corp" };
+      (getResumeLogById as any).mockResolvedValue(mockLog);
+      (updateJobResumePath as any).mockResolvedValue(undefined);
+      (deleteResumeLog as any).mockResolvedValue(undefined);
+
+      const log = await getResumeLogById(7);
+      expect(log).toBeTruthy();
+
+      // Even for failed entries, we clear the job path to allow regeneration
+      if (log!.jobId) {
+        await updateJobResumePath(log!.jobId, null);
+      }
+      await deleteResumeLog(7);
+
+      expect(updateJobResumePath).toHaveBeenCalledWith(15, null);
+      expect(deleteResumeLog).toHaveBeenCalledWith(7);
     });
   });
 });

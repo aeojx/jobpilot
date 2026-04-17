@@ -41,6 +41,18 @@ export interface GenerateResumeResult {
 }
 
 /**
+ * Sanitize a company name for use in a filename.
+ * Replaces spaces with underscores, removes special chars, trims.
+ */
+function sanitizeForFilename(str: string): string {
+  return str
+    .trim()
+    .replace(/[^a-zA-Z0-9\s]/g, "")
+    .replace(/\s+/g, "_")
+    .substring(0, 40);
+}
+
+/**
  * Generate a tailored resume for a specific job.
  * This is an async operation — call it and let it run in the background.
  */
@@ -111,11 +123,11 @@ export async function generateResume(
             "=== TARGET JOB DESCRIPTION (optimize resume for this) ===",
             jobContext,
             "",
-            "Generate the tailored resume now in Markdown format. Remember: ZERO hallucination — every fact must come from the master profile above.",
+            "Generate the tailored resume now in Markdown format. Remember: ZERO hallucination — every fact must come from the master profile above. Do NOT restrict to one page — include ALL relevant content to maximize ATS score. Focus on quality and comprehensive keyword coverage.",
           ].join("\n"),
         },
       ],
-      maxTokens: 8192,
+      maxTokens: 16384,
     });
 
     const resumeMarkdown =
@@ -131,17 +143,13 @@ export async function generateResume(
       `[Resume Generator] LLM generated ${resumeMarkdown.length} chars of markdown`
     );
 
-    // 7. Write markdown to temp file
-    const sanitizedCompany = job.company
-      .replace(/[^a-zA-Z0-9]/g, "_")
-      .substring(0, 30);
-    const sanitizedTitle = job.title
-      .replace(/[^a-zA-Z0-9]/g, "_")
-      .substring(0, 30);
+    // 7. Build filename: CompanyName_AlanAbbas.pdf
+    const companyName = sanitizeForFilename(job.company);
+    const baseName = `${companyName}_AlanAbbas`;
     const timestamp = Date.now();
-    const baseName = `AlanAbbas_${sanitizedCompany}_${sanitizedTitle}_${timestamp}`;
-    const mdPath = path.join(RESUME_DIR, `${baseName}.md`);
-    const pdfPath = path.join(RESUME_DIR, `${baseName}.pdf`);
+    const uniqueBaseName = `${baseName}_${timestamp}`;
+    const mdPath = path.join(RESUME_DIR, `${uniqueBaseName}.md`);
+    const pdfPath = path.join(RESUME_DIR, `${uniqueBaseName}.pdf`);
 
     // Write the markdown with embedded CSS
     const fullMarkdown = resumeCss
@@ -168,11 +176,11 @@ export async function generateResume(
       );
     }
 
-    // 9. Upload PDF to S3
+    // 9. Upload PDF to S3 with the clean filename
     let fileUrl = "";
     try {
       const pdfBuffer = fs.readFileSync(pdfPath);
-      const s3Key = `resumes/${baseName}.pdf`;
+      const s3Key = `resumes/${baseName}_${timestamp}.pdf`;
       const result = await storagePut(s3Key, pdfBuffer, "application/pdf");
       fileUrl = result.url;
       console.log(`[Resume Generator] Uploaded to S3: ${fileUrl}`);

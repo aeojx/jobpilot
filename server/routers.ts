@@ -48,6 +48,9 @@ import {
   getResumeConfig,
   upsertResumeConfig,
   getAllResumeConfigs,
+  deleteResumeLog,
+  getResumeLogById,
+  updateJobResumePath,
 } from "./db";
 import { generateResume } from "./resume-generator";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -1422,6 +1425,24 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await upsertResumeConfig(input.key, input.value);
         return { success: true };
+      }),
+
+    /** Delete a resume generation log entry and clear the job's resume path */
+    delete: protectedProcedure
+      .input(z.object({ logId: z.number() }))
+      .mutation(async ({ input }) => {
+        const log = await getResumeLogById(input.logId);
+        if (!log) throw new TRPCError({ code: "NOT_FOUND", message: "Resume log entry not found" });
+
+        // Clear the job's resumeGeneratedPath so the button reverts to "Generate Resume"
+        if (log.jobId) {
+          await updateJobResumePath(log.jobId, null);
+        }
+
+        // Delete the log entry
+        await deleteResumeLog(input.logId);
+
+        return { success: true, jobId: log.jobId };
       }),
   }),
 });

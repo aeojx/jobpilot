@@ -10,6 +10,7 @@ import {
   Clock,
   Save,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -59,9 +60,33 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function ResumeLog() {
+  const utils = trpc.useUtils();
   const { data: logs = [], isLoading, refetch } = trpc.resume.log.useQuery(undefined, {
     refetchInterval: 5000,
   });
+
+  const deleteMutation = trpc.resume.delete.useMutation({
+    onSuccess: (data) => {
+      toast.success("Resume deleted — you can regenerate it now");
+      // Invalidate both the log and the status for the affected job
+      utils.resume.log.invalidate();
+      if (data.jobId) {
+        utils.resume.status.invalidate({ jobId: data.jobId });
+      }
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const handleDelete = (logId: number) => {
+    if (deletingId) return; // prevent double-click
+    setDeletingId(logId);
+    deleteMutation.mutate(
+      { logId },
+      { onSettled: () => setDeletingId(null) }
+    );
+  };
 
   const stats = useMemo(() => {
     const total = logs.length;
@@ -258,37 +283,67 @@ function ResumeLog() {
                     {formatDate(log.requestedAt)}
                   </td>
                   <td style={{ padding: "8px 10px" }}>
-                    {log.status === "completed" && log.fileUrl && (
-                      <a
-                        href={log.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1"
-                        style={{
-                          fontFamily: "Press Start 2P, monospace",
-                          fontSize: "0.5rem",
-                          color: "var(--atari-cyan)",
-                          letterSpacing: "0.06em",
-                          textDecoration: "none",
-                        }}
-                      >
-                        <Download size={10} />
-                        PDF
-                      </a>
-                    )}
-                    {log.status === "failed" && log.errorMessage && (
-                      <span
-                        title={log.errorMessage}
-                        style={{
-                          fontFamily: "var(--font-mono)",
-                          fontSize: "0.6rem",
-                          color: "var(--atari-red)",
-                          cursor: "help",
-                        }}
-                      >
-                        Hover for error
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {/* Download link for completed resumes */}
+                      {log.status === "completed" && log.fileUrl && (
+                        <a
+                          href={log.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1"
+                          style={{
+                            fontFamily: "Press Start 2P, monospace",
+                            fontSize: "0.5rem",
+                            color: "var(--atari-cyan)",
+                            letterSpacing: "0.06em",
+                            textDecoration: "none",
+                          }}
+                        >
+                          <Download size={10} />
+                          PDF
+                        </a>
+                      )}
+                      {/* Error hover for failed resumes */}
+                      {log.status === "failed" && log.errorMessage && (
+                        <span
+                          title={log.errorMessage}
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: "0.6rem",
+                            color: "var(--atari-red)",
+                            cursor: "help",
+                          }}
+                        >
+                          Error
+                        </span>
+                      )}
+                      {/* Delete button — always visible for completed and failed entries */}
+                      {(log.status === "completed" || log.status === "failed") && (
+                        <button
+                          onClick={() => handleDelete(log.id)}
+                          disabled={deletingId === log.id}
+                          className="flex items-center gap-1 px-1.5 py-0.5 transition-all"
+                          style={{
+                            fontFamily: "Press Start 2P, monospace",
+                            fontSize: "0.45rem",
+                            background: "transparent",
+                            color: deletingId === log.id ? "var(--atari-gray)" : "var(--atari-red)",
+                            border: `1px solid ${deletingId === log.id ? "var(--atari-gray)" : "var(--atari-red)"}`,
+                            letterSpacing: "0.06em",
+                            cursor: deletingId === log.id ? "not-allowed" : "pointer",
+                            opacity: deletingId === log.id ? 0.5 : 1,
+                          }}
+                          title="Delete this resume and allow regeneration"
+                        >
+                          {deletingId === log.id ? (
+                            <Loader2 size={9} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={9} />
+                          )}
+                          DEL
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

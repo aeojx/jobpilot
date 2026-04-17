@@ -1,0 +1,69 @@
+OndoFinance_AlanAbbas.pdf — Baseline Structure Notes (3 pages)
+
+HEADER:
+- Name: "Alan Abbas" (large bold)
+- Subtitle line: "Head of Business Operations | Fintech & Web3 | Operating Systems Design | Cross-Functional Execution"
+- Contact: email | phone | location (UAE, Open to Remote) | linkedin
+- Languages: English · Arabic · Kurdish · German
+
+SECTIONS (in order):
+
+1. EXECUTIVE SUMMARY (paragraph, ~6 lines)
+   - Opens with "Senior business operations leader with 12 years of experience..."
+   - Bold key phrases: "designing, implementing, and scaling company-level operating systems"
+   - Bold domain terms: "fintech, Web3, and regulated financial environments"
+   - Ends with "equally comfortable designing the operating model and running the room."
+
+2. CORE COMPETENCIES (3-column grid, 4 rows = 12 items)
+   - Each cell has a left teal border accent
+   - Items: Operating System Design & OKR Frameworks, Cross-Functional Execution & Alignment, Fintech Web3 & Regulatory Environments, Leadership Cadences & Decision Forums, Data Analytics KPIs & Insight Generation, AI-Driven Internal Tooling & Automation, Client Onboarding & Partner Enablement, Stakeholder Management & Influence, Knowledge Management (Notion OS Slack), P&L Management & Resource Planning, Post-Acquisition Integration & Change Mgmt, Real-Time Dashboards & BI (SQL Tableau)
+
+3. CAREER IMPACT AT A GLANCE (4-column highlight bar, dark background)
+   - $1.7M→$4M (Valuation growth driven as COO, 2.4× in 12 months)
+   - 67% (Reduction in product delivery cycle via operating system redesign)
+   - 94 KPIs (Performance framework across 3 international markets Amazon)
+   - 68 Partners (Enterprise partner program led nationally 1,800 drivers)
+
+4. PROFESSIONAL EXPERIENCE (multiple roles, each with):
+   - Bold job title + date range right-aligned
+   - Company name in teal color + location
+   - Brief intro paragraph
+   - Bullet points with bold lead-in labels (e.g., "Operating System Design:", "Cross-Functional Execution:")
+   - Bold metrics within bullets (67%, 3× increase, 15 Financial Institutions, etc.)
+
+   Roles listed:
+   a. Co-founder & Chief Operating Officer — Markaba (Dec 2024 – Jan 2026)
+   b. Product Manager — Delivery (DEx) & Customer Experience (CEx) — Amazon.com (Sep 2021 – May 2023)
+   c. Program Manager — Operational Excellence — Amazon.com (Jun 2019 – Sep 2021)
+   d. Founder & CEO — Media Tourism and Travel (Jan 2017 – Jan 2019)
+   e. Operations Manager — Amazon.com (Jul 2014 – Oct 2016)
+   f. Business Development Manager & Growth — Media Contracting (2016–2017 & 2023–2024)
+
+5. EDUCATION
+   - B.Sc. (Hons) Civil Engineering — University of Waterloo (2009–2014)
+   - Minor in Project Management & Economics
+   - 4 industry placements (co-op)
+
+6. TECHNICAL SKILLS & TOOLS (2-column grid)
+   - Operating Frameworks, Knowledge Management, Data & Analytics, AI & Automation, Project Management, Fintech & Web3, CRM & CX, Regulatory
+
+7. SELECT ACHIEVEMENTS (2-column bullet list)
+   - Antler EIR — top 0.15% from 8,000+ applicants
+   - Grew Markaba valuation $1.7M to $4M (2.4×) in 12 months
+   - Top Tier Leader at Amazon — top 10–15%
+   - Highest mentee promotion rate (55%)
+   - Launched Canada's largest fulfillment center in 6 weeks
+   - Signed MOA with largest auto financing institution in GCC
+   - Built AI-powered Central Bank LLM tool — 70% automation
+   - Everest Base Camp (May 2017)
+
+FOOTER:
+- Alan Abbas | email | phone | linkedin | No visa sponsorship required (UAE, North America)
+
+VISUAL STYLE:
+- Clean white background
+- Teal/dark teal accent color for section headers, company names, competency borders
+- Dark navy/charcoal for the "Career Impact at a Glance" bar
+- EB Garamond or similar serif font for body text
+- Section headers: ALL CAPS, small caps style, with horizontal rule below
+- Dense but readable — 3 full pages

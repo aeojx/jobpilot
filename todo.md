@@ -501,3 +501,13 @@
 - [x] Add Resume Generation nav item to sidebar for all users
 - [x] Log all generation requests in resume_generation_log table
 - [x] Update release notes with v3.39 entry
+
+## v3.40 Resume Generation Improvements
+- [x] Add Delete button to each resume log entry (deletes PDF from DB, reverts job state)
+- [x] Add tRPC endpoint: resume.delete (clears resumeGeneratedPath, deletes log entry)
+- [x] Update LLM system prompt with exact persona: "Resume Agent" role, 90%+ ATS match objective, accuracy constraint
+- [x] Enhanced content structure: EXECUTIVE SUMMARY, CORE COMPETENCIES, CAREER IMPACT AT A GLANCE sections
+- [x] Remove page-length restriction — focus on quality and keyword coverage
+- [x] Update PDF naming convention: CompanyName_AlanAbbas.pdf
+- [x] ResumeButton reverts to "Generate Resume" state after delete
+- [x] Update release notes with v3.40 entry

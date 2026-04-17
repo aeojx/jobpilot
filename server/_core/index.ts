@@ -72,7 +72,8 @@ async function startServer() {
         res.status(404).send("Resume file not found on disk");
         return;
       }
-      const fileName = `AlanAbbas_${job.company.replace(/[^a-zA-Z0-9]/g, "_")}_Resume.pdf`;
+      const companyClean = job.company.trim().replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_").substring(0, 40);
+      const fileName = `${companyClean}_AlanAbbas.pdf`;
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
       res.setHeader("Content-Length", fs.statSync(filePath).size.toString());
