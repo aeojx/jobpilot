@@ -528,3 +528,8 @@
 - [x] Diagnose why the 3 most recent resume generations failed (puppeteer Chrome missing shared libs in production)
 - [x] Fix the root cause (replaced puppeteer with PDFKit — pure Node.js, zero system deps)
 - [x] Re-run and verify all 3 succeed (MongoDB, Thyme Care, X.ai — all completed with S3 URLs)
+
+## v3.45 Fix PDF Spacing Issues in Generated Resumes
+- [x] Inspect generated PDFs to identify specific spacing problems
+- [x] Fix PDFKit renderer spacing logic (headers, bullets, paragraphs, tables, blockquotes)
+- [x] Regenerate a test resume and verify improved spacing
