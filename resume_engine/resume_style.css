@@ -1,7 +1,7 @@
-/* OndoFinance-style Executive Resume CSS */
+/* Executive Resume CSS — Clean Sans-Serif */
 /* Used by manus-md-to-pdf for PDF generation */
 
-@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
   --accent: #2c7a7b;
@@ -19,7 +19,7 @@
 }
 
 body {
-  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  font-family: 'Inter', Calibri, 'Helvetica Neue', Arial, sans-serif;
   font-size: 10.5pt;
   line-height: 1.45;
   color: var(--text);
@@ -29,6 +29,7 @@ body {
 
 /* ─── Header ─── */
 h1 {
+  font-family: 'Inter', Calibri, 'Helvetica Neue', Arial, sans-serif;
   font-size: 26pt;
   font-weight: 700;
   letter-spacing: 2px;
@@ -40,7 +41,7 @@ h1 {
 h1 + p {
   font-size: 10pt;
   color: var(--accent);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.5px;
   margin-bottom: 3px;
 }
@@ -59,6 +60,7 @@ h1 + p + p + p {
 
 /* ─── Section Headers ─── */
 h2 {
+  font-family: 'Inter', Calibri, 'Helvetica Neue', Arial, sans-serif;
   font-size: 11pt;
   font-weight: 700;
   text-transform: uppercase;
@@ -71,6 +73,7 @@ h2 {
 }
 
 h3 {
+  font-family: 'Inter', Calibri, 'Helvetica Neue', Arial, sans-serif;
   font-size: 11pt;
   font-weight: 700;
   color: var(--text);
@@ -177,16 +180,16 @@ hr {
   margin: 10px 0;
 }
 
-/* ─── Code blocks (used for header formatting) ─── */
+/* ─── Code blocks ─── */
 code {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: 'Inter', Calibri, 'Helvetica Neue', Arial, sans-serif;
   font-size: inherit;
   background: none;
   padding: 0;
 }
 
 pre {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: 'Inter', Calibri, 'Helvetica Neue', Arial, sans-serif;
   background: none;
   padding: 0;
   margin: 0;

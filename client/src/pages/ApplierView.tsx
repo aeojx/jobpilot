@@ -9,11 +9,12 @@ import {
   Flame,
   HelpCircle,
   Loader2,
+  PlusCircle,
   Trophy,
   XCircle,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
 import JobDetailModal from "@/components/JobDetailModal";
 import ResumeButton from "@/components/ResumeButton";
@@ -57,6 +58,25 @@ export default function ApplierView() {
 
   const [confirmRejectId, setConfirmRejectId] = useState<number | null>(null);
 
+  // Manual Add Job state
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [manualTitle, setManualTitle] = useState("");
+  const [manualCompany, setManualCompany] = useState("");
+  const [manualLocation, setManualLocation] = useState("");
+  const [manualApplyUrl, setManualApplyUrl] = useState("");
+  const [manualNotes, setManualNotes] = useState("");
+  const titleRef = useRef<HTMLInputElement>(null);
+
+  const manualAdd = trpc.jobs.manualAdd.useMutation({
+    onSuccess: () => {
+      utils.jobs.kanban.invalidate();
+      toast.success("Job added to Applied column");
+      setShowManualForm(false);
+      setManualTitle(""); setManualCompany(""); setManualLocation(""); setManualApplyUrl(""); setManualNotes("");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const applierReject = trpc.jobs.applierReject.useMutation({
     onSuccess: () => {
       toast.success("Job moved to rejected pile");
@@ -92,6 +112,22 @@ export default function ApplierView() {
               {toApplyJobs.length} to apply
             </span>
             {isLoading && <Loader2 size={14} className="animate-spin text-foreground/40" />}
+            <button
+              onClick={() => { setShowManualForm(true); setTimeout(() => titleRef.current?.focus(), 50); }}
+              className="flex items-center gap-1"
+              style={{
+                background: "transparent",
+                border: "1px solid var(--atari-amber)",
+                color: "var(--atari-amber)",
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.6rem",
+                letterSpacing: "0.08em",
+                padding: "3px 8px",
+                cursor: "pointer",
+              }}
+            >
+              <PlusCircle size={10} /> ADD JOB
+            </button>
           </div>
         </div>
         <div className="atari-divider" />
@@ -480,6 +516,99 @@ export default function ApplierView() {
           </div>
         )}
       </div>
+
+      {/* Manual Add Modal */}
+      {showManualForm && (
+        <div
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowManualForm(false); }}
+        >
+          <div
+            style={{
+              background: "var(--atari-bg)",
+              border: "1px solid var(--atari-amber)",
+              boxShadow: "0 0 20px var(--atari-amber)33",
+              padding: "1.5rem",
+              width: "min(480px, 95vw)",
+              display: "flex", flexDirection: "column", gap: "0.75rem",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span className="font-pixel glow-amber" style={{ color: "var(--atari-amber)", fontSize: "10px" }}>+ MANUAL JOB ENTRY</span>
+              <button onClick={() => setShowManualForm(false)} style={{ background: "none", border: "none", color: "var(--atari-gray)", cursor: "pointer", fontSize: "1rem" }}>✕</button>
+            </div>
+            <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--atari-gray)", letterSpacing: "0.04em" }}>
+              Jobs added here go directly to the <span style={{ color: "var(--atari-cyan)" }}>Applied</span> column and are tagged as manually added by <span style={{ color: "var(--atari-amber)" }}>{user?.name ?? "you"}</span>.
+            </p>
+            {([
+              { label: "JOB TITLE *", value: manualTitle, setter: setManualTitle, ref: titleRef, required: true },
+              { label: "COMPANY *", value: manualCompany, setter: setManualCompany, ref: undefined, required: true },
+              { label: "LOCATION", value: manualLocation, setter: setManualLocation, ref: undefined, required: false },
+              { label: "APPLY URL", value: manualApplyUrl, setter: setManualApplyUrl, ref: undefined, required: false },
+            ] as Array<{ label: string; value: string; setter: (v: string) => void; ref: React.RefObject<HTMLInputElement> | undefined; required: boolean }>).map(({ label, value, setter, ref, required }) => (
+              <div key={label} style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <label style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--atari-gray)", letterSpacing: "0.08em" }}>{label}</label>
+                <input
+                  ref={ref}
+                  value={value}
+                  onChange={(e) => setter(e.target.value)}
+                  required={required}
+                  style={{
+                    background: "transparent",
+                    border: "1px solid var(--atari-border)",
+                    color: "var(--atari-white)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.75rem",
+                    padding: "6px 8px",
+                    outline: "none",
+                    width: "100%",
+                  }}
+                />
+              </div>
+            ))}
+            <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+              <label style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--atari-gray)", letterSpacing: "0.08em" }}>NOTES</label>
+              <textarea
+                value={manualNotes}
+                onChange={(e) => setManualNotes(e.target.value)}
+                rows={3}
+                style={{
+                  background: "transparent",
+                  border: "1px solid var(--atari-border)",
+                  color: "var(--atari-white)",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "0.75rem",
+                  padding: "6px 8px",
+                  outline: "none",
+                  resize: "vertical",
+                  width: "100%",
+                }}
+              />
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.25rem" }}>
+              <button
+                onClick={() => setShowManualForm(false)}
+                style={{ background: "transparent", border: "1px solid var(--atari-border)", color: "var(--atari-gray)", fontFamily: "var(--font-mono)", fontSize: "0.65rem", padding: "5px 14px", cursor: "pointer", letterSpacing: "0.06em" }}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={() => {
+                  if (!manualTitle.trim() || !manualCompany.trim()) { toast.error("Title and Company are required"); return; }
+                  manualAdd.mutate({ title: manualTitle.trim(), company: manualCompany.trim(), location: manualLocation.trim() || undefined, applyUrl: manualApplyUrl.trim() || undefined, notes: manualNotes.trim() || undefined });
+                }}
+                disabled={manualAdd.isPending}
+                style={{ background: "var(--atari-amber)", border: "1px solid var(--atari-amber)", color: "var(--atari-black)", fontFamily: "var(--font-mono)", fontSize: "0.65rem", padding: "5px 14px", cursor: "pointer", letterSpacing: "0.06em", fontWeight: 700 }}
+              >
+                {manualAdd.isPending ? "ADDING..." : "▶ ADD JOB"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Job Detail Modal */}
       {selectedJob && (

@@ -511,3 +511,8 @@
 - [x] Update PDF naming convention: CompanyName_AlanAbbas.pdf
 - [x] ResumeButton reverts to "Generate Resume" state after delete
 - [x] Update release notes with v3.40 entry
+
+## v3.41 Font Fix & Applier Add Job
+- [x] Change resume PDF font from EB Garamond (serif/cursive) to clean sans-serif matching header style
+- [x] Update resume_css in DB with new font
+- [x] Add manual "Add Job" button to Applier View page
