@@ -533,3 +533,6 @@
 - [x] Inspect generated PDFs to identify specific spacing problems
 - [x] Fix PDFKit renderer spacing logic (headers, bullets, paragraphs, tables, blockquotes)
 - [x] Regenerate a test resume and verify improved spacing
+
+## v3.46 Update Contact Email
+- [x] Change master profile email from tedunt@gmail.com to info@allanabbas.com in DB
