@@ -2,11 +2,12 @@
  * Resume Generator Service
  *
  * Uses invokeLLM() to generate a tailored resume in Markdown,
- * then converts to PDF using marked (MD→HTML) + puppeteer (HTML→PDF).
+ * then converts to PDF using PDFKit (pure Node.js, no browser/system deps).
  * Uploads the PDF to S3 via storagePut and logs everything.
  *
- * NOTE: manus-md-to-pdf is a sandbox-only CLI tool and is NOT available
- * in the deployed production environment. We use npm packages instead.
+ * NOTE: Neither manus-md-to-pdf (sandbox-only CLI) nor puppeteer (needs
+ * system Chrome libs) work in the deployed production environment.
+ * PDFKit is a pure-JS solution that works everywhere.
  */
 
 import * as fs from "fs";
@@ -21,7 +22,11 @@ import {
   updateJobResumePath,
 } from "./db";
 
-const RESUME_DIR = path.join(process.cwd(), "resume_engine", "tailored_resumes");
+const RESUME_DIR = path.join(
+  process.cwd(),
+  "resume_engine",
+  "tailored_resumes"
+);
 
 // Ensure output directory exists
 if (!fs.existsSync(RESUME_DIR)) {
@@ -44,7 +49,6 @@ export interface GenerateResumeResult {
 
 /**
  * Sanitize a company name for use in a filename.
- * Replaces spaces with underscores, removes special chars, trims.
  */
 function sanitizeForFilename(str: string): string {
   return str
@@ -54,64 +58,460 @@ function sanitizeForFilename(str: string): string {
     .substring(0, 40);
 }
 
+/* ─── Color constants matching the CSS theme ─── */
+const ACCENT = [44, 122, 123] as const; // #2c7a7b teal
+const TEXT_COLOR = [26, 32, 44] as const; // #1a202c
+const TEXT_MUTED = [74, 85, 104] as const; // #4a5568
+const DARK_BG = [26, 32, 44] as const; // #1a202c
+const BORDER = [226, 232, 240] as const; // #e2e8f0
+
 /**
- * Convert Markdown string to PDF buffer using marked + puppeteer.
- * This approach works both in sandbox and in deployed production.
+ * Convert LLM-generated Markdown resume to a professional PDF buffer
+ * using PDFKit. No browser or system dependencies required.
  */
-async function markdownToPdf(
-  markdownContent: string,
-  cssContent: string | null
-): Promise<Buffer> {
-  // Dynamic imports to avoid top-level issues
-  const { marked } = await import("marked");
-  const puppeteer = await import("puppeteer");
+async function markdownToPdf(markdownContent: string): Promise<Buffer> {
+  const PDFDocument = (await import("pdfkit")).default;
 
-  // Convert markdown to HTML
-  const htmlBody = await marked.parse(markdownContent);
-
-  // Build full HTML document with embedded CSS
-  const fullHtml = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-${cssContent ? `<style>${cssContent}</style>` : ""}
-</head>
-<body>
-${htmlBody}
-</body>
-</html>`;
-
-  // Launch puppeteer and generate PDF
-  const browser = await puppeteer.default.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-    ],
-  });
-
-  try {
-    const page = await browser.newPage();
-    await page.setContent(fullHtml, { waitUntil: "networkidle0" });
-
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: {
-        top: "0.5in",
-        right: "0.5in",
-        bottom: "0.5in",
-        left: "0.5in",
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      size: "A4",
+      margins: { top: 36, bottom: 36, left: 42, right: 42 },
+      bufferPages: true,
+      info: {
+        Title: "Alan Abbas — Resume",
+        Author: "Alan Abbas",
       },
     });
 
-    return Buffer.from(pdfBuffer);
-  } finally {
-    await browser.close();
-  }
+    const chunks: Buffer[] = [];
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    const pageW =
+      doc.page.width - doc.page.margins.left - doc.page.margins.right;
+
+    // Register fonts — use Helvetica (built-in) as our sans-serif
+    const FONT_REG = "Helvetica";
+    const FONT_BOLD = "Helvetica-Bold";
+    const FONT_ITALIC = "Helvetica-Oblique";
+    const FONT_BOLD_ITALIC = "Helvetica-BoldOblique";
+
+    // Parse the markdown into lines
+    const lines = markdownContent.split("\n");
+    let i = 0;
+
+    function ensureSpace(needed: number) {
+      const bottom = doc.page.height - doc.page.margins.bottom;
+      if (doc.y + needed > bottom) {
+        doc.addPage();
+      }
+    }
+
+    /** Render inline markdown: **bold**, *italic*, **bold *nested italic*** */
+    function renderRichText(
+      text: string,
+      opts: {
+        fontSize?: number;
+        color?: readonly [number, number, number];
+        lineGap?: number;
+        align?: "left" | "center" | "right" | "justify";
+      } = {}
+    ) {
+      const fontSize = opts.fontSize ?? 9.5;
+      const color = opts.color ?? TEXT_COLOR;
+      const lineGap = opts.lineGap ?? 2;
+      const align = opts.align ?? "left";
+
+      // Split into segments: **bold**, *italic*, or plain text
+      const segments: { text: string; bold: boolean; italic: boolean }[] = [];
+      // Match **bold** or *italic* patterns
+      const regex = /\*\*(.+?)\*\*|\*(.+?)\*/g;
+      let lastIdx = 0;
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        if (match.index > lastIdx) {
+          segments.push({
+            text: text.slice(lastIdx, match.index),
+            bold: false,
+            italic: false,
+          });
+        }
+        if (match[1] !== undefined) {
+          segments.push({ text: match[1], bold: true, italic: false });
+        } else if (match[2] !== undefined) {
+          segments.push({ text: match[2], bold: false, italic: true });
+        }
+        lastIdx = match.index + match[0].length;
+      }
+      if (lastIdx < text.length) {
+        segments.push({
+          text: text.slice(lastIdx),
+          bold: false,
+          italic: false,
+        });
+      }
+
+      if (segments.length === 0) return;
+
+      // Build features array for doc.text with continued
+      // PDFKit doesn't support inline font changes easily, so we use a workaround
+      // with doc.text() for each segment in "continued" mode
+      const startY = doc.y;
+      let isFirst = true;
+      for (const seg of segments) {
+        let font = FONT_REG;
+        if (seg.bold && seg.italic) font = FONT_BOLD_ITALIC;
+        else if (seg.bold) font = FONT_BOLD;
+        else if (seg.italic) font = FONT_ITALIC;
+
+        doc.font(font).fontSize(fontSize).fillColor(color as unknown as string);
+
+        if (isFirst) {
+          doc.text(seg.text, {
+            continued: seg !== segments[segments.length - 1],
+            lineGap,
+            align,
+            width: pageW,
+          });
+          isFirst = false;
+        } else {
+          doc.text(seg.text, {
+            continued: seg !== segments[segments.length - 1],
+            lineGap,
+          });
+        }
+      }
+    }
+
+    /** Draw a horizontal rule */
+    function drawHR() {
+      ensureSpace(12);
+      doc.y += 4;
+      doc
+        .moveTo(doc.page.margins.left, doc.y)
+        .lineTo(doc.page.margins.left + pageW, doc.y)
+        .strokeColor(BORDER as unknown as string)
+        .lineWidth(1)
+        .stroke();
+      doc.y += 8;
+    }
+
+    /** Draw section header (H2) with accent underline */
+    function drawH2(text: string) {
+      ensureSpace(30);
+      doc.y += 10;
+      doc
+        .font(FONT_BOLD)
+        .fontSize(11)
+        .fillColor(TEXT_COLOR as unknown as string)
+        .text(text.toUpperCase(), { width: pageW, characterSpacing: 1.2 });
+      doc.y += 2;
+      doc
+        .moveTo(doc.page.margins.left, doc.y)
+        .lineTo(doc.page.margins.left + pageW, doc.y)
+        .strokeColor(ACCENT as unknown as string)
+        .lineWidth(1.5)
+        .stroke();
+      doc.y += 6;
+    }
+
+    /** Draw H3 (role title) */
+    function drawH3(text: string) {
+      ensureSpace(20);
+      doc.y += 6;
+      renderRichText(text, { fontSize: 10.5, color: TEXT_COLOR });
+    }
+
+    /** Draw a blockquote (Career Impact box) */
+    function drawBlockquote(lines: string[]) {
+      ensureSpace(50);
+      const boxX = doc.page.margins.left;
+      const boxW = pageW;
+      const startY = doc.y + 4;
+
+      // Measure content height
+      let contentH = 8; // padding
+      for (const line of lines) {
+        contentH += 14;
+      }
+      contentH += 8; // bottom padding
+
+      // Draw dark background
+      doc
+        .rect(boxX, startY, boxW, contentH)
+        .fill(DARK_BG as unknown as string);
+
+      doc.y = startY + 8;
+      for (const line of lines) {
+        const cleaned = line.replace(/^>\s*/, "").trim();
+        if (!cleaned) continue;
+
+        // Check if it's a bold metric line
+        const boldMatch = cleaned.match(/^\*\*(.+?)\*\*$/);
+        if (boldMatch) {
+          doc
+            .font(FONT_BOLD)
+            .fontSize(13)
+            .fillColor("white")
+            .text(boldMatch[1], boxX + 12, doc.y, { width: boxW - 24 });
+        } else {
+          doc
+            .font(FONT_REG)
+            .fontSize(8.5)
+            .fillColor("#cbd5e0")
+            .text(cleaned, boxX + 12, doc.y, { width: boxW - 24 });
+        }
+        doc.y += 2;
+      }
+      doc.y += 8;
+    }
+
+    /** Draw a markdown table */
+    function drawTable(headerLine: string, rows: string[]) {
+      ensureSpace(40);
+      const allRows = [headerLine, ...rows].filter(
+        (r) => !r.match(/^\|[\s-:|]+\|$/)
+      ); // skip separator rows
+
+      const cellTexts = allRows.map((row) =>
+        row
+          .split("|")
+          .slice(1, -1)
+          .map((c) => c.trim())
+      );
+
+      if (cellTexts.length === 0) return;
+
+      const numCols = cellTexts[0].length;
+      const colW = pageW / numCols;
+      const cellPadX = 6;
+      const cellPadY = 5;
+
+      for (let r = 0; r < cellTexts.length; r++) {
+        const rowCells = cellTexts[r];
+        const rowH = 20;
+        ensureSpace(rowH);
+
+        for (let c = 0; c < numCols; c++) {
+          const cellX = doc.page.margins.left + c * colW;
+          const cellText = (rowCells[c] || "").replace(/\*\*/g, "");
+
+          // Draw left accent border
+          doc
+            .moveTo(cellX, doc.y)
+            .lineTo(cellX, doc.y + rowH)
+            .strokeColor(ACCENT as unknown as string)
+            .lineWidth(2.5)
+            .stroke();
+
+          doc
+            .font(r === 0 ? FONT_BOLD : FONT_REG)
+            .fontSize(8.5)
+            .fillColor(TEXT_COLOR as unknown as string)
+            .text(cellText, cellX + cellPadX + 3, doc.y + cellPadY, {
+              width: colW - cellPadX * 2 - 3,
+              lineBreak: true,
+            });
+        }
+        doc.y += rowH;
+      }
+      doc.y += 4;
+    }
+
+    // ─── Main rendering loop ───
+    while (i < lines.length) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      // Skip empty lines
+      if (!trimmed) {
+        i++;
+        continue;
+      }
+
+      // H1 — Name header
+      if (trimmed.startsWith("# ") && !trimmed.startsWith("## ")) {
+        const name = trimmed.replace(/^#\s+/, "");
+        ensureSpace(30);
+        doc
+          .font(FONT_BOLD)
+          .fontSize(24)
+          .fillColor(TEXT_COLOR as unknown as string)
+          .text(name.toUpperCase(), {
+            width: pageW,
+            characterSpacing: 2,
+          });
+        doc.y += 2;
+        i++;
+        continue;
+      }
+
+      // H2 — Section headers
+      if (trimmed.startsWith("## ")) {
+        const text = trimmed.replace(/^##\s+/, "");
+        drawH2(text);
+        i++;
+        continue;
+      }
+
+      // H3 — Role titles
+      if (trimmed.startsWith("### ")) {
+        const text = trimmed.replace(/^###\s+/, "");
+        drawH3(text);
+        i++;
+        continue;
+      }
+
+      // Horizontal rule
+      if (trimmed === "---" || trimmed === "***" || trimmed === "___") {
+        drawHR();
+        i++;
+        continue;
+      }
+
+      // Blockquote blocks — collect consecutive > lines
+      if (trimmed.startsWith(">")) {
+        const blockLines: string[] = [];
+        while (i < lines.length && lines[i].trim().startsWith(">")) {
+          blockLines.push(lines[i]);
+          i++;
+        }
+        // Check if there are multiple blockquote blocks in sequence
+        // Group them: each block separated by an empty > line or non-> line
+        const groups: string[][] = [];
+        let currentGroup: string[] = [];
+        for (const bl of blockLines) {
+          const content = bl.replace(/^>\s*/, "").trim();
+          if (!content && currentGroup.length > 0) {
+            groups.push(currentGroup);
+            currentGroup = [];
+          } else if (content) {
+            currentGroup.push(bl);
+          }
+        }
+        if (currentGroup.length > 0) groups.push(currentGroup);
+
+        // If we have multiple groups, render them side by side (impact boxes)
+        if (groups.length >= 2) {
+          ensureSpace(60);
+          const boxW = (pageW - 8 * (groups.length - 1)) / groups.length;
+          const startY = doc.y + 4;
+          const boxH = 48;
+
+          for (let g = 0; g < groups.length; g++) {
+            const boxX = doc.page.margins.left + g * (boxW + 8);
+            doc
+              .rect(boxX, startY, boxW, boxH)
+              .fill(DARK_BG as unknown as string);
+
+            let textY = startY + 6;
+            for (const bl of groups[g]) {
+              const content = bl.replace(/^>\s*/, "").trim();
+              if (!content) continue;
+              const boldMatch = content.match(/^\*\*(.+?)\*\*$/);
+              if (boldMatch) {
+                doc
+                  .font(FONT_BOLD)
+                  .fontSize(13)
+                  .fillColor("white")
+                  .text(boldMatch[1], boxX + 8, textY, {
+                    width: boxW - 16,
+                    align: "left",
+                  });
+                textY += 16;
+              } else {
+                doc
+                  .font(FONT_REG)
+                  .fontSize(7.5)
+                  .fillColor("#cbd5e0")
+                  .text(content, boxX + 8, textY, {
+                    width: boxW - 16,
+                    align: "left",
+                  });
+                textY += 10;
+              }
+            }
+          }
+          doc.y = startY + boxH + 8;
+        } else {
+          // Single blockquote
+          for (const group of groups) {
+            drawBlockquote(group);
+          }
+        }
+        continue;
+      }
+
+      // Table — starts with |
+      if (trimmed.startsWith("|")) {
+        const tableLines: string[] = [];
+        while (i < lines.length && lines[i].trim().startsWith("|")) {
+          tableLines.push(lines[i].trim());
+          i++;
+        }
+        if (tableLines.length >= 2) {
+          drawTable(tableLines[0], tableLines.slice(1));
+        }
+        continue;
+      }
+
+      // Bullet list item
+      if (
+        trimmed.startsWith("- ") ||
+        trimmed.startsWith("* ") ||
+        trimmed.startsWith("▸ ")
+      ) {
+        ensureSpace(14);
+        const bulletText = trimmed.replace(/^[-*▸]\s+/, "");
+
+        // Draw bullet marker
+        const bulletX = doc.page.margins.left;
+        doc
+          .font(FONT_BOLD)
+          .fontSize(9.5)
+          .fillColor(ACCENT as unknown as string)
+          .text("▸", bulletX, doc.y, { continued: false });
+
+        // Move back up and render text with indent
+        doc.y -= 12;
+        const savedX = doc.x;
+        doc.x = bulletX + 12;
+        renderRichText(bulletText, { fontSize: 9.5, color: TEXT_COLOR });
+        doc.x = savedX;
+        doc.y += 2;
+        i++;
+        continue;
+      }
+
+      // Code block — skip backtick fences, render content as-is
+      if (trimmed.startsWith("```")) {
+        i++; // skip opening fence
+        while (i < lines.length && !lines[i].trim().startsWith("```")) {
+          const codeLine = lines[i];
+          if (codeLine.trim()) {
+            ensureSpace(14);
+            doc
+              .font(FONT_REG)
+              .fontSize(9)
+              .fillColor(TEXT_MUTED as unknown as string)
+              .text(codeLine.trim(), { width: pageW });
+          }
+          i++;
+        }
+        if (i < lines.length) i++; // skip closing fence
+        continue;
+      }
+
+      // Regular paragraph
+      ensureSpace(14);
+      renderRichText(trimmed, { fontSize: 9.5, color: TEXT_COLOR });
+      doc.y += 2;
+      i++;
+    }
+
+    doc.end();
+  });
 }
 
 /**
@@ -143,14 +543,14 @@ export async function generateResume(
     await updateResumeLog(logId, { status: "generating" });
 
     // 4. Load config from DB (Document Vault)
-    const [profile, promptTemplate, resumeCss] = await Promise.all([
+    const [profile, promptTemplate] = await Promise.all([
       getResumeConfig("profile"),
       getResumeConfig("prompt_template"),
-      getResumeConfig("resume_css"),
     ]);
 
     if (!profile) throw new Error("Master profile not found in resume_config");
-    if (!promptTemplate) throw new Error("Prompt template not found in resume_config");
+    if (!promptTemplate)
+      throw new Error("Prompt template not found in resume_config");
 
     // 5. Build the job description context
     const jobContext = [
@@ -212,11 +612,15 @@ export async function generateResume(
     const uniqueBaseName = `${baseName}_${timestamp}`;
     const pdfPath = path.join(RESUME_DIR, `${uniqueBaseName}.pdf`);
 
-    // 8. Convert Markdown to PDF using marked + puppeteer (production-safe)
-    console.log(`[Resume Generator] Converting markdown to PDF via puppeteer...`);
-    const pdfBuffer = await markdownToPdf(resumeMarkdown, resumeCss);
+    // 8. Convert Markdown to PDF using PDFKit (pure Node.js, production-safe)
+    console.log(
+      `[Resume Generator] Converting markdown to PDF via PDFKit...`
+    );
+    const pdfBuffer = await markdownToPdf(resumeMarkdown);
     fs.writeFileSync(pdfPath, pdfBuffer);
-    console.log(`[Resume Generator] PDF generated at ${pdfPath} (${pdfBuffer.length} bytes)`);
+    console.log(
+      `[Resume Generator] PDF generated at ${pdfPath} (${pdfBuffer.length} bytes)`
+    );
 
     // 9. Upload PDF to S3 with the clean filename
     let fileUrl = "";
@@ -230,7 +634,6 @@ export async function generateResume(
         `[Resume Generator] S3 upload failed, using local path:`,
         s3Error.message
       );
-      // Fall back to local path — the download endpoint will serve it
     }
 
     // 10. Extract token usage from LLM response
@@ -238,7 +641,6 @@ export async function generateResume(
     const promptTokens = usage?.prompt_tokens ?? null;
     const completionTokens = usage?.completion_tokens ?? null;
     const totalTokens = usage?.total_tokens ?? null;
-    // Estimate credit cost: ~$0.003 per 1K input tokens + ~$0.015 per 1K output tokens (approximate)
     const creditCost = totalTokens
       ? Number(
           (

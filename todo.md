@@ -523,3 +523,8 @@
 
 ## v3.43 Bug Fix: Resume Generation Error
 - [x] Diagnose and fix resume generation error (replaced manus-md-to-pdf CLI with marked+puppeteer npm packages)
+
+## v3.44 Bug Fix: 3 Recent Failed Resume Generations
+- [x] Diagnose why the 3 most recent resume generations failed (puppeteer Chrome missing shared libs in production)
+- [x] Fix the root cause (replaced puppeteer with PDFKit — pure Node.js, zero system deps)
+- [x] Re-run and verify all 3 succeed (MongoDB, Thyme Care, X.ai — all completed with S3 URLs)
