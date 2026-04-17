@@ -631,6 +631,10 @@ export async function updateResumeLog(
     fileUrl?: string | null;
     errorMessage?: string | null;
     durationMs?: number | null;
+    promptTokens?: number | null;
+    completionTokens?: number | null;
+    totalTokens?: number | null;
+    creditCost?: number | null;
     completedAt?: Date | null;
   }
 ): Promise<void> {
@@ -642,6 +646,10 @@ export async function updateResumeLog(
   if (update.fileUrl !== undefined) setObj.fileUrl = update.fileUrl;
   if (update.errorMessage !== undefined) setObj.errorMessage = update.errorMessage;
   if (update.durationMs !== undefined) setObj.durationMs = update.durationMs;
+  if (update.promptTokens !== undefined) setObj.promptTokens = update.promptTokens;
+  if (update.completionTokens !== undefined) setObj.completionTokens = update.completionTokens;
+  if (update.totalTokens !== undefined) setObj.totalTokens = update.totalTokens;
+  if (update.creditCost !== undefined) setObj.creditCost = update.creditCost;
   if (update.completedAt !== undefined) setObj.completedAt = update.completedAt;
   if (Object.keys(setObj).length === 0) return;
   await db.update(resumeGenerationLog).set(setObj).where(eq(resumeGenerationLog.id, logId));

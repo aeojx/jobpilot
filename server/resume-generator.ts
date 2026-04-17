@@ -192,7 +192,28 @@ export async function generateResume(
       // Fall back to local path — the download endpoint will serve it
     }
 
-    // 10. Update job and log
+    // 10. Extract token usage from LLM response
+    const usage = response.usage;
+    const promptTokens = usage?.prompt_tokens ?? null;
+    const completionTokens = usage?.completion_tokens ?? null;
+    const totalTokens = usage?.total_tokens ?? null;
+    // Estimate credit cost: ~$0.003 per 1K input tokens + ~$0.015 per 1K output tokens (approximate)
+    const creditCost = totalTokens
+      ? Number(
+          (
+            ((promptTokens ?? 0) / 1000) * 0.003 +
+            ((completionTokens ?? 0) / 1000) * 0.015
+          ).toFixed(4)
+        )
+      : null;
+
+    if (usage) {
+      console.log(
+        `[Resume Generator] Token usage — prompt: ${promptTokens}, completion: ${completionTokens}, total: ${totalTokens}, est. cost: $${creditCost}`
+      );
+    }
+
+    // 11. Update job and log
     const durationMs = Date.now() - startTime;
     await updateJobResumePath(job.id, fileUrl || pdfPath);
     await updateResumeLog(logId, {
@@ -200,6 +221,10 @@ export async function generateResume(
       filePath: pdfPath,
       fileUrl: fileUrl || null,
       durationMs,
+      promptTokens,
+      completionTokens,
+      totalTokens,
+      creditCost,
       completedAt: new Date(),
     });
 

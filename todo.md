@@ -516,3 +516,7 @@
 - [x] Change resume PDF font from EB Garamond (serif/cursive) to clean sans-serif matching header style
 - [x] Update resume_css in DB with new font
 - [x] Add manual "Add Job" button to Applier View page
+
+## v3.42 My Queue Add Job Fix & Resume Cost Column
+- [x] Change My Queue manual add to place jobs in 'to_apply' status instead of 'applied'
+- [x] Add credit cost column to Resume Gen log table

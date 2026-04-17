@@ -70,7 +70,7 @@ export default function ApplierView() {
   const manualAdd = trpc.jobs.manualAdd.useMutation({
     onSuccess: () => {
       utils.jobs.kanban.invalidate();
-      toast.success("Job added to Applied column");
+      toast.success("Job added to To Apply queue");
       setShowManualForm(false);
       setManualTitle(""); setManualCompany(""); setManualLocation(""); setManualApplyUrl(""); setManualNotes("");
     },
@@ -541,7 +541,7 @@ export default function ApplierView() {
               <button onClick={() => setShowManualForm(false)} style={{ background: "none", border: "none", color: "var(--atari-gray)", cursor: "pointer", fontSize: "1rem" }}>✕</button>
             </div>
             <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--atari-gray)", letterSpacing: "0.04em" }}>
-              Jobs added here go directly to the <span style={{ color: "var(--atari-cyan)" }}>Applied</span> column and are tagged as manually added by <span style={{ color: "var(--atari-amber)" }}>{user?.name ?? "you"}</span>.
+              Jobs added here go directly to the <span style={{ color: "var(--atari-cyan)" }}>To Apply</span> queue and are tagged as manually added by <span style={{ color: "var(--atari-amber)" }}>{user?.name ?? "you"}</span>.
             </p>
             {([
               { label: "JOB TITLE *", value: manualTitle, setter: setManualTitle, ref: titleRef, required: true },
@@ -598,7 +598,7 @@ export default function ApplierView() {
               <button
                 onClick={() => {
                   if (!manualTitle.trim() || !manualCompany.trim()) { toast.error("Title and Company are required"); return; }
-                  manualAdd.mutate({ title: manualTitle.trim(), company: manualCompany.trim(), location: manualLocation.trim() || undefined, applyUrl: manualApplyUrl.trim() || undefined, notes: manualNotes.trim() || undefined });
+                  manualAdd.mutate({ title: manualTitle.trim(), company: manualCompany.trim(), location: manualLocation.trim() || undefined, applyUrl: manualApplyUrl.trim() || undefined, notes: manualNotes.trim() || undefined, status: "to_apply" });
                 }}
                 disabled={manualAdd.isPending}
                 style={{ background: "var(--atari-amber)", border: "1px solid var(--atari-amber)", color: "var(--atari-black)", fontFamily: "var(--font-mono)", fontSize: "0.65rem", padding: "5px 14px", cursor: "pointer", letterSpacing: "0.06em", fontWeight: 700 }}

@@ -243,6 +243,10 @@ export const resumeGenerationLog = mysqlTable("resume_generation_log", {
   fileUrl: text("fileUrl"),
   errorMessage: text("errorMessage"),
   durationMs: int("durationMs"),
+  promptTokens: int("promptTokens"),
+  completionTokens: int("completionTokens"),
+  totalTokens: int("totalTokens"),
+  creditCost: float("creditCost"),
   requestedAt: timestamp("requestedAt").defaultNow().notNull(),
   completedAt: timestamp("completedAt"),
 });

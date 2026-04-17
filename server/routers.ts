@@ -1012,7 +1012,7 @@ export const appRouter = router({
         return { success: true, affected };
       }),
 
-    // Manually add a job that was applied to directly (e.g. via LinkedIn)
+    // Manually add a job (status defaults to "applied" for Dashboard, can be overridden to "to_apply" from My Queue)
     manualAdd: protectedProcedure
       .input(z.object({
         title: z.string().min(1),
@@ -1020,19 +1020,21 @@ export const appRouter = router({
         location: z.string().optional(),
         applyUrl: z.string().optional(),
         notes: z.string().optional(),
+        status: z.enum(["applied", "to_apply"]).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
+        const targetStatus = input.status ?? "applied";
         await insertJob({
           title: input.title,
           company: input.company,
           location: input.location ?? null,
           description: input.notes ?? null,
           applyUrl: input.applyUrl ?? null,
-          status: "applied",
+          status: targetStatus,
           matchScore: 0,
           manuallyAdded: true,
           addedBy: ctx.user.name ?? ctx.user.email ?? "Unknown",
-          appliedAt: new Date(),
+          appliedAt: targetStatus === "applied" ? new Date() : null,
           statusChangedAt: new Date(),
           isDuplicate: false,
           hasEmail: false,

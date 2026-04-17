@@ -209,7 +209,7 @@ function ResumeLog() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["Job", "Company", "Status", "Duration", "Requested", "Actions"].map((h) => (
+                {["Job", "Company", "Status", "Duration", "Cost", "Requested", "Actions"].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -271,6 +271,27 @@ function ResumeLog() {
                     }}
                   >
                     {formatDuration(log.durationMs)}
+                  </td>
+                  <td
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "0.65rem",
+                      padding: "8px 10px",
+                    }}
+                  >
+                    {log.creditCost != null ? (
+                      <span
+                        title={`Tokens: ${log.totalTokens?.toLocaleString() ?? "—"} (prompt: ${log.promptTokens?.toLocaleString() ?? "—"}, completion: ${log.completionTokens?.toLocaleString() ?? "—"})`}
+                        style={{
+                          color: "var(--atari-amber)",
+                          cursor: "help",
+                        }}
+                      >
+                        ${log.creditCost.toFixed(4)}
+                      </span>
+                    ) : (
+                      <span style={{ color: "var(--atari-border)" }}>—</span>
+                    )}
                   </td>
                   <td
                     style={{
