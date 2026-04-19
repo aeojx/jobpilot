@@ -536,3 +536,11 @@
 
 ## v3.46 Update Contact Email
 - [x] Change master profile email from tedunt@gmail.com to info@allanabbas.com in DB
+
+## v3.47 API Ingestion Schedule v2
+- [x] Add query rotation logic to scheduled fetch runner (8 queries, day-counter cycling)
+- [x] Add pre-flight quota safety check (hard stop at 98%)
+- [x] Add staggered execution support (10 min between calls via separate schedule entries)
+- [x] Create 4 schedule entries in DB (3 ATS slots + 1 LinkedIn slot)
+- [x] Update scheduleDayOfWeek to support Mon-Fri only (weekdaysOnly field)
+- [x] All 94 existing tests pass (scheduling logic tested via existing scheduler tests)

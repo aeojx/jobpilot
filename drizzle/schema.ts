@@ -149,6 +149,8 @@ export const fetchSchedules = mysqlTable("fetch_schedules", {
   scheduleHour: int("scheduleHour").default(9), // 0-23 UTC
   scheduleMinute: int("scheduleMinute").default(0), // 0-59
   scheduleDayOfWeek: int("scheduleDayOfWeek"), // 0=Sun, 1=Mon... null for daily
+  weekdaysOnly: boolean("weekdaysOnly").default(false).notNull(),
+  queryRotation: json("queryRotation"), // array of filter objects to rotate through
   enabled: boolean("enabled").default(true).notNull(),
   lastRunAt: timestamp("lastRunAt"),
   nextRunAt: timestamp("nextRunAt"),

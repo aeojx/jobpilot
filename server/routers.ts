@@ -95,7 +95,8 @@ function computeNextRun(
   scheduleHour: number,
   scheduleMinute: number,
   scheduleDayOfWeek: number | null | undefined,
-  fromNow = false
+  fromNow = false,
+  weekdaysOnly = false
 ): Date | null {
   if (intervalType === "manual") return null;
   const now = new Date();
@@ -104,6 +105,12 @@ function computeNextRun(
   next.setHours(scheduleHour, scheduleMinute, 0, 0);
   if (intervalType === "daily") {
     if (fromNow || next <= now) next.setDate(next.getDate() + 1);
+    // Skip weekends if weekdaysOnly
+    if (weekdaysOnly) {
+      while (next.getDay() === 0 || next.getDay() === 6) {
+        next.setDate(next.getDate() + 1);
+      }
+    }
     return next;
   }
   if (intervalType === "weekly") {
@@ -654,6 +661,42 @@ export function getIngestionStatus() {
 
 let _cronInterval: ReturnType<typeof setInterval> | null = null;
 
+// ─── Quota Safety Check ──────────────────────────────────────────────────────
+
+/** Pre-flight quota check. Returns true if safe to proceed, false if we should skip. */
+async function isQuotaSafe(endpoint: string): Promise<boolean> {
+  const isLinkedIn = (LINKEDIN_ENDPOINTS as readonly string[]).includes(endpoint);
+  const monthKey = isLinkedIn ? `li-${getCurrentMonthKey()}` : getCurrentMonthKey();
+  const usage = await getOrCreateApiUsage(monthKey);
+  const jobsRemaining = usage.jobsRemaining;
+  const jobsLimit = usage.jobsLimit;
+  if (jobsRemaining == null || jobsLimit == null) return true; // No data yet, allow
+  const threshold = Math.floor(jobsLimit * 0.02); // 2% = hard stop zone
+  if (jobsRemaining <= threshold) {
+    console.log(`[Scheduler] HARD STOP: ${isLinkedIn ? 'LinkedIn' : 'Active Jobs'} has only ${jobsRemaining} jobs remaining (threshold: ${threshold}). Skipping.`);
+    return false;
+  }
+  return true;
+}
+
+/** Get the current query from a rotation array based on a day counter stored in system_config. */
+async function getRotatedFilters(
+  scheduleId: number,
+  rotation: FetchFilters[] | null,
+  baseFilters: FetchFilters
+): Promise<FetchFilters> {
+  if (!rotation || rotation.length === 0) return baseFilters;
+  const counterKey = `schedule_rotation_${scheduleId}`;
+  const counterStr = await getSystemConfig(counterKey);
+  const counter = counterStr ? parseInt(counterStr, 10) : 0;
+  const idx = counter % rotation.length;
+  const rotatedFilters = rotation[idx]!;
+  // Advance the counter for next run
+  await setSystemConfig(counterKey, String(counter + 1));
+  console.log(`[Scheduler] Schedule ${scheduleId}: using rotation index ${idx}/${rotation.length} (counter=${counter})`);
+  return rotatedFilters;
+}
+
 export function startScheduledFetchRunner() {
   if (_cronInterval) return;
   // Check every 5 minutes if any schedules are due
@@ -663,18 +706,55 @@ export function startScheduledFetchRunner() {
       for (const schedule of due) {
         console.log(`[Scheduler] Running scheduled fetch: ${schedule.name}`);
         try {
-          const filters = schedule.filters as FetchFilters;
-          await executeFetch({ ...filters, endpoint: schedule.endpoint as FetchFilters["endpoint"] }, schedule.id, schedule.name);
+          // Determine the endpoint
+          const baseFilters = schedule.filters as FetchFilters;
+          const endpoint = schedule.endpoint as FetchFilters["endpoint"];
+
+          // Pre-flight quota safety check
+          const safe = await isQuotaSafe(endpoint);
+          if (!safe) {
+            console.log(`[Scheduler] Skipping schedule ${schedule.id} (${schedule.name}) due to quota hard stop.`);
+            // Still advance nextRunAt so we don't keep retrying
+            const nextRun = computeNextRun(
+              schedule.intervalType,
+              schedule.scheduleHour ?? 9,
+              schedule.scheduleMinute ?? 0,
+              schedule.scheduleDayOfWeek,
+              true,
+              schedule.weekdaysOnly ?? false
+            );
+            await updateFetchSchedule(schedule.id, { nextRunAt: nextRun ?? undefined });
+            continue;
+          }
+
+          // Get rotated filters if queryRotation is set
+          const rotation = schedule.queryRotation as FetchFilters[] | null;
+          const filters = await getRotatedFilters(schedule.id, rotation, baseFilters);
+
+          await executeFetch({ ...filters, endpoint }, schedule.id, schedule.name);
           const nextRun = computeNextRun(
             schedule.intervalType,
             schedule.scheduleHour ?? 9,
             schedule.scheduleMinute ?? 0,
             schedule.scheduleDayOfWeek,
-            true
+            true,
+            schedule.weekdaysOnly ?? false
           );
           await updateFetchSchedule(schedule.id, { lastRunAt: new Date(), nextRunAt: nextRun ?? undefined });
         } catch (e) {
           console.error(`[Scheduler] Error running schedule ${schedule.id}:`, e);
+          // Still advance nextRunAt on error to prevent infinite retry loops
+          try {
+            const nextRun = computeNextRun(
+              schedule.intervalType,
+              schedule.scheduleHour ?? 9,
+              schedule.scheduleMinute ?? 0,
+              schedule.scheduleDayOfWeek,
+              true,
+              schedule.weekdaysOnly ?? false
+            );
+            await updateFetchSchedule(schedule.id, { nextRunAt: nextRun ?? undefined });
+          } catch {}
         }
       }
     } catch (e) {
@@ -1114,9 +1194,11 @@ export const appRouter = router({
         scheduleHour: z.number().min(0).max(23).default(9),
         scheduleMinute: z.number().min(0).max(59).default(0),
         scheduleDayOfWeek: z.number().min(0).max(6).optional(),
+        weekdaysOnly: z.boolean().optional().default(false),
+        queryRotation: z.array(FetchFiltersSchema).optional(),
       }))
       .mutation(async ({ input }) => {
-        const nextRun = computeNextRun(input.intervalType, input.scheduleHour, input.scheduleMinute, input.scheduleDayOfWeek);
+        const nextRun = computeNextRun(input.intervalType, input.scheduleHour, input.scheduleMinute, input.scheduleDayOfWeek, false, input.weekdaysOnly);
         await insertFetchSchedule({
           name: input.name,
           endpoint: input.endpoint,
@@ -1125,6 +1207,8 @@ export const appRouter = router({
           scheduleHour: input.scheduleHour,
           scheduleMinute: input.scheduleMinute,
           scheduleDayOfWeek: input.scheduleDayOfWeek ?? null,
+          weekdaysOnly: input.weekdaysOnly,
+          queryRotation: input.queryRotation ? input.queryRotation as unknown as Record<string, unknown>[] : null,
           enabled: true,
           nextRunAt: nextRun ?? undefined,
         });
@@ -1151,9 +1235,12 @@ export const appRouter = router({
         const schedule = await getFetchScheduleById(input.id);
         if (!schedule) throw new TRPCError({ code: "NOT_FOUND", message: "Schedule not found" });
         try {
-          const filters = schedule.filters as FetchFilters;
-          const result = await executeFetch({ ...filters, endpoint: schedule.endpoint as FetchFilters["endpoint"] }, schedule.id, schedule.name);
-          const nextRun = computeNextRun(schedule.intervalType, schedule.scheduleHour ?? 9, schedule.scheduleMinute ?? 0, schedule.scheduleDayOfWeek, true);
+          const baseFilters = schedule.filters as FetchFilters;
+          const endpoint = schedule.endpoint as FetchFilters["endpoint"];
+          const rotation = schedule.queryRotation as FetchFilters[] | null;
+          const filters = await getRotatedFilters(schedule.id, rotation, baseFilters);
+          const result = await executeFetch({ ...filters, endpoint }, schedule.id, schedule.name);
+          const nextRun = computeNextRun(schedule.intervalType, schedule.scheduleHour ?? 9, schedule.scheduleMinute ?? 0, schedule.scheduleDayOfWeek, true, schedule.weekdaysOnly ?? false);
           await updateFetchSchedule(schedule.id, { lastRunAt: new Date(), nextRunAt: nextRun ?? undefined });
           return { success: true, ...result };
         } catch (e: unknown) {
