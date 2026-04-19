@@ -544,3 +544,7 @@
 - [x] Create 4 schedule entries in DB (3 ATS slots + 1 LinkedIn slot)
 - [x] Update scheduleDayOfWeek to support Mon-Fri only (weekdaysOnly field)
 - [x] All 94 existing tests pass (scheduling logic tested via existing scheduler tests)
+
+## v3.48 Schedule Fix: First Run & Ingest Jobs Visibility
+- [x] Update nextRunAt for all 4 v2 schedules to Monday Apr 20 at 6:00/6:10/6:20/6:30 AM GST
+- [x] Ensure v2 schedules are visible in the Ingest Jobs tab UI (added MON-FRI badge, query rotation count, advancedTitleFilter display)

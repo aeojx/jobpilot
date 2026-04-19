@@ -378,7 +378,9 @@ function FetchDetails({ filters }: { filters?: unknown }) {
   if (!filters) return null;
   const f = filters as Record<string, unknown>;
   const details: { label: string; value: string }[] = [];
-  if (f.titleFilter) details.push({ label: "TITLE", value: String(f.titleFilter) });
+  if (f.advancedTitleFilter) details.push({ label: "TITLE", value: String(f.advancedTitleFilter) });
+  else if (f.titleFilter) details.push({ label: "TITLE", value: String(f.titleFilter) });
+  if (f.advancedDescriptionFilter) details.push({ label: "DESC", value: String(f.advancedDescriptionFilter) });
   if (f.locationFilter) details.push({ label: "LOCATION", value: String(f.locationFilter) });
   if (f.descriptionFilter) details.push({ label: "DESCRIPTION", value: String(f.descriptionFilter) });
   if (f.organizationFilter) details.push({ label: "ORG", value: String(f.organizationFilter) });
@@ -1163,9 +1165,23 @@ export default function Ingestion() {
                          s.intervalType === "daily" ? `Daily at ${String(s.scheduleHour ?? 9).padStart(2,"0")}:${String(s.scheduleMinute ?? 0).padStart(2,"0")} UTC` :
                          `Weekly ${DAYS_OF_WEEK[s.scheduleDayOfWeek ?? 1]} at ${String(s.scheduleHour ?? 9).padStart(2,"0")}:${String(s.scheduleMinute ?? 0).padStart(2,"0")} UTC`}
                       </span>
+                      {Boolean((s as Record<string, unknown>).weekdaysOnly) && <Badge className="text-xs font-mono bg-blue-500/20 text-blue-400 border-blue-500">MON-FRI</Badge>}
                       {s.lastRunAt && <span>Last run: {new Date(s.lastRunAt).toLocaleString()}</span>}
                       {s.nextRunAt && s.enabled && <span className="text-amber-400">Next: {new Date(s.nextRunAt).toLocaleString()}</span>}
                     </div>
+                    {/* Query rotation info */}
+                    {(() => {
+                      const rot = (s as Record<string, unknown>).queryRotation;
+                      if (rot && Array.isArray(rot)) {
+                        return (
+                          <div className="mt-1 text-xs font-mono text-purple-400">
+                            <Zap size={10} className="inline mr-1" />
+                            ROTATION: {rot.length} queries cycling daily
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                     <FetchDetails filters={s.filters} />
                   </div>
                   <div className="flex gap-2 shrink-0">
