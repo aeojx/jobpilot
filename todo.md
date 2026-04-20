@@ -548,3 +548,8 @@
 ## v3.48 Schedule Fix: First Run & Ingest Jobs Visibility
 - [x] Update nextRunAt for all 4 v2 schedules to Monday Apr 20 at 6:00/6:10/6:20/6:30 AM GST
 - [x] Ensure v2 schedules are visible in the Ingest Jobs tab UI (added MON-FRI badge, query rotation count, advancedTitleFilter display)
+
+## v3.49 Bug Fix: V2 Schedules Returning 0 Results
+- [x] Diagnose why all 4 v2 schedules returned 0 fetched results (advanced_title_filter used wrong boolean syntax instead of PostgreSQL tsquery)
+- [x] Fix query parameters to return actual jobs (switched to tsquery pipe | and <-> phrase operators, verified all 8 queries return results)
+- [x] Re-test and verify results (all 9 queries tested: 5+ results each, added tsquery error detection to executeFetch)

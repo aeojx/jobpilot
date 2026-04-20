@@ -518,6 +518,36 @@ async function executeFetch(
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const dataAny = data as any;
+
+  // Detect API-level errors (e.g. tsquery syntax errors) returned as JSON objects
+  if (!Array.isArray(data) && dataAny?.code && dataAny?.message) {
+    const friendlyMessage = `API query error (${dataAny.code}): ${dataAny.message}`;
+    const errorDetail = JSON.stringify({
+      httpStatus: response.status,
+      apiErrorCode: dataAny.code,
+      apiErrorMessage: dataAny.message,
+      apiErrorHint: dataAny.hint,
+      url,
+      timestamp: new Date().toISOString(),
+    });
+    await insertFetchHistory({
+      scheduleId: scheduleId ?? null,
+      scheduleName: scheduleName ?? null,
+      endpoint,
+      filters: input as Record<string, unknown>,
+      jobsFetched: 0,
+      jobsIngested: 0,
+      jobsDuplicate: 0,
+      jobsRemaining: jobsRemaining ?? null,
+      requestsRemaining: requestsRemaining ?? null,
+      durationMs: Date.now() - fetchStartTime,
+      status: "error",
+      errorMessage: friendlyMessage,
+      errorDetail,
+    });
+    throw new Error(friendlyMessage);
+  }
+
   const rawJobs: unknown[] = Array.isArray(data) ? data : (dataAny?.jobs ?? dataAny?.data ?? []);
 
   let jobsIngested = 0;
