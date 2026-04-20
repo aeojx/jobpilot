@@ -1,61 +1,86 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const CHECK = "✅";
-const CROSS = "❌";
+/* ─── Scoped style reset ─────────────────────────────────────────────────────
+   The app-wide Atari theme forces pixel fonts, zero border-radius, scanlines,
+   and monospace everywhere. We inject a scoped override so the landing page
+   renders with a clean, modern marketing aesthetic.
+   ──────────────────────────────────────────────────────────────────────────── */
+const LANDING_STYLE = `
+  /* ── Full theme reset for landing page ── */
+  .lp,
+  .lp *,
+  .lp *::before,
+  .lp *::after {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    border-radius: revert !important;
+  }
+  .lp h1, .lp h2, .lp h3, .lp h4, .lp h5, .lp h6 {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    text-transform: none !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1.15 !important;
+  }
+  .lp {
+    background-image: none !important;
+    background-color: #080B14 !important;
+    font-size: 16px !important;
+  }
+  /* Kill CRT scanlines on body when landing is active */
+  body:has(.lp) {
+    background-image: none !important;
+    background-color: #080B14 !important;
+  }
+  .lp input, .lp textarea {
+    background: #fff !important;
+    color: #111 !important;
+    font-family: 'Inter', sans-serif !important;
+    border-radius: 8px !important;
+  }
+  .lp button {
+    border-radius: 8px !important;
+  }
+  .lp table {
+    border-radius: 0 !important;
+  }
+  .lp a {
+    text-decoration: none !important;
+  }
+`;
 
-const pricingFeatures = [
-  { label: "Swipes per day", free: "10", hustler: "Unlimited", operator: "Unlimited" },
-  { label: "AI match scoring", free: CHECK, hustler: CHECK, operator: CHECK },
-  { label: "Pipeline tracker", free: CHECK, hustler: CHECK, operator: CHECK },
-  { label: "Daily 9 PM email report", free: CROSS, hustler: CHECK, operator: CHECK },
-  { label: "Weekly Friday email report", free: CROSS, hustler: CROSS, operator: CHECK },
-  { label: "Auto-apply (10 jobs/day)", free: CROSS, hustler: CHECK, operator: CHECK },
-  { label: "Priority job fetching (15 min)", free: CROSS, hustler: CHECK, operator: CHECK },
-  { label: "Question Bank", free: CROSS, hustler: CHECK, operator: CHECK },
-  { label: "Rejection analytics", free: CROSS, hustler: CHECK, operator: CHECK },
-  { label: "AI pipeline coaching", free: CROSS, hustler: CROSS, operator: CHECK },
-  { label: "Interview signal detection", free: CROSS, hustler: CROSS, operator: CHECK },
-  { label: "Onboarding call (30 min)", free: CROSS, hustler: CROSS, operator: CHECK },
-  { label: "Salary negotiation playbook", free: CROSS, hustler: CROSS, operator: CHECK },
-  { label: "Priority support (4hr)", free: CROSS, hustler: CROSS, operator: CHECK },
-];
+/* ─── Animated counter ───────────────────────────────────────────────────── */
+function AnimatedNumber({ target, suffix = "", prefix = "" }: { target: number; suffix?: string; prefix?: string }) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    const dur = 2000;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min((now - start) / dur, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      setVal(Math.round(target * ease));
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [target]);
+  return <span>{prefix}{val.toLocaleString()}{suffix}</span>;
+}
 
-const faqs = [
-  {
-    q: "Is this just a job board?",
-    a: "No. 1000Jobs doesn't list jobs — it hunts them. It pulls from 40+ live job sources, scores each one against your profile in real time, and serves only the ones worth your attention. You never browse. You only decide.",
-  },
-  {
-    q: "Do I need to write cover letters?",
-    a: "No. Your profile is your cover letter. The AI builds a tailored application from your CV and the job description. You swipe. It applies.",
-  },
-  {
-    q: "What if I get too many interviews?",
-    a: "That's the goal. The Operator plan includes interview signal detection so you can prioritize which ones to pursue first.",
-  },
-  {
-    q: "How is this different from Easy Apply on LinkedIn?",
-    a: "LinkedIn Easy Apply still requires you to find the jobs, evaluate them, and click through each one. 1000Jobs removes all three steps. You only make one decision: left or right. Also, Easy Apply LinkedIn jobs attract thousands of applicants. We pull directly from ATS systems — less competition, higher signal.",
-  },
-  {
-    q: "Can I cancel anytime?",
-    a: "Yes. No contracts, no cancellation fees. Cancel from your dashboard in 10 seconds.",
-  },
-];
-
+/* ─── FAQ accordion ──────────────────────────────────────────────────────── */
 function FAQItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
     <div
-      className="border border-[#00ff9f22] rounded-lg overflow-hidden cursor-pointer"
+      className="border border-gray-800 overflow-hidden cursor-pointer"
+      style={{ borderRadius: 12 }}
       onClick={() => setOpen(!open)}
     >
-      <div className="flex items-center justify-between px-6 py-5 bg-[#111827] hover:bg-[#1a2235] transition-colors">
-        <span className="text-[#e2e8f0] font-medium text-base">{q}</span>
-        <span className="text-[#00ff9f] text-xl ml-4 flex-shrink-0">{open ? "−" : "+"}</span>
+      <div className="flex items-center justify-between px-6 py-5 bg-[#111827] hover:bg-[#161f33] transition-colors">
+        <span className="text-white font-semibold text-base">{q}</span>
+        <span className="text-emerald-400 text-2xl ml-4 flex-shrink-0 transition-transform" style={{ transform: open ? "rotate(45deg)" : "none" }}>+</span>
       </div>
       {open && (
-        <div className="px-6 py-4 bg-[#0f0f1a] text-[#94a3b8] text-sm leading-relaxed border-t border-[#00ff9f22]">
+        <div className="px-6 py-5 bg-[#0c1220] text-gray-400 text-[15px] leading-relaxed border-t border-gray-800">
           {a}
         </div>
       )}
@@ -63,438 +88,562 @@ function FAQItem({ q, a }: { q: string; a: string }) {
   );
 }
 
+/* ─── Data ───────────────────────────────────────────────────────────────── */
+const FAQS = [
+  {
+    q: "What exactly do I get for $1?",
+    a: "10 AI-matched job applications sent on your behalf. Each one includes a tailored resume optimized for 90%+ ATS match rate. Think of it as a test drive — see the quality before committing.",
+  },
+  {
+    q: "How is the $499 White Glove different from the $100 plan?",
+    a: "The $100 plan mass-applies with your existing resume. The $499 White Glove plan generates a custom-tailored resume for every single application, rewrites your LinkedIn profile, and includes a dedicated career strategist. You literally just swipe — we handle everything else.",
+  },
+  {
+    q: "Where do the jobs come from?",
+    a: "We pull from 48+ ATS platforms (Greenhouse, Lever, Workday, Ashby, etc.) plus LinkedIn. These are direct company postings — not recycled job board listings. Less competition, higher response rates.",
+  },
+  {
+    q: "How is this different from LinkedIn Easy Apply?",
+    a: "Easy Apply sends a generic resume to jobs you manually find. 1000Jobs AI-scores every job against your profile, generates a tailored resume per application, and applies across 48 platforms — not just LinkedIn. You review 100 jobs in 5 minutes instead of 5 hours.",
+  },
+  {
+    q: "What if I don't get any interviews?",
+    a: "The White Glove plan comes with a full money-back guarantee. If you complete the 100-day program and don't land interviews, we refund every dollar. No forms, no hoops, one email.",
+  },
+  {
+    q: "Can I cancel anytime?",
+    a: "There are no subscriptions. You pay once, get your applications, and that's it. No recurring charges, no hidden fees.",
+  },
+  {
+    q: "How long does it take to see results?",
+    a: "Our founder landed 4 interviews within the first 3 weeks using this exact system. Most users see their first interview requests within 10–14 days of starting.",
+  },
+];
+
+const PAIN_POINTS = [
+  { action: "Browse LinkedIn for 2 hours", cost: "2 hours wasted, 0 applications sent" },
+  { action: "Tailor a resume for one job", cost: "45 minutes per application" },
+  { action: "Fill out an ATS form manually", cost: "20 minutes of copy-paste hell" },
+  { action: "Wait 3 weeks to hear back", cost: "Anxiety, self-doubt, silence" },
+  { action: "Repeat 200+ times to land an offer", cost: "Your entire quarter — gone" },
+];
+
+/* ─── Main component ─────────────────────────────────────────────────────── */
 export default function Landing() {
   return (
-    <div className="bg-[#0a0a12] text-[#e2e8f0] font-mono min-h-screen">
-      {/* NAV */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a12cc] backdrop-blur border-b border-[#00ff9f22]">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-[#00ff9f] font-bold text-xl tracking-widest">1000</span>
-            <span className="text-[#fbbf24] font-bold text-xl tracking-widest">JOBS</span>
+    <>
+      <style>{LANDING_STYLE}</style>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+      <div className="lp min-h-screen text-white" style={{ background: "#080B14", fontFamily: "'Inter', sans-serif" }}>
+
+        {/* ═══ STICKY NAV ═══ */}
+        <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b border-white/5" style={{ background: "rgba(8,11,20,0.85)" }}>
+          <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="text-emerald-400 font-extrabold text-xl tracking-tight">1000</span>
+              <span className="text-amber-400 font-extrabold text-xl tracking-tight">JOBS</span>
+            </div>
+            <div className="flex items-center gap-6">
+              <a href="#pricing" className="text-gray-500 hover:text-white text-sm transition-colors hidden sm:block">Pricing</a>
+              <a href="#proof" className="text-gray-500 hover:text-white text-sm transition-colors hidden sm:block">Results</a>
+              <a href="#faq" className="text-gray-500 hover:text-white text-sm transition-colors hidden sm:block">FAQ</a>
+              <a
+                href="#pricing"
+                className="text-sm font-bold px-5 py-2.5 transition-all hover:scale-105"
+                style={{ background: "#10B981", color: "#000", borderRadius: 8 }}
+              >
+                Get Started
+              </a>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <a href="#pricing" className="text-[#64748b] hover:text-[#e2e8f0] text-sm transition-colors hidden sm:block">Pricing</a>
-            <a href="#faq" className="text-[#64748b] hover:text-[#e2e8f0] text-sm transition-colors hidden sm:block">FAQ</a>
-            <a
-              href="https://1000jobs.manus.space"
-              className="bg-[#00ff9f] text-[#0a0a12] text-sm font-bold px-4 py-2 rounded hover:bg-[#00e68a] transition-colors"
-            >
-              Start Free →
-            </a>
-          </div>
-        </div>
-      </nav>
+        </nav>
 
-      {/* HERO */}
-      <section className="pt-32 pb-24 px-6 text-center relative overflow-hidden">
-        {/* Background glow */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#00ff9f08] rounded-full blur-3xl" />
-        </div>
-
-        <div className="relative max-w-4xl mx-auto">
-          <div className="inline-block bg-[#00ff9f15] border border-[#00ff9f33] text-[#00ff9f] text-xs tracking-widest px-4 py-2 rounded-full mb-8">
-            ▶ TINDER FOR JOBS — NOW IN EARLY ACCESS
-          </div>
-
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6 text-white">
-            Swipe Right on Your<br />
-            <span className="text-[#00ff9f]">Next Job.</span>
-          </h1>
-          <p className="text-xl sm:text-2xl text-[#94a3b8] mb-4 max-w-2xl mx-auto leading-relaxed">
-            Land 1,000 Applications Without Burning Out.
-          </p>
-          <p className="text-base text-[#64748b] mb-10 max-w-xl mx-auto leading-relaxed">
-            If applying to jobs worked like Tinder — swipe through AI-matched roles, apply in one tap, and get a daily report delivered to your inbox every night at 9 PM.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <a
-              href="https://1000jobs.manus.space"
-              className="bg-[#00ff9f] text-[#0a0a12] font-bold px-8 py-4 rounded-lg text-lg hover:bg-[#00e68a] transition-all hover:scale-105 shadow-[0_0_30px_#00ff9f40]"
-            >
-              Start Swiping Free →
-            </a>
-            <a
-              href="#how-it-works"
-              className="border border-[#00ff9f44] text-[#00ff9f] font-bold px-8 py-4 rounded-lg text-lg hover:bg-[#00ff9f10] transition-colors"
-            >
-              See How It Works ↓
-            </a>
+        {/* ═══ HERO ═══ */}
+        <section className="pt-28 pb-20 px-6 text-center relative overflow-hidden">
+          {/* Gradient orbs */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[500px] opacity-20" style={{ background: "radial-gradient(ellipse, #10B981 0%, transparent 70%)" }} />
+            <div className="absolute top-40 left-1/4 w-[400px] h-[400px] opacity-10" style={{ background: "radial-gradient(circle, #F59E0B 0%, transparent 70%)" }} />
           </div>
 
-          {/* Swipe card visual */}
-          <div className="relative w-72 mx-auto mb-12 select-none">
-            {/* Back card */}
-            <div className="absolute top-3 left-3 right-3 h-36 bg-[#1a1a2e] border border-[#334155] rounded-xl opacity-50 rotate-3" />
-            {/* Middle card */}
-            <div className="absolute top-1.5 left-1.5 right-1.5 h-36 bg-[#1a1a2e] border border-[#334155] rounded-xl opacity-75 rotate-1" />
-            {/* Front card */}
-            <div className="relative bg-[#1a1a2e] border border-[#00ff9f44] rounded-xl p-5 shadow-[0_0_40px_#00ff9f15]">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <div className="text-[#e2e8f0] font-bold text-sm">Senior Product Manager</div>
-                  <div className="text-[#64748b] text-xs mt-0.5">Stripe · Remote · $140k–$180k</div>
+          <div className="relative max-w-4xl mx-auto">
+            <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold tracking-wide px-4 py-2 mb-8" style={{ borderRadius: 100 }}>
+              <span className="w-2 h-2 bg-emerald-400 animate-pulse" style={{ borderRadius: "50%" }} />
+              BUILT BY A COO WHO LANDED 4 INTERVIEWS IN 3 WEEKS
+            </div>
+
+            <h1 className="text-[2.75rem] sm:text-6xl lg:text-7xl font-black leading-[1.05] mb-6 tracking-tight">
+              Stop Applying to Jobs.<br />
+              <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(135deg, #10B981, #34D399, #6EE7B7)" }}>
+                Start Landing Interviews.
+              </span>
+            </h1>
+
+            <p className="text-xl sm:text-2xl text-gray-400 mb-3 max-w-2xl mx-auto leading-relaxed font-normal">
+              1,000 targeted applications in 100 days.
+            </p>
+            <p className="text-lg text-gray-500 mb-10 max-w-xl mx-auto leading-relaxed">
+              AI scores every job against your profile. Generates a tailored resume. Applies for you. You just swipe.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-14">
+              <a
+                href="#pricing"
+                className="font-bold px-10 py-4 text-lg transition-all hover:scale-105"
+                style={{ background: "#10B981", color: "#000", borderRadius: 12, boxShadow: "0 0 40px rgba(16,185,129,0.3)" }}
+              >
+                Start for $1 — 10 Applications
+              </a>
+              <a
+                href="#how-it-works"
+                className="font-bold px-10 py-4 text-lg border border-gray-700 text-gray-300 hover:border-emerald-500/50 hover:text-white transition-all"
+                style={{ borderRadius: 12 }}
+              >
+                See How It Works
+              </a>
+            </div>
+
+            {/* Metric strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
+              {[
+                { value: 3206, label: "Jobs Scored by AI", suffix: "+" },
+                { value: 48, label: "ATS Platforms", suffix: "" },
+                { value: 351, label: "Applications Sent", suffix: "" },
+                { value: 4, label: "Interviews Landed", suffix: "" },
+              ].map((m) => (
+                <div key={m.label} className="bg-white/[0.03] border border-white/[0.06] px-4 py-4" style={{ borderRadius: 12 }}>
+                  <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400">
+                    <AnimatedNumber target={m.value} suffix={m.suffix} />
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1 font-medium">{m.label}</div>
                 </div>
-                <div className="bg-[#00ff9f20] text-[#00ff9f] text-xs font-bold px-2 py-1 rounded">94% match</div>
-              </div>
-              <div className="text-[#475569] text-xs leading-relaxed mb-4">
-                Lead product strategy for our payments infrastructure team. 5+ years PM experience required...
-              </div>
-              <div className="flex gap-3">
-                <button className="flex-1 bg-[#f8717120] border border-[#f87171] text-[#f87171] text-sm font-bold py-2 rounded-lg">✕ Pass</button>
-                <button className="flex-1 bg-[#00ff9f20] border border-[#00ff9f] text-[#00ff9f] text-sm font-bold py-2 rounded-lg">✓ Apply</button>
-              </div>
+              ))}
             </div>
           </div>
+        </section>
 
-          {/* Trust quote */}
-          <div className="max-w-lg mx-auto bg-[#111827] border border-[#00ff9f22] rounded-xl px-6 py-4">
-            <p className="text-[#94a3b8] text-sm italic leading-relaxed">
-              "19 applications submitted in the first 24 hours. I've never moved this fast."
-            </p>
-            <p className="text-[#00ff9f] text-xs mt-2">— Allan A., currently in final rounds at 3 companies</p>
-          </div>
-        </div>
-      </section>
+        {/* ═══ PROBLEM SECTION ═══ */}
+        <section className="py-20 px-6" style={{ background: "#060910" }}>
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-14">
+              <p className="text-amber-400 text-sm font-semibold tracking-wide uppercase mb-3">The Problem</p>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-5 tracking-tight">
+                You're not unemployable.<br />The process is broken.
+              </h2>
+              <p className="text-gray-400 text-lg max-w-2xl mx-auto leading-relaxed">
+                The average executive spends <strong className="text-amber-400">11 hours per week</strong> on job applications — rewriting resumes, filling ATS forms, crafting cover letters — only to hear nothing back for weeks.
+              </p>
+            </div>
 
-      {/* PROBLEM */}
-      <section className="py-20 px-6 bg-[#0d0d1a]">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Job searching is broken.</h2>
-            <p className="text-[#94a3b8] text-lg max-w-2xl mx-auto">
-              The average job seeker spends <strong className="text-[#fbbf24]">11 hours per week</strong> writing cover letters, reformatting resumes, and copy-pasting the same information into 47 different ATS portals — only to hear nothing back for weeks.
-            </p>
-            <p className="text-[#64748b] mt-4 text-base">You're not lazy. The process is ineffective and exhausting.</p>
-          </div>
-
-          <div className="overflow-hidden rounded-xl border border-[#334155]">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-[#1e293b]">
-                  <th className="text-left px-6 py-4 text-[#64748b] uppercase tracking-widest text-xs">What you do</th>
-                  <th className="text-left px-6 py-4 text-[#64748b] uppercase tracking-widest text-xs">What it costs you</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  ["Browse LinkedIn for 2 hours", "2 hours, 0 applications"],
-                  ["Write a tailored cover letter", "15 minutes per job"],
-                  ["Fill out the ATS form manually", "15 minutes per job"],
-                  ["Wait 3 weeks to hear back", "Your sanity"],
-                  ["Repeat 200+ times to land an offer", "Your entire quarter"],
-                ].map(([action, cost], i) => (
-                  <tr key={i} className={i % 2 === 0 ? "bg-[#0f0f1a]" : "bg-[#111827]"}>
-                    <td className="px-6 py-4 text-[#e2e8f0]">{action}</td>
-                    <td className="px-6 py-4 text-[#f87171]">{cost}</td>
+            <div className="overflow-hidden border border-gray-800" style={{ borderRadius: 16 }}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ background: "#111827" }}>
+                    <th className="text-left px-6 py-4 text-gray-500 uppercase tracking-wider text-xs font-semibold">What you do today</th>
+                    <th className="text-left px-6 py-4 text-gray-500 uppercase tracking-wider text-xs font-semibold">What it actually costs you</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-8 text-center">
-            <p className="text-[#e2e8f0] text-lg">You don't have a motivation problem. <strong className="text-[#fbbf24]">You don't have the right tools.</strong></p>
-            <p className="text-[#64748b] mt-3">The companies hiring right now are interviewing candidates who applied 42 minutes ago. If you're not moving fast, you're invisible.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* SOLUTION */}
-      <section className="py-20 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">
-            What if applying to jobs felt like<br />
-            <span className="text-[#00ff9f]">swiping on Tinder?</span>
-          </h2>
-          <p className="text-[#94a3b8] text-lg mb-12 max-w-2xl mx-auto">
-            <strong className="text-[#e2e8f0]">1000Jobs</strong> pulls in thousands of live job listings every day, scores each one against your skills and preferences using AI, and presents them to you one at a time. In 5 minutes a day you can match with hundreds of jobs per week.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
-            {[
-              { icon: "👉", action: "Swipe Right", result: "Goes into your Apply queue", color: "#00ff9f" },
-              { icon: "👈", action: "Swipe Left", result: "Gone forever — never see it again", color: "#f87171" },
-              { icon: "⚡", action: "Tap Apply", result: "AI submits with custom resume & cover letter", color: "#fbbf24" },
-            ].map((item) => (
-              <div key={item.action} className="bg-[#111827] border border-[#334155] rounded-xl p-6 text-center">
-                <div className="text-4xl mb-3">{item.icon}</div>
-                <div className="font-bold text-lg mb-2" style={{ color: item.color }}>{item.action}</div>
-                <div className="text-[#64748b] text-sm leading-relaxed">{item.result}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-[#00ff9f10] border border-[#00ff9f33] rounded-xl px-8 py-6 inline-block">
-            <p className="text-[#e2e8f0] text-xl font-bold">
-              From 3 applications a week → <span className="text-[#00ff9f]">30 a day.</span>
-            </p>
-            <p className="text-[#64748b] text-sm mt-2">Without working harder. No copy-paste. No ATS hell.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section id="how-it-works" className="py-20 px-6 bg-[#0d0d1a]">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white text-center mb-4">Three Steps to 1,000 Applications</h2>
-          <p className="text-[#64748b] text-center mb-14 text-base">Set it up once. Swipe daily. Watch the pipeline fill.</p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                step: "01",
-                title: "Build Your Profile Once",
-                body: "Upload your CV, set target roles, locations, and salary range. Tell the AI your dealbreakers. Done. It learns from your swipes and gets sharper every day.",
-                color: "#00ff9f",
-              },
-              {
-                step: "02",
-                title: "Swipe Every Day",
-                body: "Open the app. Jobs are served like cards. Swipe right on anything interesting. Swipe left on anything that doesn't fit. 5 minutes. Done.",
-                color: "#fbbf24",
-              },
-              {
-                step: "03",
-                title: "Watch the Pipeline Fill",
-                body: "Your daily report lands at 9 PM: how many you applied to, how many are queued, how many weeks until you hit 1,000. You stay in control without doing the grunt work.",
-                color: "#60a5fa",
-              },
-            ].map((item) => (
-              <div key={item.step} className="relative bg-[#111827] border border-[#334155] rounded-xl p-7">
-                <div className="text-5xl font-bold mb-4 opacity-20" style={{ color: item.color }}>{item.step}</div>
-                <h3 className="text-lg font-bold mb-3" style={{ color: item.color }}>{item.title}</h3>
-                <p className="text-[#64748b] text-sm leading-relaxed">{item.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* SOCIAL PROOF */}
-      <section className="py-20 px-6">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">What Early Users Are Saying</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { quote: "I hit 100 applications in my first two weeks. My previous record was 12 in a month.", name: "Software Engineer", location: "Dubai" },
-              { quote: "The daily email is the best part. I wake up and already know exactly where I stand.", name: "Marketing Manager", location: "London" },
-              { quote: "I got 4 interview requests in the first week. I haven't changed anything about my CV.", name: "Product Designer", location: "Toronto" },
-            ].map((t) => (
-              <div key={t.name} className="bg-[#111827] border border-[#00ff9f22] rounded-xl p-6">
-                <p className="text-[#94a3b8] text-sm italic leading-relaxed mb-4">"{t.quote}"</p>
-                <div className="text-[#00ff9f] text-xs font-bold">{t.name}</div>
-                <div className="text-[#475569] text-xs">{t.location}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* PRICING */}
-      <section id="pricing" className="py-20 px-6 bg-[#0d0d1a]">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white text-center mb-4">Simple, Honest Pricing</h2>
-          <p className="text-[#64748b] text-center mb-4 max-w-xl mx-auto">
-            The question isn't whether you can afford this. The question is: <strong className="text-[#e2e8f0]">how much is one job offer worth to you?</strong>
-          </p>
-          <p className="text-[#94a3b8] text-center text-sm mb-14 max-w-xl mx-auto">
-            The average salary increase when switching jobs is 15–20%. On a $100,000 salary, that's $15,000–$20,000 per year — every year. 1000Jobs costs less than a single dinner out.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-            {/* Free */}
-            <div className="bg-[#111827] border border-[#334155] rounded-2xl p-8 flex flex-col">
-              <div className="text-[#64748b] text-xs uppercase tracking-widest mb-2">Free</div>
-              <div className="text-4xl font-bold text-white mb-1">$0</div>
-              <div className="text-[#475569] text-xs mb-6">forever</div>
-              <div className="text-[#94a3b8] text-sm italic mb-6">"Dip Your Toes In"</div>
-              <ul className="space-y-3 text-sm flex-1 mb-8">
-                {["10 swipes per day", "AI match scoring", "Pipeline tracker", "Web app access"].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-[#64748b]"><span className="text-[#00ff9f]">✓</span>{f}</li>
-                ))}
-                {["Daily email report", "Auto-apply", "Priority job fetching"].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-[#334155] line-through"><span className="text-[#334155]">✗</span>{f}</li>
-                ))}
-              </ul>
-              <a href="https://1000jobs.manus.space" className="block text-center border border-[#334155] text-[#64748b] font-bold py-3 rounded-lg hover:border-[#00ff9f44] hover:text-[#e2e8f0] transition-colors text-sm">
-                Start Free — No Card Required
-              </a>
+                </thead>
+                <tbody>
+                  {PAIN_POINTS.map((row, i) => (
+                    <tr key={i} className={i % 2 === 0 ? "bg-[#0a0f1a]" : "bg-[#0d1320]"}>
+                      <td className="px-6 py-4 text-gray-300">{row.action}</td>
+                      <td className="px-6 py-4 text-red-400 font-medium">{row.cost}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
-            {/* Hustler */}
-            <div className="bg-[#111827] border-2 border-[#00ff9f] rounded-2xl p-8 flex flex-col relative shadow-[0_0_40px_#00ff9f20]">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#00ff9f] text-[#0a0a12] text-xs font-bold px-4 py-1 rounded-full tracking-widest">
-                MOST POPULAR
+            <div className="mt-10 text-center">
+              <p className="text-xl text-white font-semibold">
+                Total cost of doing it yourself: <span className="text-red-400">625+ hours per 1,000 applications</span>
+              </p>
+              <p className="text-gray-500 mt-2">That's 15 full work weeks. Three and a half months of your life.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* ═══ SOLUTION / HOW IT WORKS ═══ */}
+        <section id="how-it-works" className="py-20 px-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-14">
+              <p className="text-emerald-400 text-sm font-semibold tracking-wide uppercase mb-3">The Solution</p>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-5 tracking-tight">
+                What if 1,000 applications took<br />
+                <span className="text-emerald-400">5 minutes a day?</span>
+              </h2>
+              <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+                1000Jobs pulls from 48 ATS platforms, scores every job against your profile, generates a tailored resume, and applies — all while you swipe.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
+              {[
+                { step: "01", title: "We Hunt", desc: "Our AI scans 48+ ATS platforms and LinkedIn daily. Thousands of jobs, filtered to your exact profile.", color: "#10B981", icon: "🎯" },
+                { step: "02", title: "We Score", desc: "Every job is AI-scored against your skills, experience, and preferences. Only high-match jobs reach you.", color: "#F59E0B", icon: "⚡" },
+                { step: "03", title: "You Swipe", desc: "Open the app. Swipe right on jobs you like. Swipe left on ones you don't. 5 minutes. Done.", color: "#8B5CF6", icon: "👆" },
+                { step: "04", title: "We Apply", desc: "For every right-swipe, we generate a tailored resume and submit the application. You never touch an ATS form again.", color: "#EF4444", icon: "🚀" },
+              ].map((item) => (
+                <div key={item.step} className="relative bg-white/[0.02] border border-white/[0.06] p-7 group hover:border-emerald-500/30 transition-all" style={{ borderRadius: 16 }}>
+                  <div className="text-3xl mb-4">{item.icon}</div>
+                  <div className="text-xs font-bold tracking-widest mb-2" style={{ color: item.color }}>STEP {item.step}</div>
+                  <h3 className="text-lg font-bold text-white mb-3">{item.title}</h3>
+                  <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Before/After comparison */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-red-500/5 border border-red-500/20 p-8" style={{ borderRadius: 16 }}>
+                <h3 className="text-red-400 font-bold text-lg mb-4">Without 1000Jobs</h3>
+                <ul className="space-y-3 text-gray-400 text-sm">
+                  {["3 applications per week", "Generic resume for every job", "11 hours/week on applications", "Months to land an interview", "Burnout before you get an offer"].map((t) => (
+                    <li key={t} className="flex items-start gap-3"><span className="text-red-400 mt-0.5">✕</span>{t}</li>
+                  ))}
+                </ul>
               </div>
-              <div className="text-[#00ff9f] text-xs uppercase tracking-widest mb-2">Hustler</div>
-              <div className="text-4xl font-bold text-white mb-1">$29</div>
-              <div className="text-[#475569] text-xs mb-6">per month · 7-day free trial</div>
-              <div className="text-[#94a3b8] text-sm italic mb-6">"Apply Like It's Your Job"</div>
-              <ul className="space-y-3 text-sm flex-1 mb-8">
-                {[
-                  "Everything in Free",
-                  "Unlimited swipes",
-                  "Auto-apply (10 jobs/day)",
-                  "Daily 9 PM email report",
-                  "Priority job fetching (15 min)",
-                  "Question Bank",
-                  "Rejection analytics",
-                ].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-[#e2e8f0]"><span className="text-[#00ff9f]">✓</span>{f}</li>
-                ))}
-              </ul>
-              <a href="https://1000jobs.manus.space" className="block text-center bg-[#00ff9f] text-[#0a0a12] font-bold py-3 rounded-lg hover:bg-[#00e68a] transition-colors text-sm">
-                Start 7-Day Free Trial →
-              </a>
-              <p className="text-[#475569] text-xs text-center mt-3 italic">Most users apply to more jobs in their first week than they did in the previous 3 months.</p>
-            </div>
-
-            {/* Operator */}
-            <div className="bg-[#111827] border border-[#a78bfa44] rounded-2xl p-8 flex flex-col">
-              <div className="text-[#a78bfa] text-xs uppercase tracking-widest mb-2">Operator</div>
-              <div className="text-4xl font-bold text-white mb-1">$99</div>
-              <div className="text-[#475569] text-xs mb-6">per month</div>
-              <div className="text-[#94a3b8] text-sm italic mb-6">"Done With You — Maximum Velocity"</div>
-              <ul className="space-y-3 text-sm flex-1 mb-8">
-                {[
-                  "Everything in Hustler",
-                  "Weekly Friday email report",
-                  "AI pipeline coaching",
-                  "Interview signal detection",
-                  "30-min onboarding call",
-                  "Salary negotiation playbook",
-                  "Priority support (4hr response)",
-                ].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-[#e2e8f0]"><span className="text-[#a78bfa]">✓</span>{f}</li>
-                ))}
-              </ul>
-              <a href="https://1000jobs.manus.space" className="block text-center border border-[#a78bfa] text-[#a78bfa] font-bold py-3 rounded-lg hover:bg-[#a78bfa15] transition-colors text-sm">
-                Get Started with Operator →
-              </a>
-              <p className="text-[#475569] text-xs text-center mt-3 italic">At $99/month, this is less than one hour of a career coach — and it works 24/7.</p>
+              <div className="bg-emerald-500/5 border border-emerald-500/20 p-8" style={{ borderRadius: 16 }}>
+                <h3 className="text-emerald-400 font-bold text-lg mb-4">With 1000Jobs</h3>
+                <ul className="space-y-3 text-gray-300 text-sm">
+                  {["10+ applications per day", "Custom-tailored resume per job", "5 minutes/day swiping", "Interviews within 2 weeks", "1,000 applications in 100 days"].map((t) => (
+                    <li key={t} className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5">✓</span>{t}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
+        </section>
 
-          {/* Feature comparison table */}
-          <div className="overflow-x-auto rounded-xl border border-[#334155]">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-[#1e293b]">
-                  <th className="text-left px-5 py-4 text-[#64748b] uppercase tracking-widest text-xs">Feature</th>
-                  <th className="text-center px-5 py-4 text-[#64748b] uppercase tracking-widest text-xs">Free</th>
-                  <th className="text-center px-5 py-4 text-[#00ff9f] uppercase tracking-widest text-xs">Hustler</th>
-                  <th className="text-center px-5 py-4 text-[#a78bfa] uppercase tracking-widest text-xs">Operator</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pricingFeatures.map((row, i) => (
-                  <tr key={row.label} className={i % 2 === 0 ? "bg-[#0f0f1a]" : "bg-[#111827]"}>
-                    <td className="px-5 py-3 text-[#94a3b8]">{row.label}</td>
-                    <td className="px-5 py-3 text-center text-[#64748b]">{row.free}</td>
-                    <td className="px-5 py-3 text-center text-[#e2e8f0]">{row.hustler}</td>
-                    <td className="px-5 py-3 text-center text-[#e2e8f0]">{row.operator}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* ═══ SOCIAL PROOF ═══ */}
+        <section id="proof" className="py-20 px-6" style={{ background: "#060910" }}>
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-14">
+              <p className="text-emerald-400 text-sm font-semibold tracking-wide uppercase mb-3">Real Results</p>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-5 tracking-tight">
+                Built by a founder. Tested on himself.
+              </h2>
+              <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+                These aren't projections. This is what happened when we ran the system for 21 days.
+              </p>
+            </div>
+
+            {/* Results dashboard */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+              {[
+                { metric: "3,206", label: "Jobs Ingested & Scored", sub: "from 48 ATS platforms" },
+                { metric: "351", label: "Applications Submitted", sub: "10.9% acceptance rate" },
+                { metric: "47s", label: "Avg Resume Generation", sub: "per tailored application" },
+                { metric: "4", label: "Interviews Landed", sub: "in first 3 weeks" },
+              ].map((m) => (
+                <div key={m.label} className="bg-white/[0.03] border border-white/[0.06] p-5 text-center" style={{ borderRadius: 12 }}>
+                  <div className="text-2xl font-extrabold text-white">{m.metric}</div>
+                  <div className="text-xs text-emerald-400 font-semibold mt-1">{m.label}</div>
+                  <div className="text-xs text-gray-600 mt-0.5">{m.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Founder quote */}
+            <div className="bg-white/[0.03] border border-emerald-500/20 p-8 relative" style={{ borderRadius: 16 }}>
+              <div className="text-5xl text-emerald-500/20 absolute top-4 left-6">"</div>
+              <p className="text-gray-300 text-lg leading-relaxed pl-8 pt-4">
+                I built 1000Jobs because I was tired of spending 40 hours a week on applications and getting silence in return. In the first 21 days, the system scored 3,206 jobs, I swiped through them in minutes each morning, and it submitted 351 tailored applications. I landed 4 interviews — including two for C-suite roles. The total cost of resume generation? <strong className="text-emerald-400">$1.26.</strong>
+              </p>
+              <div className="mt-4 pl-8">
+                <div className="text-white font-bold">Allan Abbas</div>
+                <div className="text-gray-500 text-sm">Founder, 1000Jobs — Former COO, Fintech</div>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* GUARANTEE */}
-      <section className="py-20 px-6">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="bg-[#111827] border border-[#fbbf2444] rounded-2xl p-10">
-            <div className="text-5xl mb-6">🛡️</div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
-              The "1,000 Applications or We Work for Free" Guarantee
+        {/* ═══ OFFER STACK ═══ */}
+        <section className="py-20 px-6">
+          <div className="max-w-4xl mx-auto text-center">
+            <p className="text-amber-400 text-sm font-semibold tracking-wide uppercase mb-3">The Offer</p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-5 tracking-tight">
+              Here's everything you get
             </h2>
-            <p className="text-[#94a3b8] text-base leading-relaxed mb-6">
-              If you use 1000Jobs on the Hustler or Operator plan for 90 days, follow the daily swipe habit, and don't reach 1,000 applications — we'll refund your last month. No forms. No hoops. One email.
+            <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-14">
+              We don't sell access. We sell applications. You pay for results, not features.
             </p>
-            <div className="bg-[#0f0f1a] rounded-xl px-6 py-4 inline-block">
-              <p className="text-[#fbbf24] text-sm font-bold">Why can we offer this?</p>
-              <p className="text-[#64748b] text-sm mt-1">30 applications per day × 90 days = 2,700 applications. The math works. The only way you don't hit 1,000 is if you stop swiping.</p>
+
+            <div className="overflow-hidden border border-gray-800 text-left" style={{ borderRadius: 16 }}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ background: "#111827" }}>
+                    <th className="text-left px-6 py-4 text-gray-500 uppercase tracking-wider text-xs font-semibold">What you get</th>
+                    <th className="text-right px-6 py-4 text-gray-500 uppercase tracking-wider text-xs font-semibold">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["AI job scoring across 48+ ATS platforms", "$2,000"],
+                    ["1,000 targeted job applications over 100 days", "$5,000"],
+                    ["Custom-tailored resume per application (White Glove)", "$25,000"],
+                    ["LinkedIn profile rewrite (White Glove)", "$500"],
+                    ["Dedicated career strategist (White Glove)", "$3,000"],
+                    ["Daily progress reports & analytics dashboard", "$500"],
+                    ["Full money-back guarantee (White Glove)", "Priceless"],
+                  ].map(([item, value], i) => (
+                    <tr key={i} className={i % 2 === 0 ? "bg-[#0a0f1a]" : "bg-[#0d1320]"}>
+                      <td className="px-6 py-4 text-gray-300">{item}</td>
+                      <td className="px-6 py-4 text-right text-gray-500 line-through">{value}</td>
+                    </tr>
+                  ))}
+                  <tr style={{ background: "#111827" }}>
+                    <td className="px-6 py-5 text-white font-bold text-base">Total value</td>
+                    <td className="px-6 py-5 text-right text-gray-400 line-through text-base font-bold">$36,000+</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-8 bg-emerald-500/10 border border-emerald-500/20 px-8 py-5 inline-block" style={{ borderRadius: 12 }}>
+              <p className="text-white text-xl font-bold">
+                Your price today: <span className="text-emerald-400">as low as $1</span>
+              </p>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* SCARCITY */}
-      <section className="py-16 px-6 bg-[#0d0d1a]">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-block bg-[#fbbf2415] border border-[#fbbf2444] rounded-xl px-8 py-6">
-            <h3 className="text-xl font-bold text-[#fbbf24] mb-3">⚡ Early Access Pricing — Locks In Forever</h3>
-            <p className="text-[#94a3b8] text-sm leading-relaxed">
-              The $29 Hustler and $99 Operator prices are <strong className="text-[#e2e8f0]">early adopter rates</strong>. When we launch publicly, Hustler goes to $49 and Operator goes to $149.
+        {/* ═══ PRICING ═══ */}
+        <section id="pricing" className="py-20 px-6" style={{ background: "#060910" }}>
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-14">
+              <p className="text-emerald-400 text-sm font-semibold tracking-wide uppercase mb-3">Pricing</p>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-5 tracking-tight">
+                Pick your speed.
+              </h2>
+              <p className="text-gray-400 text-lg max-w-xl mx-auto">
+                The question isn't whether you can afford this. It's how much is <strong className="text-white">one job offer worth to you?</strong>
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* TIER 1: Test Drive */}
+              <div className="bg-white/[0.02] border border-gray-800 p-8 flex flex-col hover:border-gray-600 transition-all" style={{ borderRadius: 20 }}>
+                <div className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3">Test Drive</div>
+                <div className="flex items-baseline gap-1 mb-1">
+                  <span className="text-5xl font-extrabold text-white">$1</span>
+                </div>
+                <div className="text-gray-600 text-sm mb-2">one-time payment</div>
+                <div className="text-amber-400 text-sm font-medium mb-6">10 job applications</div>
+
+                <ul className="space-y-3 text-sm flex-1 mb-8">
+                  {[
+                    "10 AI-matched applications",
+                    "AI job scoring (48+ platforms)",
+                    "Swipe-based job review",
+                    "Application tracking dashboard",
+                    "See the quality before committing",
+                  ].map((f) => (
+                    <li key={f} className="flex items-start gap-3 text-gray-400">
+                      <span className="text-emerald-400 mt-0.5 flex-shrink-0">✓</span>{f}
+                    </li>
+                  ))}
+                </ul>
+
+                <a
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); alert("Stripe checkout coming soon — we'll notify you when payments are live!"); }}
+                  className="block text-center font-bold py-3.5 border border-gray-700 text-gray-300 hover:border-emerald-500/50 hover:text-white transition-all"
+                  style={{ borderRadius: 10 }}
+                >
+                  Try for $1
+                </a>
+              </div>
+
+              {/* TIER 2: Mass Apply */}
+              <div className="bg-white/[0.02] border-2 border-emerald-500/50 p-8 flex flex-col relative" style={{ borderRadius: 20, boxShadow: "0 0 60px rgba(16,185,129,0.12)" }}>
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-emerald-500 text-black text-xs font-bold px-5 py-1.5 tracking-wider" style={{ borderRadius: 100 }}>
+                  MOST POPULAR
+                </div>
+                <div className="text-emerald-400 text-xs uppercase tracking-widest font-semibold mb-3">Mass Apply</div>
+                <div className="flex items-baseline gap-1 mb-1">
+                  <span className="text-5xl font-extrabold text-white">$100</span>
+                </div>
+                <div className="text-gray-600 text-sm mb-2">one-time · 100 days</div>
+                <div className="text-emerald-400 text-sm font-medium mb-6">1,000 job applications</div>
+
+                <ul className="space-y-3 text-sm flex-1 mb-8">
+                  {[
+                    "1,000 AI-matched applications",
+                    "AI job scoring (48+ platforms)",
+                    "Swipe-based job review",
+                    "Application tracking dashboard",
+                    "Daily progress reports",
+                    "Priority job fetching",
+                    "$0.10 per application",
+                  ].map((f) => (
+                    <li key={f} className="flex items-start gap-3 text-gray-300">
+                      <span className="text-emerald-400 mt-0.5 flex-shrink-0">✓</span>{f}
+                    </li>
+                  ))}
+                </ul>
+
+                <a
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); alert("Stripe checkout coming soon — we'll notify you when payments are live!"); }}
+                  className="block text-center font-bold py-3.5 text-black transition-all hover:scale-[1.02]"
+                  style={{ background: "#10B981", borderRadius: 10 }}
+                >
+                  Get 1,000 Applications — $100
+                </a>
+                <p className="text-gray-600 text-xs text-center mt-3">That's $0.10 per targeted application</p>
+              </div>
+
+              {/* TIER 3: White Glove */}
+              <div className="bg-white/[0.02] border border-purple-500/30 p-8 flex flex-col relative" style={{ borderRadius: 20 }}>
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-purple-500 text-white text-xs font-bold px-5 py-1.5 tracking-wider" style={{ borderRadius: 100 }}>
+                  WHITE GLOVE
+                </div>
+                <div className="text-purple-400 text-xs uppercase tracking-widest font-semibold mb-3">White Glove</div>
+                <div className="flex items-baseline gap-1 mb-1">
+                  <span className="text-5xl font-extrabold text-white">$499</span>
+                </div>
+                <div className="text-gray-600 text-sm mb-2">one-time · 100 days</div>
+                <div className="text-purple-400 text-sm font-medium mb-6">1,000 custom-tailored applications</div>
+
+                <ul className="space-y-3 text-sm flex-1 mb-8">
+                  {[
+                    "1,000 custom-tailored applications",
+                    "AI resume per application (90%+ ATS)",
+                    "LinkedIn profile rewrite",
+                    "Dedicated career strategist",
+                    "Application tracking + analytics",
+                    "Daily & weekly progress reports",
+                    "Full money-back guarantee",
+                  ].map((f) => (
+                    <li key={f} className="flex items-start gap-3 text-gray-300">
+                      <span className="text-purple-400 mt-0.5 flex-shrink-0">✓</span>{f}
+                    </li>
+                  ))}
+                </ul>
+
+                <a
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); alert("Stripe checkout coming soon — we'll notify you when payments are live!"); }}
+                  className="block text-center font-bold py-3.5 border border-purple-500 text-purple-400 hover:bg-purple-500/10 transition-all"
+                  style={{ borderRadius: 10 }}
+                >
+                  Get White Glove — $499
+                </a>
+                <p className="text-gray-600 text-xs text-center mt-3">Money-back guarantee included</p>
+              </div>
+            </div>
+
+            {/* Price anchoring */}
+            <div className="mt-12 text-center">
+              <p className="text-gray-500 text-sm">
+                The average recruiter charges <strong className="text-white">$5,000–$15,000</strong> per placement. A career coach costs <strong className="text-white">$200/hour</strong>. A professional resume writer charges <strong className="text-white">$500–$1,000</strong> per resume.
+              </p>
+              <p className="text-gray-400 text-sm mt-2 font-medium">
+                1000Jobs does all three — for <strong className="text-emerald-400">$0.50 per application</strong>.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ═══ GUARANTEE ═══ */}
+        <section className="py-20 px-6">
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="bg-white/[0.03] border border-amber-500/20 p-10" style={{ borderRadius: 20 }}>
+              <div className="text-5xl mb-5">🛡</div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-5 tracking-tight">
+                The "Interviews or Your Money Back" Guarantee
+              </h2>
+              <p className="text-gray-400 text-base leading-relaxed mb-6 max-w-xl mx-auto">
+                If you purchase the White Glove plan, complete the 100-day program, and don't land any interviews — we'll refund every dollar. No forms, no hoops, one email. We take the risk so you don't have to.
+              </p>
+              <div className="bg-amber-500/10 border border-amber-500/20 px-6 py-4 inline-block" style={{ borderRadius: 10 }}>
+                <p className="text-amber-400 text-sm font-bold">Why can we offer this?</p>
+                <p className="text-gray-500 text-sm mt-1">Because the math works. 1,000 tailored applications with 90%+ ATS match rates statistically guarantee interview callbacks. If they don't, you deserve your money back.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ═══ URGENCY ═══ */}
+        <section className="py-16 px-6" style={{ background: "#060910" }}>
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="bg-amber-500/5 border border-amber-500/20 px-8 py-8" style={{ borderRadius: 16 }}>
+              <h3 className="text-xl font-extrabold text-amber-400 mb-4">Early Access Pricing — Won't Last</h3>
+              <p className="text-gray-400 text-sm leading-relaxed max-w-lg mx-auto">
+                We're onboarding the first 100 users at these prices. Once we hit capacity, the $100 Mass Apply plan goes to <strong className="text-white">$199</strong> and the $499 White Glove goes to <strong className="text-white">$999</strong>.
+              </p>
+              <p className="text-white text-sm mt-4 font-bold">
+                Lock in today's price before we raise it.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ═══ FAQ ═══ */}
+        <section id="faq" className="py-20 px-6">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-14">
+              <p className="text-emerald-400 text-sm font-semibold tracking-wide uppercase mb-3">FAQ</p>
+              <h2 className="text-3xl font-extrabold text-white tracking-tight">Got questions?</h2>
+            </div>
+            <div className="space-y-3">
+              {FAQS.map((faq) => (
+                <FAQItem key={faq.q} q={faq.q} a={faq.a} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ═══ FINAL CTA ═══ */}
+        <section className="py-24 px-6 text-center relative overflow-hidden" style={{ background: "#060910" }}>
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] opacity-15" style={{ background: "radial-gradient(ellipse, #10B981 0%, transparent 70%)" }} />
+          </div>
+          <div className="relative max-w-2xl mx-auto">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-5 tracking-tight">
+              Every day you wait is a day someone else<br />applies to the role you wanted.
+            </h2>
+            <p className="text-gray-500 text-lg mb-10">
+              Start with $1. See the quality. Then decide.
             </p>
-            <p className="text-[#e2e8f0] text-sm mt-3 font-bold">
-              Sign up today — your price is locked in for life, even as we add features.
-            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <a
+                href="#pricing"
+                className="font-bold px-10 py-4 text-lg transition-all hover:scale-105"
+                style={{ background: "#10B981", color: "#000", borderRadius: 12, boxShadow: "0 0 40px rgba(16,185,129,0.3)" }}
+              >
+                Start for $1 — 10 Applications
+              </a>
+              <a
+                href="#pricing"
+                className="font-bold px-10 py-4 text-lg border border-purple-500/50 text-purple-400 hover:bg-purple-500/10 transition-all"
+                style={{ borderRadius: 12 }}
+              >
+                Go White Glove — $499
+              </a>
+            </div>
+            <p className="text-gray-600 text-xs mt-6">No subscriptions. No recurring charges. Pay once, get your applications.</p>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* FAQ */}
-      <section id="faq" className="py-20 px-6">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">Frequently Asked Questions</h2>
-          <div className="space-y-3">
-            {faqs.map((faq) => (
-              <FAQItem key={faq.q} q={faq.q} a={faq.a} />
-            ))}
+        {/* ═══ FOOTER ═══ */}
+        <footer className="border-t border-white/5 py-10 px-6">
+          <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-1.5">
+              <span className="text-emerald-400 font-extrabold text-lg tracking-tight">1000</span>
+              <span className="text-amber-400 font-extrabold text-lg tracking-tight">JOBS</span>
+              <span className="text-gray-700 text-sm ml-2">Smart Job Application Manager</span>
+            </div>
+            <div className="flex items-center gap-6 text-xs text-gray-600">
+              <a href="#" className="hover:text-gray-400 transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-gray-400 transition-colors">Terms of Service</a>
+              <a href="mailto:info@allanabbas.com" className="hover:text-gray-400 transition-colors">info@allanabbas.com</a>
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* FINAL CTA */}
-      <section className="py-24 px-6 bg-[#0d0d1a] text-center relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-[#00ff9f08] rounded-full blur-3xl" />
-        </div>
-        <div className="relative max-w-2xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            You're one swipe away from your next job.
-          </h2>
-          <p className="text-[#64748b] text-lg mb-10">
-            Every day you wait is a day someone else applies to the role you wanted.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="https://1000jobs.manus.space"
-              className="bg-[#00ff9f] text-[#0a0a12] font-bold px-10 py-4 rounded-lg text-lg hover:bg-[#00e68a] transition-all hover:scale-105 shadow-[0_0_30px_#00ff9f40]"
-            >
-              Start Swiping Free →
-            </a>
-            <a
-              href="https://1000jobs.manus.space"
-              className="border border-[#00ff9f44] text-[#00ff9f] font-bold px-10 py-4 rounded-lg text-lg hover:bg-[#00ff9f10] transition-colors"
-            >
-              Unlock Hustler — 7 Days Free
-            </a>
-          </div>
-          <p className="text-[#475569] text-xs mt-6">No credit card required for Free · 7-day trial for Hustler · Cancel anytime</p>
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer className="border-t border-[#1e293b] py-10 px-6">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-[#00ff9f] font-bold text-lg tracking-widest">1000</span>
-            <span className="text-[#fbbf24] font-bold text-lg tracking-widest">JOBS</span>
-            <span className="text-[#334155] text-sm ml-2">· Smart Job Application Manager</span>
-          </div>
-          <div className="flex items-center gap-6 text-xs text-[#475569]">
-            <a href="#" className="hover:text-[#64748b] transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-[#64748b] transition-colors">Terms of Service</a>
-            <a href="mailto:hello@allanabbas.com" className="hover:text-[#64748b] transition-colors">hello@allanabbas.com</a>
-          </div>
-        </div>
-      </footer>
-    </div>
+        </footer>
+      </div>
+    </>
   );
 }

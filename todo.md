@@ -553,3 +553,20 @@
 - [x] Diagnose why all 4 v2 schedules returned 0 fetched results (advanced_title_filter used wrong boolean syntax instead of PostgreSQL tsquery)
 - [x] Fix query parameters to return actual jobs (switched to tsquery pipe | and <-> phrase operators, verified all 8 queries return results)
 - [x] Re-test and verify results (all 9 queries tested: 5+ results each, added tsquery error detection to executeFetch)
+
+## v4.0 Commercial Landing Page & Stripe Integration
+- [ ] Set up Stripe integration via webdev_add_feature
+- [ ] Create 3 Stripe products/prices ($1 Test, $100 Mass Apply, $499 White Glove)
+- [x] Build Hormozi-style landing page: hero section with dream outcome headline
+- [x] Build problem/agitation section (pain of manual job hunting)
+- [x] Build solution reveal with real metrics (3,206 jobs, 351 apps, 4 interviews)
+- [x] Build offer stack with value breakdown for each tier
+- [x] Build pricing cards with Stripe checkout CTAs (placeholder alerts until Stripe keys provided)
+- [x] Build social proof section (real metrics, interview results)
+- [x] Build risk reversal section (money-back guarantee on $499 tier)
+- [x] Build urgency/scarcity section
+- [x] Build FAQ section
+- [x] Build final CTA section
+- [ ] Integrate Stripe Checkout sessions for all 3 tiers
+- [ ] Add success/cancel pages post-checkout
+- [ ] Update navigation to show landing page for non-authenticated visitors
