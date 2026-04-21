@@ -590,3 +590,6 @@
 - [x] Backend: Change ingestion procedures from adminProcedure to protectedProcedure
 - [x] Frontend: Add '/ingest' to applierNav in AppLayout.tsx
 - [x] Update tests for new status enum and ingestion access changes
+
+## v4.2 Resume Fix
+- [x] Fix Career Impact section: change '$1.7M→$4M' to '$1.7M to $4M' in prompt_template
