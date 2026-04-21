@@ -1,0 +1,2 @@
+ALTER TABLE `jobs` MODIFY COLUMN `status` enum('ingested','matched','to_apply','blocked','applied','nextsteps','rejected','expired') NOT NULL DEFAULT 'ingested';--> statement-breakpoint
+ALTER TABLE `jobs` ADD `nextStepNote` varchar(512);

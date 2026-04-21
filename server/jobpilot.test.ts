@@ -140,16 +140,34 @@ describe("jobs", () => {
     expect(result.success).toBe(true);
   });
 
-  it("applier can move job to allowed statuses (to_apply, blocked, applied, expired)", async () => {
+  it("applier can move job to allowed statuses (to_apply, blocked, applied, nextsteps, expired)", async () => {
     const caller = appRouter.createCaller(makeApplierCtx());
-    // Appliers are now allowed to move jobs between to_apply, blocked, applied, and expired
+    // Appliers are now allowed to move jobs between to_apply, blocked, applied, nextsteps, and expired
     const result = await caller.jobs.moveStatus({ id: 1, status: "blocked" });
+    expect(result.success).toBe(true);
+  });
+
+  it("applier can move job to nextsteps with a note", async () => {
+    const caller = appRouter.createCaller(makeApplierCtx());
+    const result = await caller.jobs.moveStatus({ id: 1, status: "nextsteps", nextStepNote: "Phone screen Apr 25" });
     expect(result.success).toBe(true);
   });
 
   it("applier cannot move job to owner-only statuses (matched, rejected, ingested)", async () => {
     const caller = appRouter.createCaller(makeApplierCtx());
     await expect(caller.jobs.moveStatus({ id: 1, status: "matched" })).rejects.toThrow();
+  });
+
+  it("owner can update next step note on a job", async () => {
+    const caller = appRouter.createCaller(makeOwnerCtx());
+    const result = await caller.jobs.updateNextStepNote({ id: 1, nextStepNote: "Technical assessment due May 1" });
+    expect(result.success).toBe(true);
+  });
+
+  it("applier can update next step note on a job", async () => {
+    const caller = appRouter.createCaller(makeApplierCtx());
+    const result = await caller.jobs.updateNextStepNote({ id: 1, nextStepNote: "Follow-up email sent" });
+    expect(result.success).toBe(true);
   });
 
   it("applier can mark job as applied", async () => {
@@ -282,9 +300,11 @@ describe("ingestion", () => {
     expect(usage.linkedin).toHaveProperty("monthKey");
   });
 
-  it("applier cannot access API usage", async () => {
+  it("applier can access API usage (ingestion open to all authenticated users)", async () => {
     const caller = appRouter.createCaller(makeApplierCtx());
-    await expect(caller.ingestion.getUsage()).rejects.toThrow();
+    const usage = await caller.ingestion.getUsage();
+    expect(usage).toHaveProperty("fantastic");
+    expect(usage).toHaveProperty("linkedin");
   });
 });
 
@@ -308,9 +328,9 @@ describe("jobs.byStatus", () => {
     await expect(caller.jobs.byStatus({ status: "matched" })).rejects.toThrow();
   });
 
-  it("accepts all valid status values including blocked", () => {
-    const validStatuses = ["ingested", "matched", "to_apply", "blocked", "applied", "rejected", "expired"] as const;
-    expect(validStatuses).toHaveLength(7);
+  it("accepts all valid status values including blocked and nextsteps", () => {
+    const validStatuses = ["ingested", "matched", "to_apply", "blocked", "applied", "nextsteps", "rejected", "expired"] as const;
+    expect(validStatuses).toHaveLength(8);
   });
 });
 

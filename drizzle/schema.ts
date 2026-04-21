@@ -53,6 +53,7 @@ export const jobs = mysqlTable("jobs", {
     "to_apply",
     "blocked",
     "applied",
+    "nextsteps",
     "rejected",
     "expired",
   ])
@@ -68,6 +69,7 @@ export const jobs = mysqlTable("jobs", {
   statusChangedAt: timestamp("statusChangedAt"),
   autoRejected: boolean("autoRejected").default(false).notNull(),
   blockedReason: varchar("blockedReason", { length: 512 }),
+  nextStepNote: varchar("nextStepNote", { length: 512 }),
   manuallyAdded: boolean("manuallyAdded").default(false).notNull(),
   addedBy: varchar("addedBy", { length: 255 }),
   resumeGeneratedPath: varchar("resumeGeneratedPath", { length: 512 }),

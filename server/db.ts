@@ -105,6 +105,8 @@ export async function updateJobStatus(id: number, status: Job["status"], extra?:
   if (status === "applied") updates.appliedAt = new Date();
   // Clear blockedReason when moving out of blocked status
   if (status !== "blocked" && !("blockedReason" in (extra ?? {}))) updates.blockedReason = null;
+  // Clear nextStepNote when moving out of nextsteps status
+  if (status !== "nextsteps" && !("nextStepNote" in (extra ?? {}))) updates.nextStepNote = null;
   await db.update(jobs).set(updates).where(eq(jobs.id, id));
 }
 

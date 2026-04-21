@@ -570,3 +570,23 @@
 - [ ] Integrate Stripe Checkout sessions for all 3 tiers
 - [ ] Add success/cancel pages post-checkout
 - [ ] Update navigation to show landing page for non-authenticated visitors
+
+## v4.1 Next Steps Queue + Applier Ingestion Access
+
+### Task 1: Next Steps Queue (after Applied in Dashboard)
+- [x] DB: Add 'nextsteps' to jobs status enum via ALTER TABLE
+- [x] DB: Add 'nextStepNote' column (varchar 512, nullable) to jobs table
+- [x] Schema: Update drizzle/schema.ts with 'nextsteps' status and nextStepNote field
+- [x] Backend: Update moveStatus procedure to accept 'nextsteps' status
+- [x] Backend: Add updateNextStepNote mutation (set/clear note on a job)
+- [x] Backend: Update byStatus procedure to accept 'nextsteps'
+- [x] Backend: Allow applier to move jobs to 'nextsteps'
+- [x] Frontend: Add 'Next Steps' column to KanbanBoard COLUMNS array (after Applied)
+- [x] Frontend: Show nextStepNote on job cards in Next Steps column
+- [x] Frontend: Add note input prompt when moving a job to Next Steps (similar to blocked reason)
+- [x] Frontend: Allow editing the note on existing Next Steps cards
+
+### Task 2: Applier Access to Job Ingestion Tab
+- [x] Backend: Change ingestion procedures from adminProcedure to protectedProcedure
+- [x] Frontend: Add '/ingest' to applierNav in AppLayout.tsx
+- [x] Update tests for new status enum and ingestion access changes

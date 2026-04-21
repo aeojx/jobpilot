@@ -12,26 +12,29 @@ import {
   Zap,
   PlusCircle,
   User,
+  Pencil,
+  ClipboardList,
 } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import JobDetailModal from "@/components/JobDetailModal";
 import ResumeButton from "@/components/ResumeButton";
 
-type KanbanStatus = "ingested" | "matched" | "to_apply" | "blocked" | "applied" | "rejected" | "expired";
+type KanbanStatus = "ingested" | "matched" | "to_apply" | "blocked" | "applied" | "nextsteps" | "rejected" | "expired";
 type SortKey = "default" | "score_desc" | "score_asc" | "dwell_desc" | "dwell_asc";
 
 const COLUMNS: { id: KanbanStatus; label: string; color: string }[] = [
-  { id: "matched",   label: "Matched",      color: "var(--atari-green)" },
-  { id: "to_apply",  label: "To Apply",     color: "var(--atari-amber)" },
-  { id: "blocked",   label: "Blocked",      color: "var(--atari-magenta)" },
-  { id: "applied",   label: "Applied",      color: "var(--atari-cyan)" },
-  { id: "rejected",  label: "Rejected",     color: "var(--atari-red)" },
-  { id: "expired",   label: "Expired Jobs", color: "#6b6b6b" },
+  { id: "matched",    label: "Matched",      color: "var(--atari-green)" },
+  { id: "to_apply",   label: "To Apply",     color: "var(--atari-amber)" },
+  { id: "blocked",    label: "Blocked",      color: "var(--atari-magenta)" },
+  { id: "applied",    label: "Applied",      color: "var(--atari-cyan)" },
+  { id: "nextsteps",  label: "Next Steps",   color: "#a78bfa" },
+  { id: "rejected",   label: "Rejected",     color: "var(--atari-red)" },
+  { id: "expired",    label: "Expired Jobs", color: "#6b6b6b" },
 ];
 
 /** Columns the Applier role is allowed to drag into */
-const APPLIER_DROP_TARGETS: KanbanStatus[] = ["to_apply", "blocked", "applied", "expired"];
+const APPLIER_DROP_TARGETS: KanbanStatus[] = ["to_apply", "blocked", "applied", "nextsteps", "expired"];
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "default",    label: "DEFAULT" },
@@ -247,8 +250,28 @@ function JobCard({
         </p>
       )}
 
-      {/* Resume button — on To Apply and Applied cards */}
-      {(isToApply || job.status === "applied") && (
+      {/* Next step note */}
+      {job.status === "nextsteps" && job.nextStepNote && (
+        <div
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "0.6rem",
+            color: "#a78bfa",
+            marginTop: "0.35rem",
+            letterSpacing: "0.04em",
+            fontStyle: "italic",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "4px",
+          }}
+        >
+          <ClipboardList size={10} style={{ flexShrink: 0, marginTop: "1px" }} />
+          <span>{job.nextStepNote}</span>
+        </div>
+      )}
+
+      {/* Resume button — on To Apply, Applied, and Next Steps cards */}
+      {(isToApply || job.status === "applied" || job.status === "nextsteps") && (
         <div
           className="mt-3 pt-2"
           style={{ borderTop: "1px solid var(--atari-border)" }}
@@ -258,29 +281,33 @@ function JobCard({
         </div>
       )}
 
-      {/* Quick action buttons — on To Apply and Blocked cards */}
-      {(isToApply || job.status === "blocked") && onQuickAction && (
+      {/* Quick action buttons — on To Apply, Blocked, Applied, and Next Steps cards */}
+      {(isToApply || job.status === "blocked" || job.status === "applied" || job.status === "nextsteps") && onQuickAction && (
         <div
-          className="flex gap-2 mt-3 pt-2"
+          className="flex gap-2 mt-3 pt-2 flex-wrap"
           style={{ borderTop: "1px solid var(--atari-border)", paddingTop: "0.5rem" }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            className="flex items-center gap-1 flex-1 justify-center py-1 px-2 text-xs font-pixel transition-all"
-            style={{
-              background: "transparent",
-              border: "1px solid var(--atari-cyan)",
-              color: "var(--atari-cyan)",
-              fontSize: "7px",
-              cursor: "pointer",
-              letterSpacing: "0.05em",
-            }}
-            onClick={() => onQuickAction(job.id, "applied")}
-            title="Mark as Applied"
-          >
-            <CheckCircle size={10} />
-            APPLIED
-          </button>
+          {/* Applied button — on To Apply and Blocked */}
+          {(isToApply || job.status === "blocked") && (
+            <button
+              className="flex items-center gap-1 flex-1 justify-center py-1 px-2 text-xs font-pixel transition-all"
+              style={{
+                background: "transparent",
+                border: "1px solid var(--atari-cyan)",
+                color: "var(--atari-cyan)",
+                fontSize: "7px",
+                cursor: "pointer",
+                letterSpacing: "0.05em",
+              }}
+              onClick={() => onQuickAction(job.id, "applied")}
+              title="Mark as Applied"
+            >
+              <CheckCircle size={10} />
+              APPLIED
+            </button>
+          )}
+          {/* Blocked button — on To Apply */}
           {isToApply && (
             <button
               className="flex items-center gap-1 flex-1 justify-center py-1 px-2 text-xs font-pixel transition-all"
@@ -298,22 +325,63 @@ function JobCard({
               🚫 BLOCKED
             </button>
           )}
-          <button
-            className="flex items-center gap-1 flex-1 justify-center py-1 px-2 text-xs font-pixel transition-all"
-            style={{
-              background: "transparent",
-              border: "1px solid #6b6b6b",
-              color: "#9b9b9b",
-              fontSize: "7px",
-              cursor: "pointer",
-              letterSpacing: "0.05em",
-            }}
-            onClick={() => onQuickAction(job.id, "expired")}
-            title="Job no longer available"
-          >
-            <XCircle size={10} />
-            EXPIRED
-          </button>
+          {/* Next Steps button — on Applied cards */}
+          {job.status === "applied" && (
+            <button
+              className="flex items-center gap-1 flex-1 justify-center py-1 px-2 text-xs font-pixel transition-all"
+              style={{
+                background: "transparent",
+                border: "1px solid #a78bfa",
+                color: "#a78bfa",
+                fontSize: "7px",
+                cursor: "pointer",
+                letterSpacing: "0.05em",
+              }}
+              onClick={() => onQuickAction(job.id, "nextsteps")}
+              title="Move to Next Steps"
+            >
+              <ClipboardList size={10} />
+              NEXT STEPS
+            </button>
+          )}
+          {/* Edit note button — on Next Steps cards */}
+          {job.status === "nextsteps" && (
+            <button
+              className="flex items-center gap-1 flex-1 justify-center py-1 px-2 text-xs font-pixel transition-all"
+              style={{
+                background: "transparent",
+                border: "1px solid #a78bfa",
+                color: "#a78bfa",
+                fontSize: "7px",
+                cursor: "pointer",
+                letterSpacing: "0.05em",
+              }}
+              onClick={() => onQuickAction(job.id, "nextsteps")}
+              title="Edit next step note"
+            >
+              <Pencil size={10} />
+              EDIT NOTE
+            </button>
+          )}
+          {/* Expired button — on To Apply, Blocked, Applied */}
+          {(isToApply || job.status === "blocked" || job.status === "applied") && (
+            <button
+              className="flex items-center gap-1 flex-1 justify-center py-1 px-2 text-xs font-pixel transition-all"
+              style={{
+                background: "transparent",
+                border: "1px solid #6b6b6b",
+                color: "#9b9b9b",
+                fontSize: "7px",
+                cursor: "pointer",
+                letterSpacing: "0.05em",
+              }}
+              onClick={() => onQuickAction(job.id, "expired")}
+              title="Job no longer available"
+            >
+              <XCircle size={10} />
+              EXPIRED
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -399,7 +467,7 @@ function KanbanColumn({
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
             onClick={onCardClick}
-            onQuickAction={(column.id === "to_apply" || column.id === "blocked") ? onQuickAction : undefined}
+            onQuickAction={(column.id === "to_apply" || column.id === "blocked" || column.id === "applied" || column.id === "nextsteps") ? onQuickAction : undefined}
           />
         ))}
       </div>
@@ -426,6 +494,16 @@ export default function KanbanBoard() {
   const [blockingJobId, setBlockingJobId] = useState<number | null>(null);
   const [blockReason, setBlockReason] = useState("");
   const blockReasonRef = useRef<HTMLInputElement>(null);
+
+  // Next Steps note prompt state
+  const [nextStepsJobId, setNextStepsJobId] = useState<number | null>(null);
+  const [nextStepNote, setNextStepNote] = useState("");
+  const nextStepNoteRef = useRef<HTMLInputElement>(null);
+
+  const updateNextStepNote = trpc.jobs.updateNextStepNote.useMutation({
+    onSuccess: () => utils.jobs.kanban.invalidate(),
+    onError: (e) => toast.error(e.message),
+  });
 
   // Manual Add form state
   const [showManualForm, setShowManualForm] = useState(false);
@@ -458,6 +536,14 @@ export default function KanbanBoard() {
       if (!draggingJob || draggingJob.status === status) return;
       // Appliers can only drop into their allowed columns
       if (!isOwner && !APPLIER_DROP_TARGETS.includes(status)) return;
+      // If dropping into nextsteps, show the note prompt
+      if (status === "nextsteps") {
+        setNextStepsJobId(draggingJob.id);
+        setNextStepNote(draggingJob.nextStepNote ?? "");
+        setDraggingJob(null);
+        setTimeout(() => nextStepNoteRef.current?.focus(), 50);
+        return;
+      }
       moveStatus.mutate({ id: draggingJob.id, status });
       setDraggingJob(null);
     },
@@ -473,6 +559,14 @@ export default function KanbanBoard() {
         setTimeout(() => blockReasonRef.current?.focus(), 50);
         return;
       }
+      if (status === "nextsteps") {
+        // Show next step note prompt
+        const existingJob = jobs.find((j) => j.id === id);
+        setNextStepsJobId(id);
+        setNextStepNote(existingJob?.nextStepNote ?? "");
+        setTimeout(() => nextStepNoteRef.current?.focus(), 50);
+        return;
+      }
       const label = status === "applied" ? "APPLIED" : status === "expired" ? "EXPIRED" : status.toUpperCase();
       moveStatus.mutate(
         { id, status },
@@ -484,7 +578,7 @@ export default function KanbanBoard() {
         }
       );
     },
-    [moveStatus, utils]
+    [moveStatus, utils, jobs]
   );
 
   const confirmBlock = useCallback(() => {
@@ -501,6 +595,37 @@ export default function KanbanBoard() {
       }
     );
   }, [blockingJobId, blockReason, moveStatus, utils]);
+
+  const confirmNextStep = useCallback(() => {
+    if (nextStepsJobId === null) return;
+    const note = nextStepNote.trim();
+    // Check if the job is already in nextsteps — if so, just update the note
+    const existingJob = jobs.find((j) => j.id === nextStepsJobId);
+    if (existingJob?.status === "nextsteps") {
+      updateNextStepNote.mutate(
+        { id: nextStepsJobId, nextStepNote: note || "(no note)" },
+        {
+          onSuccess: () => {
+            toast.success("Next step note updated");
+            setNextStepsJobId(null);
+            setNextStepNote("");
+          },
+        }
+      );
+    } else {
+      moveStatus.mutate(
+        { id: nextStepsJobId, status: "nextsteps", nextStepNote: note || undefined },
+        {
+          onSuccess: () => {
+            toast.success("Job moved to Next Steps");
+            utils.jobs.kanban.invalidate();
+            setNextStepsJobId(null);
+            setNextStepNote("");
+          },
+        }
+      );
+    }
+  }, [nextStepsJobId, nextStepNote, moveStatus, updateNextStepNote, utils, jobs]);
 
   const jobsByStatus = useMemo(
     () =>
@@ -728,6 +853,38 @@ export default function KanbanBoard() {
               <button onClick={() => { setBlockingJobId(null); setBlockReason(""); }} style={{ background: "transparent", border: "1px solid var(--atari-border)", color: "var(--atari-gray)", fontFamily: "var(--font-mono)", fontSize: "0.65rem", padding: "5px 14px", cursor: "pointer", letterSpacing: "0.06em" }}>CANCEL</button>
               <button onClick={confirmBlock} disabled={moveStatus.isPending} style={{ background: "var(--atari-magenta)", border: "1px solid var(--atari-magenta)", color: "var(--atari-black)", fontFamily: "var(--font-mono)", fontSize: "0.65rem", padding: "5px 14px", cursor: "pointer", letterSpacing: "0.06em", fontWeight: 700 }}>
                 {moveStatus.isPending ? "BLOCKING..." : "▶ CONFIRM BLOCK"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Next Steps Note Prompt */}
+      {nextStepsJobId !== null && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setNextStepsJobId(null); setNextStepNote(""); } }}
+        >
+          <div style={{ background: "var(--atari-bg)", border: "1px solid #a78bfa", boxShadow: "0 0 20px #a78bfa33", padding: "1.5rem", width: "min(420px, 95vw)", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span className="font-pixel" style={{ color: "#a78bfa", fontSize: "10px" }}>📋 NEXT STEPS</span>
+              <button onClick={() => { setNextStepsJobId(null); setNextStepNote(""); }} style={{ background: "none", border: "none", color: "var(--atari-gray)", cursor: "pointer", fontSize: "1rem" }}>✕</button>
+            </div>
+            <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--atari-gray)", letterSpacing: "0.04em" }}>
+              What's the next step for this application? <span style={{ color: "var(--atari-gray)" }}>(e.g. interview, technical test, follow-up)</span>
+            </p>
+            <input
+              ref={nextStepNoteRef}
+              value={nextStepNote}
+              onChange={(e) => setNextStepNote(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") confirmNextStep(); if (e.key === "Escape") { setNextStepsJobId(null); setNextStepNote(""); } }}
+              placeholder="e.g. Phone screen Apr 25, Technical assessment due May 1..."
+              style={{ background: "transparent", border: "1px solid var(--atari-border)", color: "var(--atari-white)", fontFamily: "var(--font-mono)", fontSize: "0.75rem", padding: "6px 8px", outline: "none", width: "100%" }}
+            />
+            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+              <button onClick={() => { setNextStepsJobId(null); setNextStepNote(""); }} style={{ background: "transparent", border: "1px solid var(--atari-border)", color: "var(--atari-gray)", fontFamily: "var(--font-mono)", fontSize: "0.65rem", padding: "5px 14px", cursor: "pointer", letterSpacing: "0.06em" }}>CANCEL</button>
+              <button onClick={confirmNextStep} disabled={moveStatus.isPending || updateNextStepNote.isPending} style={{ background: "#a78bfa", border: "1px solid #a78bfa", color: "var(--atari-black)", fontFamily: "var(--font-mono)", fontSize: "0.65rem", padding: "5px 14px", cursor: "pointer", letterSpacing: "0.06em", fontWeight: 700 }}>
+                {(moveStatus.isPending || updateNextStepNote.isPending) ? "SAVING..." : "▶ CONFIRM"}
               </button>
             </div>
           </div>

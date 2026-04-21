@@ -39,6 +39,7 @@ const ownerNav = [
 const applierNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
   { href: "/apply", label: "My Queue", icon: Zap },
+  { href: "/ingest", label: "Ingest Jobs", icon: Radar },
   { href: "/performance", label: "Performance", icon: BarChart3 },
   { href: "/resume-generation", label: "Resume Gen", icon: FileText },
   { href: "/questions", label: "Questions", icon: HelpCircle },
@@ -53,7 +54,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { viewMode, isApplierView, toggleViewMode, setViewMode } = useViewMode();
 
   const { data: apiUsage } = trpc.ingestion.getUsage.useQuery(undefined, {
-    enabled: user?.role === "admin",
+    enabled: !!user, // Both admin and applier can access ingestion
     refetchInterval: 5 * 60 * 1000, // cost opt #3: was 30s, now 5 min
   });
 
@@ -230,8 +231,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* API Quota (Owner only, not in applier view) */}
-      {isOwner && !isApplierView && apiUsage && (
+      {/* API Quota (visible to all authenticated users) */}
+      {apiUsage && (
         <div className="px-4 py-3" style={{ borderTop: "1px solid var(--atari-border)" }}>
           <p className="text-xs mb-1" style={{ color: "var(--atari-gray)", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "Share Tech Mono" }}>
             API CALLS / MONTH
