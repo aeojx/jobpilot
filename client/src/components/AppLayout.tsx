@@ -5,6 +5,7 @@ import { useViewMode } from "@/contexts/ViewModeContext";
 import {
   BarChart3,
   BookOpen,
+  Bot,
   Eye,
   EyeOff,
   FileText,
@@ -16,6 +17,7 @@ import {
   Radar,
   Rocket,
   Shuffle,
+  User,
   X,
   Zap,
 } from "lucide-react";
@@ -32,6 +34,8 @@ const ownerNav = [
   { href: "/questions", label: "Question Bank", icon: HelpCircle },
   { href: "/performance", label: "Performance", icon: BarChart3 },
   { href: "/resume-generation", label: "Resume Gen", icon: FileText },
+  { href: "/profile", label: "My Profile", icon: User },
+  { href: "/auto-apply", label: "Auto-Apply", icon: Bot },
   { href: "/faq", label: "FAQ", icon: MessageCircleQuestion },
   { href: "/release-notes", label: "Release Notes", icon: Rocket },
 ];
@@ -42,6 +46,8 @@ const applierNav = [
   { href: "/ingest", label: "Ingest Jobs", icon: Radar },
   { href: "/performance", label: "Performance", icon: BarChart3 },
   { href: "/resume-generation", label: "Resume Gen", icon: FileText },
+  { href: "/profile", label: "My Profile", icon: User },
+  { href: "/auto-apply", label: "Auto-Apply", icon: Bot },
   { href: "/questions", label: "Questions", icon: HelpCircle },
   { href: "/faq", label: "FAQ", icon: MessageCircleQuestion },
   { href: "/release-notes", label: "Release Notes", icon: Rocket },

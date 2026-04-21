@@ -60,6 +60,16 @@ import { notifyOwner } from "./_core/notification";
 import { sendEmail, buildQuestionAnsweredEmail, buildDailyReportEmail, APPLIER_EMAIL } from "./_core/email";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import {
+  startAutoApply,
+  stopAutoApply,
+  getAutoApplyStatus,
+  getAutoApplyHistory,
+} from "./autoapply";
+import { applicantProfile } from "../drizzle/schema";
+import type { ApplicantProfile } from "../drizzle/schema";
+import { getDb } from "./db";
+import { eq } from "drizzle-orm";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1576,6 +1586,97 @@ export const appRouter = router({
         await deleteResumeLog(input.logId);
 
         return { success: true, jobId: log.jobId };
+      }),
+  }),
+
+  // ─── Applicant Profile (AutoApply) ──────────────────────────────────────
+
+  profile: router({
+    get: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return null;
+      const rows = await db.select().from(applicantProfile).limit(1);
+      return rows[0] ?? null;
+    }),
+
+    upsert: protectedProcedure
+      .input(
+        z.object({
+          personal: z.any().optional(),
+          workAuth: z.any().optional(),
+          compensation: z.any().optional(),
+          experience: z.any().optional(),
+          eeo: z.any().optional(),
+          availability: z.any().optional(),
+          skillsBoundary: z.any().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        // Check if a profile exists
+        const existing = await db.select().from(applicantProfile).limit(1);
+
+        if (existing.length > 0) {
+          // Update existing
+          const setObj: Record<string, unknown> = {};
+          if (input.personal !== undefined) setObj.personal = input.personal;
+          if (input.workAuth !== undefined) setObj.workAuth = input.workAuth;
+          if (input.compensation !== undefined) setObj.compensation = input.compensation;
+          if (input.experience !== undefined) setObj.experience = input.experience;
+          if (input.eeo !== undefined) setObj.eeo = input.eeo;
+          if (input.availability !== undefined) setObj.availability = input.availability;
+          if (input.skillsBoundary !== undefined) setObj.skillsBoundary = input.skillsBoundary;
+          if (Object.keys(setObj).length > 0) {
+            await db.update(applicantProfile).set(setObj).where(eq(applicantProfile.id, existing[0]!.id));
+          }
+        } else {
+          // Insert new
+          await db.insert(applicantProfile).values({
+            personal: input.personal ?? null,
+            workAuth: input.workAuth ?? null,
+            compensation: input.compensation ?? null,
+            experience: input.experience ?? null,
+            eeo: input.eeo ?? null,
+            availability: input.availability ?? null,
+            skillsBoundary: input.skillsBoundary ?? null,
+          });
+        }
+
+        return { success: true };
+      }),
+  }),
+
+  // ─── AutoApply ─────────────────────────────────────────────────────────────
+
+  autoApply: router({
+    start: protectedProcedure
+      .input(
+        z.object({
+          minScore: z.number().min(0).max(100).default(50),
+          maxJobs: z.number().min(1).max(100).default(10),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return startAutoApply({
+          minScore: input.minScore,
+          maxJobs: input.maxJobs,
+        });
+      }),
+
+    stop: protectedProcedure.mutation(async () => {
+      return stopAutoApply();
+    }),
+
+    status: protectedProcedure.query(async () => {
+      return getAutoApplyStatus();
+    }),
+
+    history: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(200).default(50) }).optional())
+      .query(async ({ input }) => {
+        return getAutoApplyHistory(input?.limit ?? 50);
       }),
   }),
 });

@@ -75,6 +75,21 @@ export const jobs = mysqlTable("jobs", {
   resumeGeneratedPath: varchar("resumeGeneratedPath", { length: 512 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+
+  // ─── AutoApply Fields ────────────────────────────────────────────────────
+  applyStatus: mysqlEnum("applyStatus", [
+    "queued",
+    "in_progress",
+    "applied",
+    "failed",
+    "manual",
+    "expired",
+  ]),
+  applyError: text("applyError"),
+  applyAttempts: int("applyAttempts").default(0).notNull(),
+  applyDurationMs: int("applyDurationMs"),
+  agentId: varchar("agentId", { length: 128 }),
+  lastAttemptedAt: timestamp("lastAttemptedAt"),
 });
 
 export type Job = typeof jobs.$inferSelect;
@@ -267,3 +282,95 @@ export const resumeConfig = mysqlTable("resume_config", {
 });
 
 export type ResumeConfig = typeof resumeConfig.$inferSelect;
+
+// ─── Applicant Profile (AutoApply) ──────────────────────────────────────────
+
+export type ApplicantPersonal = {
+  fullName: string;
+  preferredName: string;
+  email: string;
+  password: string;
+  phone: string;
+  address: string;
+  city: string;
+  provinceState: string;
+  country: string;
+  postalCode: string;
+  linkedinUrl: string;
+  githubUrl: string;
+  portfolioUrl: string;
+  websiteUrl: string;
+};
+
+export type ApplicantWorkAuth = {
+  legallyAuthorized: string;
+  requireSponsorship: string;
+  workPermitType: string;
+};
+
+export type ApplicantCompensation = {
+  salaryExpectation: string;
+  salaryCurrency: string;
+  salaryRangeMin: string;
+  salaryRangeMax: string;
+};
+
+export type ApplicantExperience = {
+  yearsTotal: string;
+  educationLevel: string;
+  currentTitle: string;
+  targetRole: string;
+};
+
+export type ApplicantEEO = {
+  gender: string;
+  raceEthnicity: string;
+  veteranStatus: string;
+  disabilityStatus: string;
+};
+
+export type ApplicantAvailability = {
+  earliestStart: string;
+  fullTime: string;
+  contract: string;
+};
+
+export type ApplicantSkillsBoundary = {
+  languages: string[];
+  frameworks: string[];
+  devops: string[];
+  databases: string[];
+  tools: string[];
+};
+
+export const applicantProfile = mysqlTable("applicant_profile", {
+  id: int("id").autoincrement().primaryKey(),
+  personal: json("personal").$type<ApplicantPersonal>(),
+  workAuth: json("workAuth").$type<ApplicantWorkAuth>(),
+  compensation: json("compensation").$type<ApplicantCompensation>(),
+  experience: json("experience").$type<ApplicantExperience>(),
+  eeo: json("eeo").$type<ApplicantEEO>(),
+  availability: json("availability").$type<ApplicantAvailability>(),
+  skillsBoundary: json("skillsBoundary").$type<ApplicantSkillsBoundary>(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ApplicantProfile = typeof applicantProfile.$inferSelect;
+export type InsertApplicantProfile = typeof applicantProfile.$inferInsert;
+
+// ─── AutoApply Log ──────────────────────────────────────────────────────────
+
+export const autoApplyLog = mysqlTable("auto_apply_log", {
+  id: int("id").autoincrement().primaryKey(),
+  jobId: int("jobId").notNull(),
+  jobTitle: varchar("jobTitle", { length: 512 }),
+  jobCompany: varchar("jobCompany", { length: 512 }),
+  status: mysqlEnum("status", ["applied", "failed", "expired", "manual", "captcha", "login_issue"]).notNull(),
+  errorMessage: text("errorMessage"),
+  durationMs: int("durationMs"),
+  agentId: varchar("agentId", { length: 128 }),
+  attemptedAt: timestamp("attemptedAt").defaultNow().notNull(),
+});
+
+export type AutoApplyLogEntry = typeof autoApplyLog.$inferSelect;
+export type InsertAutoApplyLog = typeof autoApplyLog.$inferInsert;

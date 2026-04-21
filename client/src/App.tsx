@@ -17,6 +17,8 @@ import FAQ from "./pages/FAQ";
 import ReleaseNotes from "./pages/ReleaseNotes";
 import ResumeGeneration from "./pages/ResumeGeneration";
 import Landing from "./pages/Landing";
+import ApplicantProfilePage from "./pages/ApplicantProfile";
+import AutoApplyPage from "./pages/AutoApply";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 
@@ -107,6 +109,12 @@ function Router() {
       </Route>
       <Route path="/resume-generation">
         {() => <AppLayout><ResumeGeneration /></AppLayout>}
+      </Route>
+      <Route path="/profile">
+        {() => <AppLayout><ApplicantProfilePage /></AppLayout>}
+      </Route>
+      <Route path="/auto-apply">
+        {() => <AppLayout><AutoApplyPage /></AppLayout>}
       </Route>
       <Route path="/release-notes" component={ReleaseNotes} />
       <Route path="/landing" component={Landing} />

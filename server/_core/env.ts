@@ -10,4 +10,5 @@ export const ENV = {
   rapidApiKey: process.env.RAPIDAPI_KEY ?? "",
   sitePassword: process.env.SITE_PASSWORD ?? "",
   resendApiKey: process.env.RESEND_API_KEY ?? "",
+  capsolverApiKey: process.env.CAPSOLVER_API_KEY ?? "",
 };
