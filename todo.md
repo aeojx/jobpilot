@@ -593,3 +593,24 @@
 
 ## v4.2 Resume Fix
 - [x] Fix Career Impact section: change '$1.7M→$4M' to '$1.7M to $4M' in prompt_template
+
+## v4.3 Latency Improvements + Queue Selector
+
+### Latency Fix #1 — DB Indexes
+- [x] Add index on jobs.status column
+- [x] Add index on jobs.matchScore column
+- [x] Add index on jobs.createdAt column
+
+### Latency Fix #2 — Server-side status filter
+- [x] Update getKanbanJobs() to filter WHERE status IN (matched, to_apply, blocked, applied, nextsteps)
+
+### Latency Fix #3 — Strip heavy columns from Kanban query
+- [x] Update getKanbanJobs() to SELECT only needed columns (exclude description, descriptionHtml, rawJson)
+- [x] Update KanbanJob type to reflect stripped columns
+
+### Add Job Queue Selector
+- [x] Update manualAdd backend: expand status enum to include matched, to_apply, applied, nextsteps
+- [x] When status = 'matched', run scoring algorithm (scoreJobWithLLM) on the job
+- [x] Update Add Job modal: add mandatory queue selector (Matched, To Apply, Applied, Next Steps)
+- [x] Show Next Step Note input when 'Next Steps' is selected
+- [x] Update description text in modal to reflect selected queue

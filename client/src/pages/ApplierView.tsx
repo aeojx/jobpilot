@@ -1,6 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { trpc } from "@/lib/trpc";
-import { Job } from "../../../drizzle/schema";
+import { trpc, KanbanJob } from "@/lib/trpc";
 import {
   AtSign,
   CheckCircle,
@@ -39,7 +38,7 @@ function getScoreColor(score: number) {
 export default function ApplierView() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [selectedJob, setSelectedJob] = useState<KanbanJob | null>(null);
 
   const { data: allJobs = [], isLoading } = trpc.jobs.kanban.useQuery();
   const { data: todayStats } = trpc.stats.today.useQuery();
@@ -65,14 +64,25 @@ export default function ApplierView() {
   const [manualLocation, setManualLocation] = useState("");
   const [manualApplyUrl, setManualApplyUrl] = useState("");
   const [manualNotes, setManualNotes] = useState("");
+  const [manualQueue, setManualQueue] = useState<"matched" | "to_apply" | "applied" | "nextsteps">("to_apply");
+  const [manualNextStepNote, setManualNextStepNote] = useState("");
   const titleRef = useRef<HTMLInputElement>(null);
 
+  const QUEUE_OPTIONS: { value: "matched" | "to_apply" | "applied" | "nextsteps"; label: string; color: string; hint: string }[] = [
+    { value: "matched",   label: "Matched",    color: "var(--atari-green)",   hint: "Runs matching algorithm to score this job" },
+    { value: "to_apply",  label: "To Apply",   color: "var(--atari-amber)",   hint: "Queued for the Applier to action" },
+    { value: "applied",   label: "Applied",    color: "var(--atari-cyan)",    hint: "Already applied to this job" },
+    { value: "nextsteps", label: "Next Steps", color: "#a78bfa",              hint: "Awaiting a next step (interview, test, etc.)" },
+  ];
+
   const manualAdd = trpc.jobs.manualAdd.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       utils.jobs.kanban.invalidate();
-      toast.success("Job added to To Apply queue");
+      const queueLabel = QUEUE_OPTIONS.find((q) => q.value === manualQueue)?.label ?? manualQueue;
+      const scoreMsg = manualQueue === "matched" && data.matchScore > 0 ? ` · Score: ${data.matchScore}` : "";
+      toast.success(`Job added to ${queueLabel}${scoreMsg}`);
       setShowManualForm(false);
-      setManualTitle(""); setManualCompany(""); setManualLocation(""); setManualApplyUrl(""); setManualNotes("");
+      setManualTitle(""); setManualCompany(""); setManualLocation(""); setManualApplyUrl(""); setManualNotes(""); setManualNextStepNote(""); setManualQueue("to_apply");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -86,7 +96,7 @@ export default function ApplierView() {
     onError: (e) => toast.error(e.message),
   });
 
-  const toApplyJobs = allJobs.filter((j) => j.status === "to_apply");
+  const toApplyJobs: KanbanJob[] = allJobs.filter((j) => j.status === "to_apply");
   const today = todayStats?.appliedCount ?? 0;
   const target = todayStats?.targetCount ?? 10;
   const pct = Math.min(100, Math.round((today / target) * 100));
@@ -541,8 +551,41 @@ export default function ApplierView() {
               <button onClick={() => setShowManualForm(false)} style={{ background: "none", border: "none", color: "var(--atari-gray)", cursor: "pointer", fontSize: "1rem" }}>✕</button>
             </div>
             <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--atari-gray)", letterSpacing: "0.04em" }}>
-              Jobs added here go directly to the <span style={{ color: "var(--atari-cyan)" }}>To Apply</span> queue and are tagged as manually added by <span style={{ color: "var(--atari-amber)" }}>{user?.name ?? "you"}</span>.
+              Manually add a job to any queue. Tagged as added by <span style={{ color: "var(--atari-amber)" }}>{user?.name ?? "you"}</span>.
             </p>
+
+            {/* Queue Selector — MANDATORY */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--atari-amber)", letterSpacing: "0.08em" }}>QUEUE *</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+                {QUEUE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setManualQueue(opt.value)}
+                    title={opt.hint}
+                    style={{
+                      background: manualQueue === opt.value ? opt.color + "22" : "transparent",
+                      border: `1.5px solid ${manualQueue === opt.value ? opt.color : "var(--atari-border)"}`,
+                      color: manualQueue === opt.value ? opt.color : "var(--atari-gray)",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "0.65rem",
+                      padding: "5px 8px",
+                      cursor: "pointer",
+                      letterSpacing: "0.06em",
+                      fontWeight: manualQueue === opt.value ? 700 : 400,
+                      textAlign: "center",
+                      transition: "all 0.1s",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", color: "var(--atari-gray)", letterSpacing: "0.04em", marginTop: 2 }}>
+                {QUEUE_OPTIONS.find((q) => q.value === manualQueue)?.hint}
+              </p>
+            </div>
+
             {([
               { label: "JOB TITLE *", value: manualTitle, setter: setManualTitle, ref: titleRef, required: true },
               { label: "COMPANY *", value: manualCompany, setter: setManualCompany, ref: undefined, required: true },
@@ -551,59 +594,51 @@ export default function ApplierView() {
             ] as Array<{ label: string; value: string; setter: (v: string) => void; ref: React.RefObject<HTMLInputElement> | undefined; required: boolean }>).map(({ label, value, setter, ref, required }) => (
               <div key={label} style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
                 <label style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--atari-gray)", letterSpacing: "0.08em" }}>{label}</label>
-                <input
-                  ref={ref}
-                  value={value}
-                  onChange={(e) => setter(e.target.value)}
-                  required={required}
-                  style={{
-                    background: "transparent",
-                    border: "1px solid var(--atari-border)",
-                    color: "var(--atari-white)",
-                    fontFamily: "var(--font-mono)",
-                    fontSize: "0.75rem",
-                    padding: "6px 8px",
-                    outline: "none",
-                    width: "100%",
-                  }}
+                <input ref={ref} value={value} onChange={(e) => setter(e.target.value)} required={required}
+                  style={{ background: "transparent", border: "1px solid var(--atari-border)", color: "var(--atari-white)", fontFamily: "var(--font-mono)", fontSize: "0.75rem", padding: "6px 8px", outline: "none", width: "100%" }}
                 />
               </div>
             ))}
+
             <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-              <label style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--atari-gray)", letterSpacing: "0.08em" }}>NOTES</label>
-              <textarea
-                value={manualNotes}
-                onChange={(e) => setManualNotes(e.target.value)}
-                rows={3}
-                style={{
-                  background: "transparent",
-                  border: "1px solid var(--atari-border)",
-                  color: "var(--atari-white)",
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "0.75rem",
-                  padding: "6px 8px",
-                  outline: "none",
-                  resize: "vertical",
-                  width: "100%",
-                }}
+              <label style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--atari-gray)", letterSpacing: "0.08em" }}>
+                {manualQueue === "matched" ? "JOB DESCRIPTION (used for scoring)" : "NOTES"}
+              </label>
+              <textarea value={manualNotes} onChange={(e) => setManualNotes(e.target.value)}
+                rows={manualQueue === "matched" ? 5 : 3}
+                placeholder={manualQueue === "matched" ? "Paste the job description here to run the matching algorithm..." : ""}
+                style={{ background: "transparent", border: `1px solid ${manualQueue === "matched" ? "var(--atari-green)" : "var(--atari-border)"}`, color: "var(--atari-white)", fontFamily: "var(--font-mono)", fontSize: "0.75rem", padding: "6px 8px", outline: "none", resize: "vertical", width: "100%" }}
               />
             </div>
+
+            {manualQueue === "nextsteps" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <label style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "#a78bfa", letterSpacing: "0.08em" }}>NEXT STEP NOTE</label>
+                <input value={manualNextStepNote} onChange={(e) => setManualNextStepNote(e.target.value)}
+                  placeholder="e.g. Phone screen Apr 25, Technical test due May 1..."
+                  style={{ background: "transparent", border: "1px solid #a78bfa", color: "var(--atari-white)", fontFamily: "var(--font-mono)", fontSize: "0.75rem", padding: "6px 8px", outline: "none", width: "100%" }}
+                />
+              </div>
+            )}
+
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.25rem" }}>
-              <button
-                onClick={() => setShowManualForm(false)}
+              <button onClick={() => setShowManualForm(false)}
                 style={{ background: "transparent", border: "1px solid var(--atari-border)", color: "var(--atari-gray)", fontFamily: "var(--font-mono)", fontSize: "0.65rem", padding: "5px 14px", cursor: "pointer", letterSpacing: "0.06em" }}
-              >
-                CANCEL
-              </button>
+              >CANCEL</button>
               <button
                 onClick={() => {
                   if (!manualTitle.trim() || !manualCompany.trim()) { toast.error("Title and Company are required"); return; }
-                  manualAdd.mutate({ title: manualTitle.trim(), company: manualCompany.trim(), location: manualLocation.trim() || undefined, applyUrl: manualApplyUrl.trim() || undefined, notes: manualNotes.trim() || undefined, status: "to_apply" });
+                  manualAdd.mutate({
+                    title: manualTitle.trim(), company: manualCompany.trim(),
+                    location: manualLocation.trim() || undefined, applyUrl: manualApplyUrl.trim() || undefined,
+                    notes: manualNotes.trim() || undefined, status: manualQueue,
+                    nextStepNote: manualQueue === "nextsteps" ? (manualNextStepNote.trim() || undefined) : undefined,
+                  });
                 }}
                 disabled={manualAdd.isPending}
-                style={{ background: "var(--atari-amber)", border: "1px solid var(--atari-amber)", color: "var(--atari-black)", fontFamily: "var(--font-mono)", fontSize: "0.65rem", padding: "5px 14px", cursor: "pointer", letterSpacing: "0.06em", fontWeight: 700 }}
+                style={{ background: QUEUE_OPTIONS.find((q) => q.value === manualQueue)?.color ?? "var(--atari-amber)", border: "1px solid transparent", color: "var(--atari-black)", fontFamily: "var(--font-mono)", fontSize: "0.65rem", padding: "5px 14px", cursor: "pointer", letterSpacing: "0.06em", fontWeight: 700 }}
               >
-                {manualAdd.isPending ? "ADDING..." : "▶ ADD JOB"}
+                {manualAdd.isPending ? (manualQueue === "matched" ? "SCORING..." : "ADDING...") : `▶ ADD TO ${QUEUE_OPTIONS.find((q) => q.value === manualQueue)?.label.toUpperCase()}`}
               </button>
             </div>
           </div>

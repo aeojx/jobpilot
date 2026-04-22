@@ -1,10 +1,9 @@
-import { trpc } from "@/lib/trpc";
-import { Job } from "../../../drizzle/schema";
+import { trpc, KanbanJob } from "@/lib/trpc";
 import { AtSign, Copy, ExternalLink, HelpCircle, X, CheckCircle, XCircle, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-type KanbanStatus = "ingested" | "matched" | "to_apply" | "blocked" | "applied" | "rejected" | "expired";
+type KanbanStatus = "ingested" | "matched" | "to_apply" | "blocked" | "applied" | "rejected" | "expired" | "nextsteps";
 
 export default function JobDetailModal({
   job,
@@ -12,7 +11,7 @@ export default function JobDetailModal({
   onClose,
   onStatusChange,
 }: {
-  job: Job;
+  job: KanbanJob;
   isOwner: boolean;
   onClose: () => void;
   onStatusChange: (status: KanbanStatus, blockedReason?: string) => void;
@@ -39,6 +38,9 @@ export default function JobDetailModal({
     },
     onError: (e) => toast.error(e.message),
   });
+
+  // Lazy-load full job details (description etc.) only when modal is open
+  const { data: fullJob } = trpc.jobs.byId.useQuery({ id: job.id });
 
   const score = Math.round(job.matchScore ?? 0);
 
@@ -201,8 +203,8 @@ export default function JobDetailModal({
             </div>
           )}
 
-          {/* Description */}
-          {job.description && (
+          {/* Description — lazy loaded from byId query */}
+          {fullJob?.description && (
             <div>
               <p
                 className="mb-2"
@@ -227,7 +229,7 @@ export default function JobDetailModal({
                   whiteSpace: "pre-wrap",
                 }}
               >
-                {job.description}
+                {fullJob?.description}
               </div>
             </div>
           )}

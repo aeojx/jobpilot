@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, like, or, sql, lte } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, like, or, sql, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -148,11 +148,55 @@ export async function checkDuplicate(title: string, company: string, externalId?
   return result.length > 0;
 }
 
+// Active statuses shown on the Kanban board — excludes rejected/expired/ingested
+const KANBAN_ACTIVE_STATUSES = ["matched", "to_apply", "blocked", "applied", "nextsteps"] as const;
+
 export async function getKanbanJobs() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(jobs).orderBy(desc(jobs.matchScore), desc(jobs.createdAt));
+  // Fix #2: filter to active statuses only (excludes 3,056 rejected rows)
+  // Fix #3: select only columns needed by the Kanban UI (excludes description, descriptionHtml, rawJson blobs)
+  return db
+    .select({
+      id: jobs.id,
+      title: jobs.title,
+      company: jobs.company,
+      location: jobs.location,
+      applyUrl: jobs.applyUrl,
+      source: jobs.source,
+      status: jobs.status,
+      matchScore: jobs.matchScore,
+      scoreSkills: jobs.scoreSkills,
+      scoreSeniority: jobs.scoreSeniority,
+      scoreLocation: jobs.scoreLocation,
+      scoreIndustry: jobs.scoreIndustry,
+      scoreCompensation: jobs.scoreCompensation,
+      dealBreakerMatched: jobs.dealBreakerMatched,
+      isDuplicate: jobs.isDuplicate,
+      hasEmail: jobs.hasEmail,
+      emailFound: jobs.emailFound,
+      tags: jobs.tags,
+      ingestedAt: jobs.ingestedAt,
+      appliedAt: jobs.appliedAt,
+      statusChangedAt: jobs.statusChangedAt,
+      autoRejected: jobs.autoRejected,
+      blockedReason: jobs.blockedReason,
+      nextStepNote: jobs.nextStepNote,
+      manuallyAdded: jobs.manuallyAdded,
+      addedBy: jobs.addedBy,
+      resumeGeneratedPath: jobs.resumeGeneratedPath,
+      createdAt: jobs.createdAt,
+      updatedAt: jobs.updatedAt,
+      // externalId kept for dedup checks on the frontend
+      externalId: jobs.externalId,
+    })
+    .from(jobs)
+    .where(inArray(jobs.status, [...KANBAN_ACTIVE_STATUSES]))
+    .orderBy(desc(jobs.matchScore), desc(jobs.createdAt));
 }
+
+// Inferred type for Kanban board jobs (stripped of heavy blob columns)
+export type KanbanJob = Awaited<ReturnType<typeof getKanbanJobs>>[number];
 
 // ─── Skills Profile ─────────────────────────────────────────────────────
 

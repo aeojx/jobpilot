@@ -1,0 +1,17 @@
+import mysql from 'mysql2/promise';
+const conn = await mysql.createConnection(process.env.DATABASE_URL);
+const [countRows] = await conn.execute('SELECT COUNT(*) as total FROM jobs');
+console.log('Total jobs:', countRows[0].total);
+const [statusRows] = await conn.execute('SELECT status, COUNT(*) as cnt FROM jobs GROUP BY status ORDER BY cnt DESC');
+console.log('Jobs by status:');
+statusRows.forEach(r => console.log(' -', r.status, ':', r.cnt));
+const [indexRows] = await conn.execute('SHOW INDEX FROM jobs');
+console.log('\nIndexes on jobs table:');
+indexRows.forEach(r => console.log(' -', r.Key_name, '|', r.Column_name, '| Unique:', r.Non_unique === 0));
+const [sizeRows] = await conn.execute("SELECT table_name, round(((data_length + index_length) / 1024 / 1024), 2) AS size_mb FROM information_schema.TABLES WHERE table_schema = DATABASE() ORDER BY size_mb DESC LIMIT 10");
+console.log('\nTable sizes (MB):');
+sizeRows.forEach(r => console.log(' -', r.table_name, ':', r.size_mb, 'MB'));
+const [explainRows] = await conn.execute("EXPLAIN SELECT * FROM jobs ORDER BY matchScore DESC, createdAt DESC");
+console.log('\nEXPLAIN for kanban query:');
+explainRows.forEach(r => console.log(' type:', r.type, '| key:', r.key, '| rows:', r.rows, '| Extra:', r.Extra));
+await conn.end();

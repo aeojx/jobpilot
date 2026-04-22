@@ -738,6 +738,7 @@ describe("jobs.manualAdd", () => {
       company: "Acme Corp",
       location: "New York, NY",
       applyUrl: "https://acme.com/jobs/123",
+      status: "applied",
     });
     expect(result.success).toBe(true);
     expect(insertJobMock).toHaveBeenCalledWith(
@@ -756,13 +757,14 @@ describe("jobs.manualAdd", () => {
     const result = await caller.jobs.manualAdd({
       title: "Product Manager",
       company: "Startup Inc",
+      status: "to_apply",
     });
     expect(result.success).toBe(true);
     expect(insertJobMock).toHaveBeenCalledWith(
       expect.objectContaining({
         manuallyAdded: true,
         addedBy: "Applier",
-        status: "applied",
+        status: "to_apply",
       })
     );
   });

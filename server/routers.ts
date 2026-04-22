@@ -1144,10 +1144,23 @@ export const appRouter = router({
         location: z.string().optional(),
         applyUrl: z.string().optional(),
         notes: z.string().optional(),
-        status: z.enum(["applied", "to_apply"]).optional(),
+        // Mandatory queue selector: matched | to_apply | applied | nextsteps
+        status: z.enum(["matched", "to_apply", "applied", "nextsteps"]),
+        nextStepNote: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const targetStatus = input.status ?? "applied";
+        const targetStatus = input.status;
+        let matchScore = 0;
+        let dimensionScores: Partial<DimensionScores> = {};
+        // Run matching algorithm when adding to Matched queue
+        if (targetStatus === "matched" && input.notes) {
+          const skills = await getSkillsProfile();
+          if (skills) {
+            const result = await scoreJobWithLLM(input.notes, skills, input.title, input.company, input.location);
+            matchScore = result.composite;
+            dimensionScores = result;
+          }
+        }
         await insertJob({
           title: input.title,
           company: input.company,
@@ -1155,7 +1168,13 @@ export const appRouter = router({
           description: input.notes ?? null,
           applyUrl: input.applyUrl ?? null,
           status: targetStatus,
-          matchScore: 0,
+          matchScore,
+          scoreSkills: dimensionScores.scoreSkills,
+          scoreSeniority: dimensionScores.scoreSeniority,
+          scoreLocation: dimensionScores.scoreLocation,
+          scoreIndustry: dimensionScores.scoreIndustry,
+          scoreCompensation: dimensionScores.scoreCompensation,
+          dealBreakerMatched: dimensionScores.dealBreakerMatched ?? undefined,
           manuallyAdded: true,
           addedBy: ctx.user.name ?? ctx.user.email ?? "Unknown",
           appliedAt: targetStatus === "applied" ? new Date() : null,
@@ -1163,8 +1182,9 @@ export const appRouter = router({
           isDuplicate: false,
           hasEmail: false,
           autoRejected: false,
+          nextStepNote: targetStatus === "nextsteps" ? (input.nextStepNote ?? null) : null,
         });
-        return { success: true };
+        return { success: true, matchScore };
       }),
 
     ingest: adminProcedure
