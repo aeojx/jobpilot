@@ -397,6 +397,7 @@ function KanbanColumn({
   onCardClick,
   onQuickAction,
   sortKey,
+  archiveCount,
 }: {
   column: (typeof COLUMNS)[0];
   jobs: KanbanJob[];
@@ -407,6 +408,7 @@ function KanbanColumn({
   onCardClick: (job: KanbanJob) => void;
   onQuickAction?: (id: number, status: KanbanStatus) => void;
   sortKey: SortKey;
+  archiveCount?: number;
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const sorted = useMemo(() => sortJobs(jobs, sortKey), [jobs, sortKey]);
@@ -435,9 +437,40 @@ function KanbanColumn({
             border: `1px solid ${column.color}`,
           }}
         >
-          {jobs.length}
+          {(column.id === "rejected" || column.id === "expired") && archiveCount != null
+            ? archiveCount.toLocaleString()
+            : jobs.length}
         </span>
       </div>
+      {column.id === "rejected" && archiveCount != null && archiveCount > 0 && (
+        <div
+          style={{
+            padding: "0.45rem 0.6rem",
+            borderBottom: "1px solid var(--atari-border)",
+            background: "oklch(0.07 0.01 20)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "3px",
+          }}
+        >
+          <span style={{ fontFamily: "Share Tech Mono, monospace", fontSize: "0.6rem", color: "var(--atari-gray)", letterSpacing: "0.04em", lineHeight: 1.4 }}>
+            ⚡ {archiveCount.toLocaleString()} rejected/expired jobs have been hidden to improve load times.
+          </span>
+          <a
+            href="/archive"
+            style={{
+              fontFamily: "Share Tech Mono, monospace",
+              fontSize: "0.6rem",
+              color: "var(--atari-amber)",
+              letterSpacing: "0.04em",
+              textDecoration: "underline",
+              cursor: "pointer",
+            }}
+          >
+            View the Job Archive →
+          </a>
+        </div>
+      )}
       <div className="kanban-column-body">
         {sorted.length === 0 && (
           <div
@@ -481,7 +514,6 @@ export default function KanbanBoard() {
 
   const { data: jobs = [], isLoading } = trpc.jobs.kanban.useQuery();
   const { data: archivedCount } = trpc.jobs.archiveCount.useQuery(undefined, {
-    enabled: isOwner,
     staleTime: 5 * 60 * 1000,
   });
   const moveStatus = trpc.jobs.moveStatus.useMutation({
@@ -743,6 +775,7 @@ export default function KanbanBoard() {
               onCardClick={setSelectedJob}
               onQuickAction={handleQuickAction}
               sortKey={sortKey}
+              archiveCount={archivedCount}
             />
           ))}
         </div>
@@ -958,45 +991,7 @@ export default function KanbanBoard() {
         />
       )}
 
-      {/* Hidden Jobs Notice — shown to owner when there are archived jobs */}
-      {isOwner && archivedCount != null && archivedCount > 0 && (
-        <div
-          style={{
-            padding: "0.6rem 1.25rem",
-            borderTop: "1px solid var(--atari-border)",
-            background: "oklch(0.06 0.01 60)",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            flexWrap: "wrap",
-          }}
-        >
-          <span
-            style={{
-              fontFamily: "Share Tech Mono, monospace",
-              fontSize: "0.65rem",
-              color: "var(--atari-gray)",
-              letterSpacing: "0.05em",
-            }}
-          >
-            ⚡ {archivedCount.toLocaleString()} rejected/expired jobs have been hidden to improve load times.
-          </span>
-          <a
-            href="/archive"
-            style={{
-              fontFamily: "Share Tech Mono, monospace",
-              fontSize: "0.65rem",
-              color: "var(--atari-amber)",
-              letterSpacing: "0.05em",
-              textDecoration: "underline",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
-          >
-            View the Job Archive →
-          </a>
-        </div>
-      )}
+
     </div>
   );
 }

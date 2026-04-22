@@ -621,3 +621,8 @@
 - [x] Frontend: Add hidden jobs notice banner at the bottom of the Kanban board with count + link to /archive
 - [x] Frontend: Add 'Archive' nav item in AppLayout sidebar (owner only)
 - [x] Tests: Add test for getArchivedJobs procedure
+
+## v4.5 Rejected Column + Archive Fixes
+- [x] Move hidden jobs notice from board footer into the Rejected column header
+- [x] Show real archiveCount in Rejected column header instead of 0
+- [x] Fix /archive route: change from adminProcedure to protectedProcedure so authenticated users can access it without being redirected to login
