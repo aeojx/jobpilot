@@ -51,6 +51,8 @@ import {
   deleteResumeLog,
   getResumeLogById,
   updateJobResumePath,
+  getArchivedJobs,
+  getArchivedJobsCount,
 } from "./db";
 import { generateResume } from "./resume-generator";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -1014,9 +1016,12 @@ export const appRouter = router({
       return getKanbanJobs();
     }),
 
-    all: adminProcedure.query(async () => getAllJobs()),
-
+     all: adminProcedure.query(async () => getAllJobs()),
     byId: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getJobById(input.id)),
+    archive: adminProcedure
+      .input(z.object({ page: z.number().int().min(1).default(1), pageSize: z.number().int().min(1).max(200).default(50) }))
+      .query(async ({ input }) => getArchivedJobs(input.page, input.pageSize)),
+    archiveCount: adminProcedure.query(async () => getArchivedJobsCount()),
 
     byStatus: adminProcedure
       .input(z.object({ status: z.enum(["ingested", "matched", "to_apply", "blocked", "applied", "nextsteps", "rejected", "expired"]) }))

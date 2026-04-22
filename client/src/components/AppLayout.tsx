@@ -3,6 +3,7 @@ import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import {
+  Archive,
   BarChart3,
   BookOpen,
   Eye,
@@ -33,6 +34,7 @@ const ownerNav = [
   { href: "/performance", label: "Performance", icon: BarChart3 },
   { href: "/resume-generation", label: "Resume Gen", icon: FileText },
   { href: "/faq", label: "FAQ", icon: MessageCircleQuestion },
+  { href: "/archive", label: "Job Archive", icon: Archive },
   { href: "/release-notes", label: "Release Notes", icon: Rocket },
 ];
 

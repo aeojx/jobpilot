@@ -17,6 +17,7 @@ import FAQ from "./pages/FAQ";
 import ReleaseNotes from "./pages/ReleaseNotes";
 import ResumeGeneration from "./pages/ResumeGeneration";
 import Landing from "./pages/Landing";
+import ArchivedJobs from "./pages/ArchivedJobs";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 
@@ -107,6 +108,9 @@ function Router() {
       </Route>
       <Route path="/resume-generation">
         {() => <AppLayout><ResumeGeneration /></AppLayout>}
+      </Route>
+      <Route path="/archive">
+        {() => <AppLayout><ArchivedJobs /></AppLayout>}
       </Route>
       <Route path="/release-notes" component={ReleaseNotes} />
       <Route path="/landing" component={Landing} />

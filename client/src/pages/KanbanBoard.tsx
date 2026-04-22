@@ -480,6 +480,10 @@ export default function KanbanBoard() {
   const utils = trpc.useUtils();
 
   const { data: jobs = [], isLoading } = trpc.jobs.kanban.useQuery();
+  const { data: archivedCount } = trpc.jobs.archiveCount.useQuery(undefined, {
+    enabled: isOwner,
+    staleTime: 5 * 60 * 1000,
+  });
   const moveStatus = trpc.jobs.moveStatus.useMutation({
     onSuccess: () => utils.jobs.kanban.invalidate(),
     onError: (e) => toast.error(e.message),
@@ -952,6 +956,46 @@ export default function KanbanBoard() {
             setSelectedJob(null);
           }}
         />
+      )}
+
+      {/* Hidden Jobs Notice — shown to owner when there are archived jobs */}
+      {isOwner && archivedCount != null && archivedCount > 0 && (
+        <div
+          style={{
+            padding: "0.6rem 1.25rem",
+            borderTop: "1px solid var(--atari-border)",
+            background: "oklch(0.06 0.01 60)",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            flexWrap: "wrap",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "Share Tech Mono, monospace",
+              fontSize: "0.65rem",
+              color: "var(--atari-gray)",
+              letterSpacing: "0.05em",
+            }}
+          >
+            ⚡ {archivedCount.toLocaleString()} rejected/expired jobs have been hidden to improve load times.
+          </span>
+          <a
+            href="/archive"
+            style={{
+              fontFamily: "Share Tech Mono, monospace",
+              fontSize: "0.65rem",
+              color: "var(--atari-amber)",
+              letterSpacing: "0.05em",
+              textDecoration: "underline",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            View the Job Archive →
+          </a>
+        </div>
       )}
     </div>
   );

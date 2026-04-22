@@ -198,6 +198,54 @@ export async function getKanbanJobs() {
 // Inferred type for Kanban board jobs (stripped of heavy blob columns)
 export type KanbanJob = Awaited<ReturnType<typeof getKanbanJobs>>[number];
 
+export async function getArchivedJobs(page = 1, pageSize = 50) {
+  const db = await getDb();
+  if (!db) return { jobs: [], total: 0 };
+  const offset = (page - 1) * pageSize;
+  const [rows, countResult] = await Promise.all([
+    db
+      .select({
+        id: jobs.id,
+        title: jobs.title,
+        company: jobs.company,
+        location: jobs.location,
+        applyUrl: jobs.applyUrl,
+        source: jobs.source,
+        status: jobs.status,
+        matchScore: jobs.matchScore,
+        isDuplicate: jobs.isDuplicate,
+        hasEmail: jobs.hasEmail,
+        tags: jobs.tags,
+        autoRejected: jobs.autoRejected,
+        blockedReason: jobs.blockedReason,
+        manuallyAdded: jobs.manuallyAdded,
+        addedBy: jobs.addedBy,
+        createdAt: jobs.createdAt,
+        statusChangedAt: jobs.statusChangedAt,
+      })
+      .from(jobs)
+      .where(inArray(jobs.status, ["rejected", "expired"]))
+      .orderBy(desc(jobs.statusChangedAt), desc(jobs.createdAt))
+      .limit(pageSize)
+      .offset(offset),
+    db
+      .select({ total: count() })
+      .from(jobs)
+      .where(inArray(jobs.status, ["rejected", "expired"])),
+  ]);
+  return { jobs: rows, total: countResult[0]?.total ?? 0 };
+}
+
+export async function getArchivedJobsCount() {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db
+    .select({ total: count() })
+    .from(jobs)
+    .where(inArray(jobs.status, ["rejected", "expired"]));
+  return result[0]?.total ?? 0;
+}
+
 // ─── Skills Profile ─────────────────────────────────────────────────────
 
 // 5-minute in-memory cache — avoids 100 DB reads per scoring batch

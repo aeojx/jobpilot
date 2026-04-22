@@ -614,3 +614,10 @@
 - [x] Update Add Job modal: add mandatory queue selector (Matched, To Apply, Applied, Next Steps)
 - [x] Show Next Step Note input when 'Next Steps' is selected
 - [x] Update description text in modal to reflect selected queue
+
+## v4.4 Hidden Jobs Archive
+- [x] Backend: Add getArchivedJobs procedure (status IN rejected, expired; paginated; returns count + rows)
+- [x] Frontend: Add /archive route with ArchivedJobs page (table view: title, company, status, score, date)
+- [x] Frontend: Add hidden jobs notice banner at the bottom of the Kanban board with count + link to /archive
+- [x] Frontend: Add 'Archive' nav item in AppLayout sidebar (owner only)
+- [x] Tests: Add test for getArchivedJobs procedure

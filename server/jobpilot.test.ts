@@ -36,6 +36,8 @@ vi.mock("./db", () => ({
   getQuestionById: vi.fn().mockResolvedValue({ id: 1, question: "What tech stack?", jobTitle: "Engineer", jobCompany: "Acme", answer: null, answeredAt: null, createdAt: new Date() }),
   getPipelineStats: vi.fn().mockResolvedValue({ matched: 10, toApply: 5, blocked: 2, applied: 20, totalApplied: 20 }),
   getAppliedTodayCount: vi.fn().mockResolvedValue(3),
+  getArchivedJobs: vi.fn().mockResolvedValue({ jobs: [], total: 0 }),
+  getArchivedJobsCount: vi.fn().mockResolvedValue(42),
 }));
 
 vi.mock("./_core/llm", () => ({
@@ -781,5 +783,27 @@ describe("jobs.manualAdd", () => {
     await expect(
       caller.jobs.manualAdd({ title: "Engineer", company: "" })
     ).rejects.toThrow();
+  });
+});
+
+describe("jobs.archive", () => {
+  it("returns paginated archived jobs for owner", async () => {
+    const caller = appRouter.createCaller(makeOwnerCtx());
+    const result = await caller.jobs.archive({ page: 1, pageSize: 20 });
+    expect(result).toHaveProperty("jobs");
+    expect(result).toHaveProperty("total");
+    expect(Array.isArray(result.jobs)).toBe(true);
+  });
+
+  it("returns archive count for owner", async () => {
+    const caller = appRouter.createCaller(makeOwnerCtx());
+    const count = await caller.jobs.archiveCount();
+    expect(typeof count).toBe("number");
+    expect(count).toBeGreaterThanOrEqual(0);
+  });
+
+  it("rejects unauthenticated access to archive", async () => {
+    const caller = appRouter.createCaller({ user: null } as any);
+    await expect(caller.jobs.archive({ page: 1, pageSize: 20 })).rejects.toThrow();
   });
 });
