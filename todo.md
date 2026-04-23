@@ -642,3 +642,9 @@
 - [x] Update badge/pill above headline to reflect niche positioning
 - [x] Update hero CTA copy to match niche
 - [x] Add fully-refundable risk-reversal guarantee section (with conditions) for 1,000-job packages
+
+## v4.8 WhatsApp Link Preview (Open Graph)
+- [x] Generate 1200x630 OG preview image for landing page
+- [x] Upload OG image to S3 via manus-upload-file --webdev
+- [x] Add og:title, og:description, og:image, og:url, og:type, twitter:card meta tags to index.html
+- [x] Add canonical URL meta tag pointing to 1000jobs.club domain
