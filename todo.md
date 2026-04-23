@@ -594,6 +594,7 @@
 ## v4.2 Resume Fix
 - [x] Fix Career Impact section: change '$1.7M→$4M' to '$1.7M to $4M' in prompt_template
 
+<<<<<<< Updated upstream
 ## v4.3 Latency Improvements + Queue Selector
 
 ### Latency Fix #1 — DB Indexes
@@ -626,3 +627,11 @@
 - [x] Move hidden jobs notice from board footer into the Rejected column header
 - [x] Show real archiveCount in Rejected column header instead of 0
 - [x] Fix /archive route: change from adminProcedure to protectedProcedure so authenticated users can access it without being redirected to login
+
+## v4.6 Landing Page Updates
+- [x] Upload 4 product screenshots to S3 (Swipe Mode, Daily Report, Skills Profile, Resume Generation)
+- [x] Replace all payment/Stripe CTAs with WhatsApp redirect (wa.me/971509410068)
+- [x] Add product screenshots section to landing page (4 screenshots: Swipe Mode, Daily Report, Skills Profile, Resume Generation)
+- [x] Revamp pricing to 2 tiers: Mass Application ($10/50 apps, $199/1000 apps) and Customized Resumes ($10/10 apps, $500/1000 apps)
+- [x] Update FAQ and offer stack to reflect new pricing
+- [x] Add /manus-storage/* storage proxy for screenshot serving
