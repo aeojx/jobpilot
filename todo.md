@@ -635,3 +635,10 @@
 - [x] Revamp pricing to 2 tiers: Mass Application ($10/50 apps, $199/1000 apps) and Customized Resumes ($10/10 apps, $500/1000 apps)
 - [x] Update FAQ and offer stack to reflect new pricing
 - [x] Add /manus-storage/* storage proxy for screenshot serving
+
+## v4.7 Landing Page Copy Rewrite
+- [x] Rewrite hero headline to target Senior Product & Operations Leaders in KSA/UAE
+- [x] Rewrite hero sub-headline and body copy to lead with dream outcome (land high-paying role at top-tier tech company without 20h/week on applications)
+- [x] Update badge/pill above headline to reflect niche positioning
+- [x] Update hero CTA copy to match niche
+- [x] Add fully-refundable risk-reversal guarantee section (with conditions) for 1,000-job packages
