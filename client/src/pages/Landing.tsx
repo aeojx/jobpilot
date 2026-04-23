@@ -140,21 +140,25 @@ const SCREENSHOTS = [
     src: "/manus-storage/screenshot-swipe-mode_664dce8e.png",
     title: "Swipe Mode",
     desc: "Review AI-scored jobs in seconds. Swipe right to apply, left to reject. Each card shows a 5-dimension match score.",
+    portrait: true,
   },
   {
     src: "/manus-storage/screenshot-daily-report_905a0c57.png",
     title: "Daily Report",
     desc: "Track your pipeline at a glance. See matched jobs, applications sent, and your 1,000-job campaign progress.",
+    portrait: true,
   },
   {
     src: "/manus-storage/screenshot-skills-profile_d513eac6.png",
     title: "Skills Profile",
     desc: "Configure your profile once. The AI uses every field to score jobs across 5 dimensions and auto-reject dealbreakers.",
+    portrait: false,
   },
   {
     src: "/manus-storage/screenshot-resume-gen_3afb0ef8.png",
     title: "Resume Generation",
     desc: "Every application gets a tailored resume. Track status, cost ($0.04–$0.07 each), and download PDFs instantly.",
+    portrait: false,
   },
 ];
 
@@ -365,15 +369,35 @@ export default function Landing() {
               </p>
             </div>
 
+            {/* Portrait screenshots (Swipe Mode, Daily Report) shown side-by-side at full height */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8">
+              {SCREENSHOTS.filter((s) => s.portrait).map((s) => (
+                <div key={s.title} className="screenshot-card bg-white/[0.02] border border-white/[0.06] overflow-hidden hover:border-emerald-500/30 transition-all group" style={{ borderRadius: 16 }}>
+                  <div className="overflow-hidden" style={{ borderRadius: "16px 16px 0 0" }}>
+                    <img
+                      src={s.src}
+                      alt={s.title}
+                      className="w-full h-auto transition-transform duration-500 group-hover:scale-[1.02]"
+                      style={{ display: "block" }}
+                    />
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-white font-bold text-lg mb-2">{s.title}</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed">{s.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Landscape screenshots (Skills Profile, Resume Generation) with constrained height */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {SCREENSHOTS.map((s) => (
+              {SCREENSHOTS.filter((s) => !s.portrait).map((s) => (
                 <div key={s.title} className="screenshot-card bg-white/[0.02] border border-white/[0.06] overflow-hidden hover:border-emerald-500/30 transition-all group" style={{ borderRadius: 16 }}>
                   <div className="overflow-hidden" style={{ borderRadius: "16px 16px 0 0" }}>
                     <img
                       src={s.src}
                       alt={s.title}
                       className="w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-                      style={{ maxHeight: 340, objectPosition: "top" }}
+                      style={{ maxHeight: 300, objectPosition: "top" }}
                     />
                   </div>
                   <div className="p-6">
