@@ -58,7 +58,7 @@ const FAQS = [
   },
   {
     q: "What does the money-back guarantee cover?",
-    a: "If we don't deliver your full 1,000 applications within the campaign window, you get a full refund. No questions asked. The guarantee applies to the AED 730 and AED 1,840 packages.",
+    a: "If we don't deliver your full 1,000 applications within the campaign window, you get a full refund. No questions asked. The guarantee applies to the AED 1,730 and AED 2,840 packages.",
   },
   {
     q: "How quickly can I start getting callbacks?",
@@ -300,14 +300,14 @@ export default function Landing() {
           <p style={{ color: "#94a3b8", fontSize: 16, lineHeight: 1.7, marginBottom: 48 }}>
             The average tech professional in UAE earns{" "}
             <strong style={{ color: "#fff" }}>AED 30,000/month</strong> — that's AED 1,000 per day.
-            Our full 1,000-application campaign costs less than{" "}
-            <strong style={{ color: "#f59e0b" }}>AED 730</strong>.
+Our full 1,000-application campaign costs less than{" "}
+                  <strong style={{ color: "#f59e0b" }}>AED 1,730</strong>.
             You make that back in your first 17 hours on the job.
           </p>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 48 }}>
             {[
-              { label: "Cost of campaign", value: "AED 730", sub: "Full 1,000 applications", color: "#f59e0b" },
+              { label: "Cost of campaign", value: "AED 1,730", sub: "Full 1,000 applications", color: "#f59e0b" },
               { label: "Average monthly salary", value: "AED 30k+", sub: "Tech roles in UAE/KSA", color: "#10b981" },
               { label: "Break-even point", value: "17 hours", sub: "Of your first week at work", color: "#60a5fa" },
             ].map(({ label, value, sub, color }) => (
@@ -396,7 +396,7 @@ export default function Landing() {
               "Complete your 30-minute profile intake call",
               "Review and approve your shortlist within 48 hours",
               "Request your refund within the campaign window",
-              "Applies to the AED 730 and AED 1,840 packages",
+              "Applies to the AED 1,730 and AED 2,840 packages",
             ].map(item => (
               <div key={item} style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
                 <span style={{ color: "#10b981", fontSize: 16, flexShrink: 0, marginTop: 2 }}>✓</span>
@@ -441,7 +441,7 @@ export default function Landing() {
             </p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
             {/* Mass Application */}
             <div style={{
               background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)",
@@ -459,11 +459,11 @@ export default function Landing() {
 
               <div style={{ marginBottom: 28 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
-                  <span style={{ color: "#fff", fontWeight: 900, fontSize: 28 }}>AED 37</span>
+                  <span style={{ color: "#fff", fontWeight: 900, fontSize: 28 }}>AED 99</span>
                   <span style={{ color: "#64748b", fontSize: 14 }}>/ 50 applications</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ color: "#f59e0b", fontWeight: 900, fontSize: 26 }}>AED 730</span>
+                  <span style={{ color: "#f59e0b", fontWeight: 900, fontSize: 26 }}>AED 1,730</span>
                   <span style={{ color: "#64748b", fontSize: 14 }}>/ 1,000 applications</span>
                   <span style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b", fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 100 }}>BEST VALUE</span>
                 </div>
@@ -514,11 +514,11 @@ export default function Landing() {
 
               <div style={{ marginBottom: 28 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
-                  <span style={{ color: "#fff", fontWeight: 900, fontSize: 28 }}>AED 37</span>
+                  <span style={{ color: "#fff", fontWeight: 900, fontSize: 28 }}>AED 99</span>
                   <span style={{ color: "#64748b", fontSize: 14 }}>/ 10 applications</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ color: "#f59e0b", fontWeight: 900, fontSize: 26 }}>AED 1,840</span>
+                  <span style={{ color: "#f59e0b", fontWeight: 900, fontSize: 26 }}>AED 2,840</span>
                   <span style={{ color: "#64748b", fontSize: 14 }}>/ 1,000 applications</span>
                   <span style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b", fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 100 }}>BEST VALUE</span>
                 </div>
@@ -542,6 +542,78 @@ export default function Landing() {
                 }}
               >
                 Get Started — WhatsApp Us →
+              </a>
+            </div>
+
+            {/* White Glove */}
+            <div style={{
+              background: "linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(251,191,36,0.04) 100%)",
+              border: "2px solid rgba(245,158,11,0.5)",
+              borderRadius: 16, padding: "36px 32px", position: "relative",
+            }}>
+              <div style={{
+                position: "absolute", top: -14, left: "50%", transform: "translateX(-50%)",
+                background: "linear-gradient(90deg, #f59e0b, #fbbf24)", color: "#000", fontWeight: 800, fontSize: 12,
+                padding: "4px 16px", borderRadius: 100, whiteSpace: "nowrap",
+              }}>
+                👑 WHITE GLOVE
+              </div>
+              <p style={{ color: "#f59e0b", fontWeight: 700, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>
+                White Glove
+              </p>
+              <h3 style={{ color: "#fff", fontWeight: 900, fontSize: 22, marginBottom: 6 }}>
+                Done For You — Fully Managed
+              </h3>
+              <p style={{ color: "#64748b", fontSize: 14, marginBottom: 20, lineHeight: 1.6 }}>
+                Alan personally runs your entire job search. You show up to interviews. We handle everything else.
+              </p>
+
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <span style={{ color: "#f59e0b", fontWeight: 900, fontSize: 32 }}>AED 4,970</span>
+                </div>
+                <p style={{ color: "#64748b", fontSize: 13, marginTop: 4 }}>Full campaign · One-time investment</p>
+                <div style={{
+                  background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.3)",
+                  borderRadius: 8, padding: "10px 14px", marginTop: 12,
+                }}>
+                  <p style={{ color: "#10b981", fontWeight: 700, fontSize: 13, margin: 0 }}>
+                    🛡️ Guarantee: 5 interviews or full refund
+                  </p>
+                </div>
+              </div>
+
+              <p style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Everything in Customized Resumes, plus:</p>
+
+              {[
+                "Alan personally manages your campaign",
+                "LinkedIn profile full rewrite",
+                "Top 20 target companies — warm referral outreach",
+                "Direct recruiter network blast (50–100 recruiters)",
+                "Custom portfolio website + domain + email",
+                "Salary negotiation coaching session",
+                "Weekly 1:1 check-in calls with Alan",
+                "Offer letter legal review before you sign",
+                "Interview preparation (mock interviews + coaching)",
+                "5 interviews guaranteed — or full refund",
+              ].map(f => (
+                <div key={f} style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                  <span style={{ color: "#f59e0b" }}>✓</span>
+                  <span style={{ color: "#e2e8f0", fontSize: 13 }}>{f}</span>
+                </div>
+              ))}
+
+              <a
+                href={WA_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "block", textAlign: "center", marginTop: 28,
+                  background: "linear-gradient(90deg, #f59e0b, #fbbf24)", color: "#000", fontWeight: 800,
+                  fontSize: 15, padding: "14px 24px", borderRadius: 10,
+                }}
+              >
+                Apply for White Glove — WhatsApp Alan →
               </a>
             </div>
           </div>

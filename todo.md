@@ -671,3 +671,10 @@
 - [x] Trim FAQ to 5 questions
 - [x] Rewrite final CTA section
 - [x] Remove all sections not in the 10-section structure
+
+## v5.1 White Glove Pricing Tier + Price Updates
+- [x] Verify visual price edits: Mass Application AED 99/50 apps, AED 1,730/1,000 apps; Customized Resumes AED 99/10 apps, AED 2,840/1,000 apps
+- [x] Add White Glove 3rd pricing card (AED 4,970) with all premium services
+- [x] White Glove includes: everything in Customized Resumes + LinkedIn profile rewrite + top 20 company referral outreach + direct recruiter network blast (50-100 recruiters) + custom portfolio website + domain + custom email + salary negotiation coaching + weekly 1:1 check-ins with Alan + offer legal review + interview prep + guarantee: 5 interviews or full refund
+- [x] Update pricing section layout from 2-column to 3-column grid
+- [x] Update The Math section to reference new pricing
