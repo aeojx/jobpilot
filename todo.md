@@ -648,3 +648,12 @@
 - [x] Upload OG image to S3 via manus-upload-file --webdev
 - [x] Add og:title, og:description, og:image, og:url, og:type, twitter:card meta tags to index.html
 - [x] Add canonical URL meta tag pointing to 1000jobs.club domain
+
+## v4.9 WellFound Jobs Scraper Integration (Apify)
+- [x] Create `scrapeWellFoundJobs()` helper function in server/db.ts using Apify API
+- [x] Add `jobs.scrapeWellFound` tRPC procedure in server/routers.ts with input validation
+- [x] Add WellFound button to API source selector in Ingest Jobs UI
+- [x] Add WellFound input fields (job title, location, keyword, fully remote toggle) in collapsible section
+- [x] Map WellFound job data to internal job schema (title, company, location, salary, link, etc.)
+- [x] Add error handling and retry logic for Apify API calls
+- [ ] Write vitest tests for WellFound scraper integration

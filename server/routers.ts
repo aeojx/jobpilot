@@ -53,6 +53,8 @@ import {
   updateJobResumePath,
   getArchivedJobs,
   getArchivedJobsCount,
+  scrapeWellFoundJobs,
+  transformWellFoundJob,
 } from "./db";
 import { generateResume } from "./resume-generator";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -1224,6 +1226,85 @@ export const appRouter = router({
           dealBreakerMatched: dimensionScores.dealBreakerMatched ?? undefined,
         });
         return { success: true, isDuplicate, matchScore };
+      }),
+
+    scrapeWellFound: protectedProcedure
+      .input(z.object({
+        jobTitle: z.string().min(1),
+        jobLocation: z.string().min(1),
+        keyword: z.string().max(30).optional(),
+        customJobTitle: z.string().optional(),
+        customJobLocation: z.string().optional(),
+        includeCompanyProfile: z.boolean().default(true),
+        includeCompanyPeople: z.boolean().default(false),
+        includeCompanyFunding: z.boolean().default(false),
+        includeJobPage: z.boolean().default(true),
+        fullyRemote: z.boolean().default(false),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          console.log("[WellFound] Starting scrape with input:", input);
+          const rawJobs = await scrapeWellFoundJobs(input);
+          console.log(`[WellFound] Scraped ${rawJobs.length} jobs, processing...`);
+
+          const insertedJobs = [];
+          const duplicates = [];
+
+          for (const rawJob of rawJobs) {
+            const isDuplicate = await checkDuplicate(rawJob.title || "Unknown", rawJob.company || "Unknown", rawJob.id);
+            if (isDuplicate) {
+              duplicates.push(rawJob.title);
+              continue;
+            }
+
+            const jobData = transformWellFoundJob(rawJob);
+            const descText = jobData.description ?? "";
+            const emailFound = extractEmailFromText(descText);
+            const hasEmail = !!emailFound;
+            const skills = await getSkillsProfile();
+            let matchScore = 0;
+            let dimensionScores: Partial<DimensionScores> = {};
+            let status: "ingested" | "matched" = "ingested";
+
+            if (skills && descText) {
+              const result = await scoreJobWithLLM(descText, skills, jobData.title, jobData.company, jobData.location ?? undefined);
+              matchScore = result.composite;
+              dimensionScores = result;
+              if (matchScore > 0 && !result.dealBreakerMatched) status = "matched";
+            }
+
+            await insertJob({
+              ...jobData,
+              isDuplicate: false,
+              hasEmail,
+              emailFound: emailFound ?? undefined,
+              matchScore,
+              status,
+              tags: ["wellfound"],
+              scoreSkills: dimensionScores.scoreSkills,
+              scoreSeniority: dimensionScores.scoreSeniority,
+              scoreLocation: dimensionScores.scoreLocation,
+              scoreIndustry: dimensionScores.scoreIndustry,
+              scoreCompensation: dimensionScores.scoreCompensation,
+              dealBreakerMatched: dimensionScores.dealBreakerMatched ?? undefined,
+            });
+            insertedJobs.push(jobData.title);
+          }
+
+          console.log(`[WellFound] Inserted ${insertedJobs.length} jobs, ${duplicates.length} duplicates`);
+          return {
+            success: true,
+            inserted: insertedJobs.length,
+            duplicates: duplicates.length,
+            total: rawJobs.length,
+          };
+        } catch (error) {
+          console.error("[WellFound] Scrape error:", error);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to scrape WellFound jobs: ${(error as Error).message}`,
+          });
+        }
       }),
   }),
 

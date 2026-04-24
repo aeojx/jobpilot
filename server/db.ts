@@ -799,3 +799,115 @@ export async function deleteResumeLog(logId: number): Promise<void> {
   if (!db) return;
   await db.delete(resumeGenerationLog).where(eq(resumeGenerationLog.id, logId));
 }
+
+
+// ─── WellFound Jobs Scraper (Apify) ────────────────────────────────────────────
+
+/**
+ * Scrape jobs from WellFound (AngelList) using Apify API
+ * Returns raw job data from the Apify scraper
+ */
+export async function scrapeWellFoundJobs(input: {
+  jobTitle: string;
+  jobLocation: string;
+  keyword?: string;
+  customJobTitle?: string;
+  customJobLocation?: string;
+  includeCompanyProfile?: boolean;
+  includeCompanyPeople?: boolean;
+  includeCompanyFunding?: boolean;
+  includeJobPage?: boolean;
+  fullyRemote?: boolean;
+  maxResults?: number;
+}) {
+  const APIFY_TOKEN = process.env.APIFY;
+  if (!APIFY_TOKEN) {
+    throw new Error("APIFY token is not configured in environment variables");
+  }
+
+  const APIFY_ENDPOINT = "https://api.apify.com/v2/acts/radeance~wellfound-job-listings-scraper/run-sync-get-dataset-items";
+
+  const payload = {
+    job_title: input.customJobTitle || input.jobTitle,
+    job_location: input.customJobLocation || input.jobLocation,
+    keyword: input.keyword || undefined,
+    include_company_profile: input.includeCompanyProfile !== false,
+    include_company_people: input.includeCompanyPeople || false,
+    include_company_funding: input.includeCompanyFunding || false,
+    include_job_page: input.includeJobPage !== false,
+    fully_remote: input.fullyRemote || false,
+    us_date_format: true,
+  };
+
+  try {
+    console.log("[WellFound] Calling Apify scraper with payload:", JSON.stringify(payload, null, 2));
+
+    const response = await fetch(`${APIFY_ENDPOINT}?token=${APIFY_TOKEN}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[WellFound] Apify API error:", response.status, errorText);
+      throw new Error(`Apify API returned ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log(`[WellFound] Scraper returned ${Array.isArray(data) ? data.length : 0} items`);
+
+    // data is an array of job listings from Apify
+    return data as Array<{
+      id?: string;
+      title?: string;
+      company?: string;
+      location?: string;
+      salary?: string;
+      salaryMin?: number;
+      salaryMax?: number;
+      salaryType?: string;
+      equity?: string;
+      remote?: boolean;
+      remotePolicy?: string;
+      description?: string;
+      link?: string;
+      postedDate?: string;
+      applicationUrl?: string;
+      companyProfile?: {
+        name?: string;
+        website?: string;
+        linkedin?: string;
+        twitter?: string;
+        industry?: string;
+        size?: string;
+      };
+      [key: string]: unknown;
+    }>;
+  } catch (error) {
+    console.error("[WellFound] Scraper error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Transform WellFound job data to internal InsertJob format
+ */
+export function transformWellFoundJob(
+  wellfoundJob: Awaited<ReturnType<typeof scrapeWellFoundJobs>>[number]
+): InsertJob {
+  return {
+    title: wellfoundJob.title || "Unknown Position",
+    company: wellfoundJob.company || "Unknown Company",
+    location: wellfoundJob.location || "Remote",
+    applyUrl: wellfoundJob.applicationUrl || wellfoundJob.link || "",
+    description: wellfoundJob.description || "",
+    source: "wellfound",
+    externalId: wellfoundJob.id || `wellfound-${Date.now()}-${Math.random()}`,
+    status: "matched",
+    ingestedAt: new Date(),
+    rawJson: JSON.stringify(wellfoundJob),
+  };
+}

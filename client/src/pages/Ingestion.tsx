@@ -598,6 +598,12 @@ export default function Ingestion() {
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [activeTab, setActiveTab] = useState<"fetch" | "schedules" | "history">("fetch");
 
+  // WellFound scraper state
+  const [wellFoundJobTitle, setWellFoundJobTitle] = useState("product-manager");
+  const [wellFoundJobLocation, setWellFoundJobLocation] = useState("united-arab-emirates");
+  const [wellFoundKeyword, setWellFoundKeyword] = useState("");
+  const [wellFoundFullyRemote, setWellFoundFullyRemote] = useState(false);
+
   // Convert-to-schedule modal state
   const [convertingHistory, setConvertingHistory] = useState<{
     id: number; name: string; filters: Filters;
@@ -665,7 +671,16 @@ export default function Ingestion() {
     onError: (e) => toast.error(e.message),
   });
 
-  const isFetching = fetchJobsMut.isPending || runNowMut.isPending;
+  const scrapeWellFoundMut = trpc.jobs.scrapeWellFound.useMutation({
+    onSuccess: (data) => {
+      toast.success(`✓ WellFound: ${data.inserted} jobs ingested, ${data.duplicates} duplicates`);
+      refetchHistory();
+      utils.jobs.kanban.invalidate();
+    },
+    onError: (e) => toast.error(`WellFound Error: ${e.message}`),
+  });
+
+  const isFetching = fetchJobsMut.isPending || runNowMut.isPending || scrapeWellFoundMut.isPending;
 
   // Quota calculations — pick the active API's quota
   const isLI = isLinkedInEndpoint(filters.endpoint);
@@ -802,7 +817,7 @@ export default function Ingestion() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-1">
               <label className="block text-xs font-mono text-amber-400 mb-1">API SOURCE</label>
-              <div className="grid grid-cols-2 gap-1 mb-2">
+              <div className="grid grid-cols-3 gap-1 mb-2">
                 <button
                   type="button"
                   onClick={() => setFilter("endpoint", "active-ats-7d" as AllEndpoints)}
@@ -827,6 +842,25 @@ export default function Ingestion() {
                 >
                   LINKEDIN JOBS
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!wellFoundJobTitle.trim() || !wellFoundJobLocation.trim()) {
+                      toast.error("Job title and location required");
+                      return;
+                    }
+                    scrapeWellFoundMut.mutate({
+                      jobTitle: wellFoundJobTitle,
+                      jobLocation: wellFoundJobLocation,
+                      keyword: wellFoundKeyword || undefined,
+                      fullyRemote: wellFoundFullyRemote,
+                    });
+                  }}
+                  disabled={isFetching || scrapeWellFoundMut.isPending}
+                  className="px-2 py-1.5 text-xs font-mono font-bold border-2 transition-colors border-emerald-500 text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-50"
+                >
+                  {scrapeWellFoundMut.isPending ? "SCRAPING..." : "WELLFOUND"}
+                </button>
               </div>
               <SelectInput
                 label="ENDPOINT"
@@ -844,6 +878,41 @@ export default function Ingestion() {
                 }
                 disabled={isFetching}
               />
+              {/* WellFound Inputs */}
+              <div className="border-2 border-emerald-700 p-3 space-y-3 bg-emerald-950/20">
+                <p className="text-xs font-mono text-emerald-400 font-bold tracking-widest">WELLFOUND SCRAPER</p>
+                <TextInput
+                  label="JOB TITLE"
+                  value={wellFoundJobTitle}
+                  onChange={setWellFoundJobTitle}
+                  placeholder="e.g. product-manager"
+                  disabled={isFetching}
+                />
+                <TextInput
+                  label="LOCATION"
+                  value={wellFoundJobLocation}
+                  onChange={setWellFoundJobLocation}
+                  placeholder="e.g. united-arab-emirates"
+                  disabled={isFetching}
+                />
+                <TextInput
+                  label="KEYWORD (optional)"
+                  value={wellFoundKeyword}
+                  onChange={setWellFoundKeyword}
+                  placeholder="e.g. fintech, AI"
+                  disabled={isFetching}
+                />
+                <label className="flex items-center gap-2 text-xs font-mono text-emerald-400">
+                  <input
+                    type="checkbox"
+                    checked={wellFoundFullyRemote}
+                    onChange={(e) => setWellFoundFullyRemote(e.target.checked)}
+                    disabled={isFetching}
+                    className="w-4 h-4"
+                  />
+                  FULLY REMOTE ONLY
+                </label>
+              </div>
             </div>
             <SelectInput
               label="LIMIT (10–100 per call)"
