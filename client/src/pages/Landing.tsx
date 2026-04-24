@@ -458,14 +458,9 @@ Our full 1,000-application campaign costs less than{" "}
               </p>
 
               <div style={{ marginBottom: 28 }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
-                  <span style={{ color: "#fff", fontWeight: 900, fontSize: 28 }}>AED 99</span>
-                  <span style={{ color: "#64748b", fontSize: 14 }}>/ 50 applications</span>
-                </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ color: "#f59e0b", fontWeight: 900, fontSize: 26 }}>AED 1,730</span>
+                  <span style={{ color: "#f59e0b", fontWeight: 900, fontSize: 32 }}>AED 1,730</span>
                   <span style={{ color: "#64748b", fontSize: 14 }}>/ 1,000 applications</span>
-                  <span style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b", fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 100 }}>BEST VALUE</span>
                 </div>
               </div>
 
@@ -513,14 +508,9 @@ Our full 1,000-application campaign costs less than{" "}
               </p>
 
               <div style={{ marginBottom: 28 }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
-                  <span style={{ color: "#fff", fontWeight: 900, fontSize: 28 }}>AED 99</span>
-                  <span style={{ color: "#64748b", fontSize: 14 }}>/ 10 applications</span>
-                </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ color: "#f59e0b", fontWeight: 900, fontSize: 26 }}>AED 2,840</span>
+                  <span style={{ color: "#f59e0b", fontWeight: 900, fontSize: 32 }}>AED 2,840</span>
                   <span style={{ color: "#64748b", fontSize: 14 }}>/ 1,000 applications</span>
-                  <span style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b", fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 100 }}>BEST VALUE</span>
                 </div>
               </div>
 
