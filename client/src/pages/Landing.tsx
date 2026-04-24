@@ -142,7 +142,7 @@ export default function Landing() {
           fontSize: "clamp(2.2rem, 5vw, 3.6rem)", fontWeight: 900,
           color: "#fff", marginBottom: 24, lineHeight: 1.1,
         }}>
-          Land a High-Paying Tech Job<br />
+          Land a High-Paying Job<br />
           <span style={{ color: "#10b981" }}>in 100 Days.</span>{" "}
           <span style={{ color: "#f59e0b" }}>Or Your Money Back.</span>
         </h1>
