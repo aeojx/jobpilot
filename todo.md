@@ -656,4 +656,18 @@
 - [x] Add WellFound input fields (job title, location, keyword, fully remote toggle) in collapsible section
 - [x] Map WellFound job data to internal job schema (title, company, location, salary, link, etc.)
 - [x] Add error handling and retry logic for Apify API calls
+- [x] Fix company object handling and rawJson serialization (v4.9.1)
 - [ ] Write vitest tests for WellFound scraper integration
+
+## v5.0 Hormozi $100M Offer Landing Page Rewrite
+- [x] Rewrite NAV: logo + single CTA "Book Free Intake Call"
+- [x] Rewrite HERO: dream outcome H1, 5-min/day sub-copy, WhatsApp CTA, social proof bar
+- [x] Add PAIN AGITATION section: "Most Candidates" vs "1000Jobs" side-by-side comparison
+- [x] Add HOW IT WORKS section: 3-step mechanism (intake call → AI runs 1000 apps → 5 min/day)
+- [x] Add THE MATH section: no-brainer investment framing (AED 730 vs AED 30k/month)
+- [x] Keep product screenshots section (cleaned up)
+- [x] Keep guarantee section (cleaned up)
+- [x] Simplify pricing to 2 clean cards, remove clutter
+- [x] Trim FAQ to 5 questions
+- [x] Rewrite final CTA section
+- [x] Remove all sections not in the 10-section structure
