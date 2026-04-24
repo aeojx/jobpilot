@@ -898,9 +898,29 @@ export async function scrapeWellFoundJobs(input: {
 export function transformWellFoundJob(
   wellfoundJob: Awaited<ReturnType<typeof scrapeWellFoundJobs>>[number]
 ): InsertJob {
+  // Handle company: can be a string or an object with a name property
+  let companyName = "Unknown Company";
+  if (typeof wellfoundJob.company === "string") {
+    companyName = wellfoundJob.company;
+  } else if (wellfoundJob.company && typeof wellfoundJob.company === "object" && "name" in wellfoundJob.company) {
+    companyName = (wellfoundJob.company as { name?: string }).name || "Unknown Company";
+  }
+
+  // Store only essential fields in rawJson to avoid SQL serialization issues
+  const essentialData = {
+    id: wellfoundJob.id,
+    title: wellfoundJob.title,
+    company: companyName,
+    location: wellfoundJob.location,
+    link: wellfoundJob.link,
+    description: wellfoundJob.description,
+    compensation: (wellfoundJob as any).salary || (wellfoundJob as any).compensation,
+    remote: (wellfoundJob as any).remote,
+  };
+
   return {
     title: wellfoundJob.title || "Unknown Position",
-    company: wellfoundJob.company || "Unknown Company",
+    company: companyName,
     location: wellfoundJob.location || "Remote",
     applyUrl: wellfoundJob.applicationUrl || wellfoundJob.link || "",
     description: wellfoundJob.description || "",
@@ -908,6 +928,6 @@ export function transformWellFoundJob(
     externalId: wellfoundJob.id || `wellfound-${Date.now()}-${Math.random()}`,
     status: "matched",
     ingestedAt: new Date(),
-    rawJson: JSON.stringify(wellfoundJob),
+    rawJson: JSON.stringify(essentialData),
   };
 }
