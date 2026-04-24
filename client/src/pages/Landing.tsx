@@ -143,8 +143,7 @@ export default function Landing() {
           color: "#fff", marginBottom: 24, lineHeight: 1.1,
         }}>
           Land a High-Paying Job<br />
-          <span style={{ color: "#10b981" }}>in 100 Days.</span>{" "}
-          <span style={{ color: "#f59e0b" }}>Or Your Money Back.</span>
+          <span style={{ color: "#10b981" }}>in 100 Days.</span>
         </h1>
 
         <p className="lp-fade-up-3" style={{
