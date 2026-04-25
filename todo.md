@@ -678,3 +678,11 @@
 - [x] White Glove includes: everything in Customized Resumes + LinkedIn profile rewrite + top 20 company referral outreach + direct recruiter network blast (50-100 recruiters) + custom portfolio website + domain + custom email + salary negotiation coaching + weekly 1:1 check-ins with Alan + offer legal review + interview prep + guarantee: 5 interviews or full refund
 - [x] Update pricing section layout from 2-column to 3-column grid
 - [x] Update The Math section to reference new pricing
+
+## v5.2 WellFound Ingest UX Improvements
+- [x] Hide WellFound scraper form by default in Fetch tab
+- [x] Show WellFound scraper form inline when WellFound button is pressed (toggle view)
+- [x] Place scraper activation button at bottom of WellFound form view
+- [x] Add "Back to API Sources" button to return to normal fetch view
+- [x] Record WellFound scrapes in fetch_history (backend routers.ts) for History tab
+- [x] Add emerald WELLFOUND badge to history rows for wellfound endpoint

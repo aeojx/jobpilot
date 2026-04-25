@@ -454,7 +454,9 @@ function HistoryRow({
             </span>
             <Badge className="text-xs font-mono bg-gray-800 text-gray-400 border-gray-600">{h.endpoint}</Badge>
             {/* API source badge */}
-            {["active-jb-7d", "active-jb-24h"].includes(h.endpoint) ? (
+            {h.endpoint === "wellfound" ? (
+              <Badge className="text-xs font-mono bg-emerald-400/10 text-emerald-400 border-emerald-400/40">WELLFOUND</Badge>
+            ) : ["active-jb-7d", "active-jb-24h"].includes(h.endpoint) ? (
               <Badge className="text-xs font-mono border" style={{ background: "rgba(10,102,194,0.15)", color: "#4d9de0", borderColor: "rgba(10,102,194,0.5)" }}>LINKEDIN</Badge>
             ) : (
               <Badge className="text-xs font-mono bg-amber-400/10 text-amber-400 border-amber-400/40">EXTERNAL</Badge>
@@ -597,6 +599,7 @@ export default function Ingestion() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [activeTab, setActiveTab] = useState<"fetch" | "schedules" | "history">("fetch");
+  const [showWellFound, setShowWellFound] = useState(false);
 
   // WellFound scraper state
   const [wellFoundJobTitle, setWellFoundJobTitle] = useState("product-manager");
@@ -844,43 +847,36 @@ export default function Ingestion() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (!wellFoundJobTitle.trim() || !wellFoundJobLocation.trim()) {
-                      toast.error("Job title and location required");
-                      return;
-                    }
-                    scrapeWellFoundMut.mutate({
-                      jobTitle: wellFoundJobTitle,
-                      jobLocation: wellFoundJobLocation,
-                      keyword: wellFoundKeyword || undefined,
-                      fullyRemote: wellFoundFullyRemote,
-                    });
-                  }}
-                  disabled={isFetching || scrapeWellFoundMut.isPending}
-                  className="px-2 py-1.5 text-xs font-mono font-bold border-2 transition-colors border-emerald-500 text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-50"
+                  onClick={() => setShowWellFound(true)}
+                  disabled={isFetching}
+                  className={`px-2 py-1.5 text-xs font-mono font-bold border-2 transition-colors ${
+                    showWellFound
+                      ? "border-emerald-400 text-emerald-400 bg-emerald-400/10"
+                      : "border-emerald-500 text-emerald-400 hover:bg-emerald-500/10"
+                  } disabled:opacity-50`}
                 >
-                  {scrapeWellFoundMut.isPending ? "SCRAPING..." : "WELLFOUND"}
+                  WELLFOUND
                 </button>
               </div>
-              <SelectInput
-                label="ENDPOINT"
-                value={filters.endpoint}
-                onChange={(v) => setFilter("endpoint", v as AllEndpoints)}
-                options={isLinkedInEndpoint(filters.endpoint)
-                  ? [
-                      { value: "active-jb-7d", label: "active-jb-7d (Last 7 days)" },
-                      { value: "active-jb-24h", label: "active-jb-24h (Last 24 hours)" },
-                    ]
-                  : [
-                      { value: "active-ats-7d", label: "active-ats-7d (Last 7 days)" },
-                      { value: "active-ats-24h", label: "active-ats-24h (Last 24 hours)" },
-                    ]
-                }
-                disabled={isFetching}
-              />
-              {/* WellFound Inputs */}
-              <div className="border-2 border-emerald-700 p-3 space-y-3 bg-emerald-950/20">
-                <p className="text-xs font-mono text-emerald-400 font-bold tracking-widest">WELLFOUND SCRAPER</p>
+            </div>
+
+          </div>
+
+          {/* WellFound Scraper View — shown when WellFound button is pressed */}
+          {showWellFound && (
+            <div className="border-2 border-emerald-500/50 p-4 space-y-4 bg-emerald-950/10">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-mono text-emerald-400 font-bold tracking-widest">▌ WELLFOUND SCRAPER</p>
+                <button
+                  type="button"
+                  onClick={() => setShowWellFound(false)}
+                  className="text-xs font-mono text-gray-500 hover:text-emerald-400 transition-colors flex items-center gap-1"
+                >
+                  ← BACK TO API SOURCES
+                </button>
+              </div>
+              <p className="text-xs text-gray-400">Scrape job listings directly from WellFound (AngelList). Configure your search below and activate the scraper.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <TextInput
                   label="JOB TITLE"
                   value={wellFoundJobTitle}
@@ -895,25 +891,55 @@ export default function Ingestion() {
                   placeholder="e.g. united-arab-emirates"
                   disabled={isFetching}
                 />
-                <TextInput
-                  label="KEYWORD (optional)"
-                  value={wellFoundKeyword}
-                  onChange={setWellFoundKeyword}
-                  placeholder="e.g. fintech, AI"
+              </div>
+              <TextInput
+                label="KEYWORD (optional)"
+                value={wellFoundKeyword}
+                onChange={setWellFoundKeyword}
+                placeholder="e.g. fintech, AI"
+                disabled={isFetching}
+              />
+              <label className="flex items-center gap-2 text-xs font-mono text-emerald-400">
+                <input
+                  type="checkbox"
+                  checked={wellFoundFullyRemote}
+                  onChange={(e) => setWellFoundFullyRemote(e.target.checked)}
                   disabled={isFetching}
+                  className="w-4 h-4 accent-emerald-400"
                 />
-                <label className="flex items-center gap-2 text-xs font-mono text-emerald-400">
-                  <input
-                    type="checkbox"
-                    checked={wellFoundFullyRemote}
-                    onChange={(e) => setWellFoundFullyRemote(e.target.checked)}
-                    disabled={isFetching}
-                    className="w-4 h-4"
-                  />
-                  FULLY REMOTE ONLY
-                </label>
+                FULLY REMOTE ONLY
+              </label>
+              <div className="pt-2 border-t border-emerald-800">
+                <Button
+                  onClick={() => {
+                    if (!wellFoundJobTitle.trim() || !wellFoundJobLocation.trim()) {
+                      toast.error("Job title and location required");
+                      return;
+                    }
+                    scrapeWellFoundMut.mutate({
+                      jobTitle: wellFoundJobTitle,
+                      jobLocation: wellFoundJobLocation,
+                      keyword: wellFoundKeyword || undefined,
+                      fullyRemote: wellFoundFullyRemote,
+                    });
+                  }}
+                  disabled={isFetching || scrapeWellFoundMut.isPending}
+                  className="bg-emerald-500 text-black hover:bg-emerald-400 font-mono font-bold text-xs tracking-widest px-6 py-2 border-0 w-full"
+                >
+                  {scrapeWellFoundMut.isPending ? (
+                    <><RefreshCw size={14} className="animate-spin mr-2" />SCRAPING WELLFOUND…</>
+                  ) : (
+                    <><Zap size={14} className="mr-2" />ACTIVATE WELLFOUND SCRAPER</>
+                  )}
+                </Button>
               </div>
             </div>
+          )}
+
+          {/* Normal API filters — hidden when WellFound view is active */}
+          {!showWellFound && (
+            <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <SelectInput
               label="LIMIT (10–100 per call)"
               value={filters.limit}
@@ -1145,6 +1171,8 @@ export default function Ingestion() {
               RESET FILTERS
             </Button>
           </div>
+              </>
+            )}
         </div>
       )}
 

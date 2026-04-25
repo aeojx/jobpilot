@@ -1292,6 +1292,18 @@ export const appRouter = router({
           }
 
           console.log(`[WellFound] Inserted ${insertedJobs.length} jobs, ${duplicates.length} duplicates`);
+
+          // Record in fetch_history so it shows in the History tab
+          await insertFetchHistory({
+            endpoint: "wellfound",
+            filters: { jobTitle: input.jobTitle, jobLocation: input.jobLocation, keyword: input.keyword, fullyRemote: input.fullyRemote },
+            jobsFetched: rawJobs.length,
+            jobsIngested: insertedJobs.length,
+            jobsDuplicate: duplicates.length,
+            status: "success",
+            ranAt: new Date(),
+          });
+
           return {
             success: true,
             inserted: insertedJobs.length,
@@ -1300,6 +1312,19 @@ export const appRouter = router({
           };
         } catch (error) {
           console.error("[WellFound] Scrape error:", error);
+
+          // Record error in fetch_history
+          await insertFetchHistory({
+            endpoint: "wellfound",
+            filters: { jobTitle: input.jobTitle, jobLocation: input.jobLocation, keyword: input.keyword, fullyRemote: input.fullyRemote },
+            jobsFetched: 0,
+            jobsIngested: 0,
+            jobsDuplicate: 0,
+            status: "error",
+            errorMessage: (error as Error).message,
+            ranAt: new Date(),
+          });
+
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: `Failed to scrape WellFound jobs: ${(error as Error).message}`,
