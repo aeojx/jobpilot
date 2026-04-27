@@ -686,3 +686,10 @@
 - [x] Add "Back to API Sources" button to return to normal fetch view
 - [x] Record WellFound scrapes in fetch_history (backend routers.ts) for History tab
 - [x] Add emerald WELLFOUND badge to history rows for wellfound endpoint
+
+## v5.3 WellFound Scoring Pipeline + Ingest Tab Navigation Fix
+- [x] Confirmed WellFound jobs already go through the same AI scoring pipeline (scoreJobWithLLM) as Fantastic/LinkedIn jobs
+- [x] Confirmed WellFound jobs appear in Matched queue and Swipe Mode when scored (status=matched)
+- [x] Remove "Back to API Sources" button from WellFound view
+- [x] Make API source buttons (Fantastic Jobs, LinkedIn Jobs, WellFound) work as a toggle group — clicking any one switches the view
+- [x] Fix WellFound header to reference WellFound/Apify API, not LinkedIn Jobs API

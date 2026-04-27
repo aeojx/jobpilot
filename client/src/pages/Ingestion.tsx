@@ -599,7 +599,7 @@ export default function Ingestion() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [activeTab, setActiveTab] = useState<"fetch" | "schedules" | "history">("fetch");
-  const [showWellFound, setShowWellFound] = useState(false);
+  const [activeSource, setActiveSource] = useState<"fantastic" | "linkedin" | "wellfound">("fantastic");
 
   // WellFound scraper state
   const [wellFoundJobTitle, setWellFoundJobTitle] = useState("product-manager");
@@ -823,10 +823,10 @@ export default function Ingestion() {
               <div className="grid grid-cols-3 gap-1 mb-2">
                 <button
                   type="button"
-                  onClick={() => setFilter("endpoint", "active-ats-7d" as AllEndpoints)}
+                  onClick={() => { setActiveSource("fantastic"); setFilter("endpoint", "active-ats-7d" as AllEndpoints); }}
                   disabled={isFetching}
                   className={`px-2 py-1.5 text-xs font-mono font-bold border-2 transition-colors ${
-                    !isLinkedInEndpoint(filters.endpoint)
+                    activeSource === "fantastic"
                       ? "border-amber-400 text-amber-400 bg-amber-400/10"
                       : "border-gray-700 text-gray-500 hover:border-gray-500"
                   }`}
@@ -835,10 +835,10 @@ export default function Ingestion() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFilter("endpoint", "active-jb-7d" as AllEndpoints)}
+                  onClick={() => { setActiveSource("linkedin"); setFilter("endpoint", "active-jb-7d" as AllEndpoints); }}
                   disabled={isFetching}
                   className={`px-2 py-1.5 text-xs font-mono font-bold border-2 transition-colors ${
-                    isLinkedInEndpoint(filters.endpoint)
+                    activeSource === "linkedin"
                       ? "border-blue-400 text-blue-400 bg-blue-400/10"
                       : "border-gray-700 text-gray-500 hover:border-gray-500"
                   }`}
@@ -847,10 +847,10 @@ export default function Ingestion() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowWellFound(true)}
+                  onClick={() => setActiveSource("wellfound")}
                   disabled={isFetching}
                   className={`px-2 py-1.5 text-xs font-mono font-bold border-2 transition-colors ${
-                    showWellFound
+                    activeSource === "wellfound"
                       ? "border-emerald-400 text-emerald-400 bg-emerald-400/10"
                       : "border-emerald-500 text-emerald-400 hover:bg-emerald-500/10"
                   } disabled:opacity-50`}
@@ -863,19 +863,12 @@ export default function Ingestion() {
           </div>
 
           {/* WellFound Scraper View — shown when WellFound button is pressed */}
-          {showWellFound && (
+          {activeSource === "wellfound" && (
             <div className="border-2 border-emerald-500/50 p-4 space-y-4 bg-emerald-950/10">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-mono text-emerald-400 font-bold tracking-widest">▌ WELLFOUND SCRAPER</p>
-                <button
-                  type="button"
-                  onClick={() => setShowWellFound(false)}
-                  className="text-xs font-mono text-gray-500 hover:text-emerald-400 transition-colors flex items-center gap-1"
-                >
-                  ← BACK TO API SOURCES
-                </button>
+              <div>
+                <p className="text-xs font-mono text-emerald-400 font-bold tracking-widest">▌ WELLFOUND SCRAPER — APIFY API</p>
               </div>
-              <p className="text-xs text-gray-400">Scrape job listings directly from WellFound (AngelList). Configure your search below and activate the scraper.</p>
+              <p className="text-xs text-gray-400">Scrape job listings directly from WellFound (AngelList) via the Apify API. Configure your search below and activate the scraper.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <TextInput
                   label="JOB TITLE"
@@ -937,7 +930,7 @@ export default function Ingestion() {
           )}
 
           {/* Normal API filters — hidden when WellFound view is active */}
-          {!showWellFound && (
+          {activeSource !== "wellfound" && (
             <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <SelectInput
