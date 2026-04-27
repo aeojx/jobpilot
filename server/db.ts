@@ -943,23 +943,42 @@ export function transformWellFoundJob(
     companyName = (wellfoundJob.company as { name?: string }).name || "Unknown Company";
   }
 
+  // Extract title from job_id slug when title field is empty
+  // e.g., "4129433-senior-product-manager" → "Senior Product Manager"
+  let jobTitle = wellfoundJob.title;
+  if (!jobTitle && wellfoundJob.id) {
+    const slug = wellfoundJob.id.replace(/^\d+-/, ""); // Remove leading numeric ID
+    jobTitle = slug
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  }
+  if (!jobTitle) jobTitle = "Unknown Position";
+
+  // Construct WellFound application URL from job_id when applicationUrl and link are empty
+  // WellFound job URLs follow the pattern: https://wellfound.com/jobs/{job_id}
+  let applyUrl = wellfoundJob.applicationUrl || wellfoundJob.link || "";
+  if (!applyUrl && wellfoundJob.id) {
+    applyUrl = `https://wellfound.com/jobs/${wellfoundJob.id}`;
+  }
+
   // Store only essential fields in rawJson to avoid SQL serialization issues
   const essentialData = {
     id: wellfoundJob.id,
-    title: wellfoundJob.title,
+    title: jobTitle,
     company: companyName,
     location: wellfoundJob.location,
-    link: wellfoundJob.link,
+    link: applyUrl,
     description: wellfoundJob.description,
     compensation: (wellfoundJob as any).salary || (wellfoundJob as any).compensation,
     remote: (wellfoundJob as any).remote,
   };
 
   return {
-    title: wellfoundJob.title || "Unknown Position",
+    title: jobTitle,
     company: companyName,
     location: wellfoundJob.location || "Remote",
-    applyUrl: wellfoundJob.applicationUrl || wellfoundJob.link || "",
+    applyUrl: applyUrl,
     description: wellfoundJob.description || buildWellFoundSyntheticDescription(wellfoundJob, companyName),
     source: "wellfound",
     externalId: wellfoundJob.id || `wellfound-${Date.now()}-${Math.random()}`,

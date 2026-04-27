@@ -700,3 +700,8 @@
 - [x] Add getJobsBySource and updateJobDescription helpers to db.ts
 - [x] Add "RE-SCORE ALL WELLFOUND JOBS" button to WellFound view in Ingest tab
 - [x] Add buildWellFoundSyntheticDescription helper for empty descriptions
+
+## v5.5 WellFound Title & URL Fix
+- [x] Extract job title from job_id slug when title field is empty (e.g., "4129433-senior-product-manager" → "Senior Product Manager")
+- [x] Construct WellFound application URL from job_id when applicationUrl and link are empty
+- [x] Ensure all WellFound jobs have a valid title and applyUrl (rescoreWellFound also fixes existing jobs' titles and URLs)

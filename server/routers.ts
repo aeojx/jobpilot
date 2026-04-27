@@ -146,6 +146,9 @@ export type DimensionScores = {
 };
 
 import type { SkillsProfile } from "../drizzle/schema";
+import { jobs } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
+import { getDb } from "./db";
 
 /**
  * Check if a job description contains any dealbreaker keywords.
@@ -1528,14 +1531,39 @@ export const appRouter = router({
       let updated = 0;
       let descriptionFixed = 0;
       let skipped = 0;
+      const db = await getDb();
       for (const job of wellfoundJobs) {
+        // Fix title if it's "Unknown Position" — extract from rawJson id slug
+        let currentTitle = job.title;
+        if (currentTitle === "Unknown Position" && job.rawJson) {
+          try {
+            const rawData = JSON.parse(job.rawJson as string);
+            if (rawData.id && typeof rawData.id === "string" && rawData.id.includes("-")) {
+              const slug = rawData.id.replace(/^\d+-/, "");
+              currentTitle = slug.split("-").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+              if (db) await db.update(jobs).set({ title: currentTitle }).where(eq(jobs.id, job.id));
+            }
+          } catch { /* ignore */ }
+        }
+
+        // Fix applyUrl if empty — construct from rawJson id
+        if (!job.applyUrl && job.rawJson) {
+          try {
+            const rawData = JSON.parse(job.rawJson as string);
+            const newUrl = rawData.link || (rawData.id ? `https://wellfound.com/jobs/${rawData.id}` : "");
+            if (newUrl && db) {
+              await db.update(jobs).set({ applyUrl: newUrl }).where(eq(jobs.id, job.id));
+            }
+          } catch { /* ignore */ }
+        }
+
         // If description is empty, build a synthetic one from rawJson
         let descText = job.description ?? "";
         if (!descText.trim()) {
           try {
             const rawData = job.rawJson ? JSON.parse(job.rawJson as string) : {};
             const parts: string[] = [];
-            parts.push(`Job Title: ${job.title}`);
+            parts.push(`Job Title: ${currentTitle}`);
             parts.push(`Company: ${job.company}`);
             if (job.location) parts.push(`Location: ${job.location}`);
             if (rawData.compensation) parts.push(`Compensation: ${rawData.compensation}`);
