@@ -693,3 +693,10 @@
 - [x] Remove "Back to API Sources" button from WellFound view
 - [x] Make API source buttons (Fantastic Jobs, LinkedIn Jobs, WellFound) work as a toggle group — clicking any one switches the view
 - [x] Fix WellFound header to reference WellFound/Apify API, not LinkedIn Jobs API
+
+## v5.4 WellFound Header Fix + Re-score
+- [x] Make Ingest tab header dynamic — show WellFound/Apify info when WellFound source is selected
+- [x] Add rescoreWellFound procedure (builds synthetic descriptions for empty ones, then scores)
+- [x] Add getJobsBySource and updateJobDescription helpers to db.ts
+- [x] Add "RE-SCORE ALL WELLFOUND JOBS" button to WellFound view in Ingest tab
+- [x] Add buildWellFoundSyntheticDescription helper for empty descriptions

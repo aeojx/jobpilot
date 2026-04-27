@@ -55,6 +55,8 @@ import {
   getArchivedJobsCount,
   scrapeWellFoundJobs,
   transformWellFoundJob,
+  getJobsBySource,
+  updateJobDescription,
 } from "./db";
 import { generateResume } from "./resume-generator";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -1516,6 +1518,79 @@ export const appRouter = router({
         }
       }
       return { success: true, updated, migrated, skipped };
+    }),
+
+    rescoreWellFound: protectedProcedure
+      .mutation(async () => {
+      const skills = await getSkillsProfile();
+      if (!skills) throw new TRPCError({ code: "BAD_REQUEST", message: "No skills profile found. Please set up your Skills Profile first." });
+      const wellfoundJobs = await getJobsBySource("wellfound");
+      let updated = 0;
+      let descriptionFixed = 0;
+      let skipped = 0;
+      for (const job of wellfoundJobs) {
+        // If description is empty, build a synthetic one from rawJson
+        let descText = job.description ?? "";
+        if (!descText.trim()) {
+          try {
+            const rawData = job.rawJson ? JSON.parse(job.rawJson as string) : {};
+            const parts: string[] = [];
+            parts.push(`Job Title: ${job.title}`);
+            parts.push(`Company: ${job.company}`);
+            if (job.location) parts.push(`Location: ${job.location}`);
+            if (rawData.compensation) parts.push(`Compensation: ${rawData.compensation}`);
+            if (rawData.remote) parts.push(`Remote: Yes`);
+            if (rawData.id && typeof rawData.id === "string" && rawData.id.includes("-")) {
+              const roleSlug = rawData.id.replace(/^\d+-/, "").replace(/-/g, " ");
+              parts.push(`Role: ${roleSlug}`);
+            }
+            descText = parts.join("\n");
+            if (descText.trim()) {
+              await updateJobDescription(job.id, descText);
+              descriptionFixed++;
+            }
+          } catch { /* ignore parse errors */ }
+        }
+        if (!descText.trim()) { skipped++; continue; }
+        try {
+          const result = await scoreJobWithLLM(descText, skills, job.title, job.company, job.location ?? undefined);
+          if (result.dealBreakerMatched) {
+            if (job.status === "matched" || job.status === "ingested") {
+              await updateJobStatus(job.id, "rejected");
+            }
+            await updateJobMatchScore(job.id, 0, { dealBreakerMatched: result.dealBreakerMatched });
+          } else if (result.scoreSeniority < 50) {
+            if (job.status === "matched" || job.status === "ingested") {
+              await updateJobStatus(job.id, "rejected");
+            }
+            await updateJobMatchScore(job.id, result.composite, {
+              scoreSkills: result.scoreSkills,
+              scoreSeniority: result.scoreSeniority,
+              scoreLocation: result.scoreLocation,
+              scoreIndustry: result.scoreIndustry,
+              scoreCompensation: result.scoreCompensation,
+              dealBreakerMatched: null,
+            });
+          } else {
+            // Good match — ensure status is "matched"
+            if (job.status === "ingested") {
+              await updateJobStatus(job.id, "matched");
+            }
+            await updateJobMatchScore(job.id, result.composite, {
+              scoreSkills: result.scoreSkills,
+              scoreSeniority: result.scoreSeniority,
+              scoreLocation: result.scoreLocation,
+              scoreIndustry: result.scoreIndustry,
+              scoreCompensation: result.scoreCompensation,
+              dealBreakerMatched: null,
+            });
+          }
+          updated++;
+        } catch (err) {
+          console.error("[rescoreWellFound] Scoring failed for job", job.id, (err as Error).message);
+        }
+      }
+      return { success: true, total: wellfoundJobs.length, updated, descriptionFixed, skipped };
     }),
   }),
 

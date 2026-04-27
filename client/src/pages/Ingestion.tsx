@@ -683,7 +683,15 @@ export default function Ingestion() {
     onError: (e) => toast.error(`WellFound Error: ${e.message}`),
   });
 
-  const isFetching = fetchJobsMut.isPending || runNowMut.isPending || scrapeWellFoundMut.isPending;
+  const rescoreWellFoundMut = trpc.skills.rescoreWellFound.useMutation({
+    onSuccess: (data) => {
+      toast.success(`✓ Re-scored ${data.updated}/${data.total} WellFound jobs (${data.descriptionFixed} descriptions fixed, ${data.skipped} skipped)`);
+      utils.jobs.kanban.invalidate();
+    },
+    onError: (e) => toast.error(`Re-score Error: ${e.message}`),
+  });
+
+  const isFetching = fetchJobsMut.isPending || runNowMut.isPending || scrapeWellFoundMut.isPending || rescoreWellFoundMut.isPending;
 
   // Quota calculations — pick the active API's quota
   const isLI = isLinkedInEndpoint(filters.endpoint);
@@ -736,9 +744,11 @@ export default function Ingestion() {
         </div>
         <div className="h-0.5 w-full bg-amber-400 mb-3" />
         <p className="text-xs text-gray-400">
-          {isLinkedInEndpoint(filters.endpoint)
-            ? "LINKEDIN JOBS API · linkedin-job-search-api.p.rapidapi.com · DIRECT LINKEDIN LISTINGS"
-            : "ACTIVE JOBS DB · active-jobs-db.p.rapidapi.com · 175K+ ORGS"}
+          {activeSource === "wellfound"
+            ? "WELLFOUND SCRAPER · apify.com/radeance/wellfound-job-listings-scraper · ANGELLIST LISTINGS"
+            : isLinkedInEndpoint(filters.endpoint)
+              ? "LINKEDIN JOBS API · linkedin-job-search-api.p.rapidapi.com · DIRECT LINKEDIN LISTINGS"
+              : "ACTIVE JOBS DB · active-jobs-db.p.rapidapi.com · 175K+ ORGS"}
         </p>
       </div>
 
@@ -923,6 +933,20 @@ export default function Ingestion() {
                     <><RefreshCw size={14} className="animate-spin mr-2" />SCRAPING WELLFOUND…</>
                   ) : (
                     <><Zap size={14} className="mr-2" />ACTIVATE WELLFOUND SCRAPER</>
+                  )}
+                </Button>
+
+                {/* Re-score existing WellFound jobs */}
+                <Button
+                  variant="outline"
+                  onClick={() => rescoreWellFoundMut.mutate()}
+                  disabled={isFetching || rescoreWellFoundMut.isPending}
+                  className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 font-mono font-bold text-xs tracking-widest px-6 py-2 w-full"
+                >
+                  {rescoreWellFoundMut.isPending ? (
+                    <><RefreshCw size={14} className="animate-spin mr-2" />RE-SCORING WELLFOUND JOBS…</>
+                  ) : (
+                    <><RefreshCw size={14} className="mr-2" />RE-SCORE ALL WELLFOUND JOBS</>
                   )}
                 </Button>
               </div>

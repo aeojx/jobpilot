@@ -84,6 +84,18 @@ export async function getJobsByStatus(status: Job["status"]) {
   return db.select().from(jobs).where(eq(jobs.status, status)).orderBy(desc(jobs.matchScore), desc(jobs.createdAt));
 }
 
+export async function getJobsBySource(source: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(jobs).where(eq(jobs.source, source)).orderBy(desc(jobs.createdAt));
+}
+
+export async function updateJobDescription(id: number, description: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(jobs).set({ description }).where(eq(jobs.id, id));
+}
+
 export async function getJobById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
@@ -893,6 +905,31 @@ export async function scrapeWellFoundJobs(input: {
 }
 
 /**
+ * Build a synthetic description from WellFound job fields when description is empty
+ */
+function buildWellFoundSyntheticDescription(
+  job: Record<string, any>,
+  companyName: string
+): string {
+  const parts: string[] = [];
+  const title = job.title || "Unknown Position";
+  parts.push(`Job Title: ${title}`);
+  parts.push(`Company: ${companyName}`);
+  if (job.location) parts.push(`Location: ${job.location}`);
+  if (job.remote || job.remotePolicy) parts.push(`Remote: ${job.remotePolicy || "Yes"}`);
+  if (job.salary) parts.push(`Compensation: ${job.salary}`);
+  if (job.equity) parts.push(`Equity: ${job.equity}`);
+  if (job.companyProfile?.industry) parts.push(`Industry: ${job.companyProfile.industry}`);
+  if (job.companyProfile?.size) parts.push(`Company Size: ${job.companyProfile.size}`);
+  // Extract role info from the job_id slug if available (e.g. "4129433-senior-product-manager")
+  if (job.id && typeof job.id === "string" && job.id.includes("-")) {
+    const roleSlug = job.id.replace(/^\d+-/, "").replace(/-/g, " ");
+    parts.push(`Role: ${roleSlug}`);
+  }
+  return parts.join("\n");
+}
+
+/**
  * Transform WellFound job data to internal InsertJob format
  */
 export function transformWellFoundJob(
@@ -923,7 +960,7 @@ export function transformWellFoundJob(
     company: companyName,
     location: wellfoundJob.location || "Remote",
     applyUrl: wellfoundJob.applicationUrl || wellfoundJob.link || "",
-    description: wellfoundJob.description || "",
+    description: wellfoundJob.description || buildWellFoundSyntheticDescription(wellfoundJob, companyName),
     source: "wellfound",
     externalId: wellfoundJob.id || `wellfound-${Date.now()}-${Math.random()}`,
     status: "matched",
