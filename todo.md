@@ -705,3 +705,18 @@
 - [x] Extract job title from job_id slug when title field is empty (e.g., "4129433-senior-product-manager" → "Senior Product Manager")
 - [x] Construct WellFound application URL from job_id when applicationUrl and link are empty
 - [x] Ensure all WellFound jobs have a valid title and applyUrl (rescoreWellFound also fixes existing jobs' titles and URLs)
+
+## v5.6 AI/ML Landing Page (/landing_ai)
+- [x] Create LandingAI.tsx with 10-section Hormozi $100M Offer framework
+- [x] Section 1: Nav — Logo + "Book Free Evaluation" CTA
+- [x] Section 2: Hero — Dream outcome headline for UAE AI/ML market (AED 30k-90k+ roles)
+- [x] Section 3: Pain Agitation — "Cold Applying" vs "The 1000Jobs Way" side-by-side
+- [x] Section 4: How It Works — 3 steps: The Call, AI runs 1000 apps, 5 min/day Swipe Mode
+- [x] Section 5: The Math — AED 1,730 vs AED 40,000+ ML Lead salary ROI framing
+- [x] Section 6: Screenshots — Swipe Mode, Daily Report, Skills Profile, Resume Generation
+- [x] Section 7: Guarantee — Volume Guarantee + Interview Guarantee
+- [x] Section 8: Pricing Cards — Mass Application (1,730), Customized Resumes (2,840), White Glove (4,970)
+- [x] Section 9: FAQ — 5 questions for data/AI professionals
+- [x] Section 10: Final CTA — "Free 15-Minute Salary & LinkedIn Evaluation"
+- [x] Register /landing_ai route in App.tsx
+- [x] All CTAs route to WhatsApp booking (wa.me/971509410068) with "Free 15-Minute Salary & LinkedIn Evaluation" framing

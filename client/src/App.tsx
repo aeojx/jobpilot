@@ -17,6 +17,7 @@ import FAQ from "./pages/FAQ";
 import ReleaseNotes from "./pages/ReleaseNotes";
 import ResumeGeneration from "./pages/ResumeGeneration";
 import Landing from "./pages/Landing";
+import LandingAI from "./pages/LandingAI";
 import ArchivedJobs from "./pages/ArchivedJobs";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
@@ -114,6 +115,7 @@ function Router() {
       </Route>
       <Route path="/release-notes" component={ReleaseNotes} />
       <Route path="/landing" component={Landing} />
+      <Route path="/landing_ai" component={LandingAI} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -121,7 +123,7 @@ function Router() {
 }
 
 // Routes that are publicly accessible without the password gate
-const PUBLIC_ROUTES = ["/landing", "/release-notes"];
+const PUBLIC_ROUTES = ["/landing", "/landing_ai", "/release-notes"];
 
 function GatedApp() {
   const [location] = useLocation();
