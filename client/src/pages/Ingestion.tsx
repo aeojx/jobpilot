@@ -60,6 +60,153 @@ const LOCATION_OPTIONS = [
   "Berlin","Amsterdam","Austin","Seattle","Chicago","Boston","Los Angeles","Atlanta","Miami",
 ];
 
+// ── WellFound API Valid Options ───────────────────────────────────────────────
+
+const WELLFOUND_JOB_TITLES = [
+  { value: "3d-designer", label: "3D Designer" },
+  { value: "api-testing", label: "API Testing" },
+  { value: "application-engineer", label: "Application Engineer" },
+  { value: "artificial-intelligence-engineer", label: "AI Engineer" },
+  { value: "aws-cloud-engineer", label: "AWS Cloud Engineer" },
+  { value: "backend-engineer", label: "Backend Engineer" },
+  { value: "c-developer", label: "C Developer" },
+  { value: "chief-operating-officer", label: "Chief Operating Officer" },
+  { value: "cloud-services-developer", label: "Cloud Services Developer" },
+  { value: "cybersecurity", label: "Cybersecurity" },
+  { value: "data-analyst", label: "Data Analyst" },
+  { value: "data-engineer", label: "Data Engineer" },
+  { value: "data-scientist", label: "Data Scientist" },
+  { value: "database-developer", label: "Database Developer" },
+  { value: "designer", label: "Designer" },
+  { value: "devops-engineer", label: "DevOps Engineer" },
+  { value: "engineering-manager", label: "Engineering Manager" },
+  { value: "flutter-developer", label: "Flutter Developer" },
+  { value: "frontend-engineer", label: "Frontend Engineer" },
+  { value: "full-stack-engineer", label: "Full Stack Engineer" },
+  { value: "full-stack-software-engineer", label: "Full Stack Software Engineer" },
+  { value: "game-developer", label: "Game Developer" },
+  { value: "game-producer", label: "Game Producer" },
+  { value: "go-developer", label: "Go Developer" },
+  { value: "graphql-developer", label: "GraphQL Developer" },
+  { value: "html-css", label: "HTML/CSS" },
+  { value: "java-backend-developer", label: "Java Backend Developer" },
+  { value: "leadership", label: "Leadership" },
+  { value: "machine-learning-engineer", label: "Machine Learning Engineer" },
+  { value: "marketing-operations", label: "Marketing Operations" },
+  { value: "marketing-research-analyst", label: "Marketing Research Analyst" },
+  { value: "mobile-engineer", label: "Mobile Engineer" },
+  { value: "network-administrator", label: "Network Administrator" },
+  { value: "power-bi-developer", label: "Power BI Developer" },
+  { value: "product-designer", label: "Product Designer" },
+  { value: "product-manager", label: "Product Manager" },
+  { value: "product-owner", label: "Product Owner" },
+  { value: "python-developer", label: "Python Developer" },
+  { value: "react-native", label: "React Native" },
+  { value: "sales-director", label: "Sales Director" },
+  { value: "sales-representative", label: "Sales Representative" },
+  { value: "sem-manager", label: "SEM Manager" },
+  { value: "software-architect", label: "Software Architect" },
+  { value: "software-engineer", label: "Software Engineer" },
+  { value: "swift-developer", label: "Swift Developer" },
+  { value: "systems-administrator", label: "Systems Administrator" },
+  { value: "tableau-developer", label: "Tableau Developer" },
+  { value: "ui-developer", label: "UI Developer" },
+  { value: "unity-developer", label: "Unity Developer" },
+  { value: "ux-engineer", label: "UX Engineer" },
+  { value: "vp-of-strategy", label: "VP of Strategy" },
+  { value: "web-analytics", label: "Web Analytics" },
+  { value: "web-designer", label: "Web Designer" },
+  { value: "website-testing", label: "Website Testing" },
+  { value: "wordpress-developer", label: "WordPress Developer" },
+];
+
+const WELLFOUND_LOCATIONS = [
+  { value: "remote", label: "Remote" },
+  { value: "united-arab-emirates", label: "United Arab Emirates" },
+  { value: "dubai", label: "Dubai" },
+  { value: "saudi-arabia", label: "Saudi Arabia" },
+  { value: "united-states", label: "United States" },
+  { value: "united-kingdom", label: "United Kingdom" },
+  { value: "canada-startups", label: "Canada" },
+  { value: "australia", label: "Australia" },
+  { value: "europe", label: "Europe" },
+  { value: "asia", label: "Asia" },
+  { value: "north-america", label: "North America" },
+  { value: "south-america", label: "South America" },
+  { value: "africa", label: "Africa" },
+  { value: "india", label: "India" },
+  { value: "germany", label: "Germany" },
+  { value: "france", label: "France" },
+  { value: "netherlands", label: "Netherlands" },
+  { value: "singapore", label: "Singapore" },
+  { value: "japan", label: "Japan" },
+  { value: "china", label: "China" },
+  { value: "austria", label: "Austria" },
+  { value: "colombia", label: "Colombia" },
+  { value: "mexico", label: "Mexico" },
+  { value: "nigeria", label: "Nigeria" },
+  { value: "poland", label: "Poland" },
+  { value: "portugal", label: "Portugal" },
+  { value: "spain", label: "Spain" },
+  { value: "switzerland", label: "Switzerland" },
+  { value: "amsterdam", label: "Amsterdam" },
+  { value: "atlanta", label: "Atlanta" },
+  { value: "austin", label: "Austin" },
+  { value: "bangalore", label: "Bangalore" },
+  { value: "barcelona", label: "Barcelona" },
+  { value: "beijing", label: "Beijing" },
+  { value: "berlin", label: "Berlin" },
+  { value: "bogota", label: "Bogota" },
+  { value: "boston", label: "Boston" },
+  { value: "buenos-aires-5", label: "Buenos Aires" },
+  { value: "cape-town", label: "Cape Town" },
+  { value: "chennai-tn", label: "Chennai" },
+  { value: "chicago", label: "Chicago" },
+  { value: "copenhagen", label: "Copenhagen" },
+  { value: "denver", label: "Denver" },
+  { value: "district-of-columbia", label: "Washington DC" },
+  { value: "dublin", label: "Dublin" },
+  { value: "helsinki", label: "Helsinki" },
+  { value: "hong-kong", label: "Hong Kong" },
+  { value: "krakow", label: "Krakow" },
+  { value: "lagos", label: "Lagos" },
+  { value: "lagos-mainland", label: "Lagos Mainland" },
+  { value: "lisbon", label: "Lisbon" },
+  { value: "london", label: "London" },
+  { value: "los-angeles", label: "Los Angeles" },
+  { value: "madrid-community-of-madrid", label: "Madrid" },
+  { value: "melbourne", label: "Melbourne" },
+  { value: "mexico-city", label: "Mexico City" },
+  { value: "miami", label: "Miami" },
+  { value: "montreal", label: "Montreal" },
+  { value: "mumbai", label: "Mumbai" },
+  { value: "munich", label: "Munich" },
+  { value: "nairobi", label: "Nairobi" },
+  { value: "new-delhi", label: "New Delhi" },
+  { value: "new-york", label: "New York" },
+  { value: "paris", label: "Paris" },
+  { value: "philadelphia", label: "Philadelphia" },
+  { value: "pittsburgh", label: "Pittsburgh" },
+  { value: "portland", label: "Portland" },
+  { value: "prague", label: "Prague" },
+  { value: "salt-lake-city", label: "Salt Lake City" },
+  { value: "san-francisco", label: "San Francisco" },
+  { value: "sao-paulo", label: "Sao Paulo" },
+  { value: "seattle", label: "Seattle" },
+  { value: "seoul", label: "Seoul" },
+  { value: "shanghai", label: "Shanghai" },
+  { value: "shenzhen", label: "Shenzhen" },
+  { value: "stockholm", label: "Stockholm" },
+  { value: "sydney", label: "Sydney" },
+  { value: "tallinn", label: "Tallinn" },
+  { value: "tokyo", label: "Tokyo" },
+  { value: "toronto", label: "Toronto" },
+  { value: "vancouver", label: "Vancouver" },
+  { value: "vienna", label: "Vienna" },
+  { value: "warsaw", label: "Warsaw" },
+  { value: "zurich", label: "Zurich" },
+];
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 type TriState = true | false | undefined;
@@ -230,14 +377,22 @@ function MultiSelect({
 
 /** Single-select dropdown */
 function SelectInput({
-  label, options, value, onChange, placeholder, disabled,
+  label, options, value, onChange, placeholder, disabled, tooltip,
 }: {
   label: string; options: { value: string; label: string }[]; value: string;
-  onChange: (v: string) => void; placeholder?: string; disabled?: boolean;
+  onChange: (v: string) => void; placeholder?: string; disabled?: boolean; tooltip?: string;
 }) {
   return (
     <div>
-      <label className="block text-xs font-mono text-amber-400 mb-1">{label}</label>
+      <label className="flex items-center gap-1.5 text-xs font-mono text-amber-400 mb-1">
+        {label}
+        {tooltip && (
+          <span className="relative group cursor-help">
+            <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-amber-400/50 text-[9px] font-bold text-amber-400/70 hover:text-amber-400 hover:border-amber-400 transition-colors">?</span>
+            <span className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 border border-amber-400/30 text-[10px] font-mono text-gray-300 whitespace-pre-wrap max-w-[320px] max-h-[300px] overflow-y-auto hidden group-hover:block shadow-lg shadow-black/50">{tooltip}</span>
+          </span>
+        )}
+      </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -880,19 +1035,23 @@ export default function Ingestion() {
               </div>
               <p className="text-xs text-gray-400">Scrape job listings directly from WellFound (AngelList) via the Apify API. Configure your search below and activate the scraper.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <TextInput
+                <SelectInput
                   label="JOB TITLE"
                   value={wellFoundJobTitle}
                   onChange={setWellFoundJobTitle}
-                  placeholder="e.g. product-manager"
+                  placeholder="Select a job title..."
                   disabled={isFetching}
+                  options={WELLFOUND_JOB_TITLES}
+                  tooltip={`WellFound API only accepts these exact role slugs:\n\n${WELLFOUND_JOB_TITLES.map(t => `• ${t.label}`).join("\n")}`}
                 />
-                <TextInput
+                <SelectInput
                   label="LOCATION"
                   value={wellFoundJobLocation}
                   onChange={setWellFoundJobLocation}
-                  placeholder="e.g. united-arab-emirates"
+                  placeholder="Select a location..."
                   disabled={isFetching}
+                  options={WELLFOUND_LOCATIONS}
+                  tooltip={`WellFound API only accepts these locations:\n\nRegions: Remote, Europe, Asia, North America, South America, Africa\n\nCountries: UAE, US, UK, India, Germany, France, etc.\n\nCities: Dubai, London, New York, San Francisco, Berlin, etc.\n\nSelect from the dropdown for valid values.`}
                 />
               </div>
               <TextInput

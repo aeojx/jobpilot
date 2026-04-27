@@ -737,3 +737,7 @@
 - [x] Verify fix with transform tests (12/13 pass, 1 expected edge case)
 - [x] Clean up 97 broken WellFound jobs from database
 - [x] All 100 vitest tests passing
+
+## v5.8 WellFound Ingestion Bug + Tooltip Hints
+- [x] Fix 0 jobs ingested bug — root cause: Apify API returns 400 when job_title/job_location aren't exact slugs. Changed TextInputs to SelectInput dropdowns with all 54 valid job titles and 80+ valid locations
+- [x] Add tooltip (?) beside each WellFound field showing all valid input values (hover to see full list)
