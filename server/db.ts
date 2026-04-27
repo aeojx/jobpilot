@@ -844,17 +844,38 @@ export async function scrapeWellFoundJobs(input: {
   const jobTitleSlug = toSlug(input.customJobTitle || input.jobTitle);
   const jobLocationSlug = toSlug(input.customJobLocation || input.jobLocation);
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     job_title: jobTitleSlug,
     job_location: jobLocationSlug,
-    keyword: input.keyword || undefined,
     include_company_profile: input.includeCompanyProfile !== false,
     include_company_people: input.includeCompanyPeople || false,
     include_company_funding: input.includeCompanyFunding || false,
     include_job_page: input.includeJobPage !== false,
     fully_remote: input.fullyRemote || false,
     us_date_format: true,
+    // Required parameters for the scraper to actually fetch results
+    last_x_days: 365,
+    max_pages: 3,
+    page_offset: 1,
+    max_items: input.maxResults || 100,
+    min_salary: 0,
+    max_salary: 0,
+    job_type: "all",
+    job_experience: "all",
+    sorting: "newest",
+    only_unique_jobs: true,
+    stream_output: true,
+    include_no_experience: true,
+    include_no_salary: true,
+    monitoring_mode: false,
+    only_company: false,
+    reset_monitoring: false,
   };
+
+  // Only include keyword if provided (undefined values cause issues)
+  if (input.keyword) {
+    payload.keyword = input.keyword;
+  }
 
   try {
     console.log("[WellFound] Calling Apify scraper with payload:", JSON.stringify(payload, null, 2));

@@ -739,5 +739,7 @@
 - [x] All 100 vitest tests passing
 
 ## v5.8 WellFound Ingestion Bug + Tooltip Hints
-- [x] Fix 0 jobs ingested bug — root cause: Apify API returns 400 when job_title/job_location aren't exact slugs. Changed TextInputs to SelectInput dropdowns with all 54 valid job titles and 80+ valid locations
+- [x] Fix 0 jobs ingested bug (Part 1) — Apify API returns 400 when job_title/job_location aren't exact slugs. Changed TextInputs to SelectInput dropdowns
+- [x] Fix 0 jobs ingested bug (Part 2) — Missing required Apify payload params (last_x_days, max_pages, page_offset, max_items, sorting, etc.). Added all required fields matching the successful Apr 24 run
+- [x] Identified daily usage limit: Apify free plan allows 10 runs/day. Resets at 10:03 UTC daily. Currently exceeded for today (Apr 27)
 - [x] Add tooltip (?) beside each WellFound field showing all valid input values (hover to see full list)
