@@ -839,9 +839,14 @@ export async function scrapeWellFoundJobs(input: {
 
   const APIFY_ENDPOINT = "https://api.apify.com/v2/acts/radeance~wellfound-job-listings-scraper/run-sync-get-dataset-items";
 
+  // Normalize to slug format (e.g., "Machine Learning Engineer" → "machine-learning-engineer")
+  const toSlug = (s: string) => s.trim().toLowerCase().replace(/[\s_]+/g, "-").replace(/[^a-z0-9-]/g, "");
+  const jobTitleSlug = toSlug(input.customJobTitle || input.jobTitle);
+  const jobLocationSlug = toSlug(input.customJobLocation || input.jobLocation);
+
   const payload = {
-    job_title: input.customJobTitle || input.jobTitle,
-    job_location: input.customJobLocation || input.jobLocation,
+    job_title: jobTitleSlug,
+    job_location: jobLocationSlug,
     keyword: input.keyword || undefined,
     include_company_profile: input.includeCompanyProfile !== false,
     include_company_people: input.includeCompanyPeople || false,
@@ -872,30 +877,52 @@ export async function scrapeWellFoundJobs(input: {
     console.log(`[WellFound] Scraper returned ${Array.isArray(data) ? data.length : 0} items`);
 
     // data is an array of job listings from Apify
+    // Actual field names from the radeance~wellfound-job-listings-scraper:
+    // job_title, job_id, job_url, job_application_url, job_description,
+    // job_location, job_compensation, job_remote, job_type, company (object), skills, etc.
     return data as Array<{
+      job_id?: string;
+      job_title?: string;
+      job_url?: string;
+      job_application_url?: string;
+      job_description?: string;
+      job_location?: string;
+      job_compensation?: string;
+      job_remote?: boolean | string;
+      job_type?: string;
+      job_min_salary?: number;
+      job_max_salary?: number;
+      job_salary_currency?: string;
+      job_equity?: string;
+      job_min_equity?: string;
+      job_max_equity?: string;
+      job_experience?: string;
+      job_listing_posted?: string;
+      job_published?: string;
+      visa_sponsorship?: boolean | string;
+      skills?: string[];
+      direct_application?: boolean;
+      company?: {
+        name?: string;
+        slug?: string;
+        location?: string;
+        size?: string;
+        category?: string[];
+        type?: string;
+        profile_url?: string;
+        url?: string;
+        logo_url?: string;
+        [key: string]: unknown;
+      } | string;
+      // Legacy fields (in case older scraper versions return these)
       id?: string;
       title?: string;
-      company?: string;
       location?: string;
-      salary?: string;
-      salaryMin?: number;
-      salaryMax?: number;
-      salaryType?: string;
-      equity?: string;
-      remote?: boolean;
-      remotePolicy?: string;
       description?: string;
       link?: string;
-      postedDate?: string;
       applicationUrl?: string;
-      companyProfile?: {
-        name?: string;
-        website?: string;
-        linkedin?: string;
-        twitter?: string;
-        industry?: string;
-        size?: string;
-      };
+      salary?: string;
+      remote?: boolean;
       [key: string]: unknown;
     }>;
   } catch (error) {
@@ -912,30 +939,35 @@ function buildWellFoundSyntheticDescription(
   companyName: string
 ): string {
   const parts: string[] = [];
-  const title = job.title || "Unknown Position";
+  const title = job.job_title || job.title || "Unknown Position";
   parts.push(`Job Title: ${title}`);
   parts.push(`Company: ${companyName}`);
-  if (job.location) parts.push(`Location: ${job.location}`);
-  if (job.remote || job.remotePolicy) parts.push(`Remote: ${job.remotePolicy || "Yes"}`);
-  if (job.salary) parts.push(`Compensation: ${job.salary}`);
-  if (job.equity) parts.push(`Equity: ${job.equity}`);
-  if (job.companyProfile?.industry) parts.push(`Industry: ${job.companyProfile.industry}`);
-  if (job.companyProfile?.size) parts.push(`Company Size: ${job.companyProfile.size}`);
-  // Extract role info from the job_id slug if available (e.g. "4129433-senior-product-manager")
-  if (job.id && typeof job.id === "string" && job.id.includes("-")) {
-    const roleSlug = job.id.replace(/^\d+-/, "").replace(/-/g, " ");
-    parts.push(`Role: ${roleSlug}`);
-  }
+  const location = job.job_location || job.location;
+  if (location) parts.push(`Location: ${location}`);
+  if (job.job_remote || job.remote) parts.push(`Remote: ${job.job_remote || "Yes"}`);
+  const compensation = job.job_compensation || job.salary;
+  if (compensation) parts.push(`Compensation: ${compensation}`);
+  const equity = job.job_equity || job.equity;
+  if (equity) parts.push(`Equity: ${equity}`);
+  if (job.job_type) parts.push(`Type: ${job.job_type}`);
+  if (job.job_experience) parts.push(`Experience: ${job.job_experience}`);
+  if (job.skills && Array.isArray(job.skills)) parts.push(`Skills: ${job.skills.join(", ")}`);
+  if (job.visa_sponsorship) parts.push(`Visa Sponsorship: ${job.visa_sponsorship}`);
+  const companyObj = typeof job.company === "object" ? job.company : null;
+  if (companyObj?.category) parts.push(`Industry: ${Array.isArray(companyObj.category) ? companyObj.category.join(", ") : companyObj.category}`);
+  if (companyObj?.size) parts.push(`Company Size: ${companyObj.size}`);
   return parts.join("\n");
 }
 
 /**
  * Transform WellFound job data to internal InsertJob format
+ * Handles both new Apify field names (job_title, job_url, etc.) and legacy names (title, link, etc.)
  */
 export function transformWellFoundJob(
   wellfoundJob: Awaited<ReturnType<typeof scrapeWellFoundJobs>>[number]
 ): InsertJob {
   // Handle company: can be a string or an object with a name property
+  // New Apify format returns company as object: { name, slug, location, size, ... }
   let companyName = "Unknown Company";
   if (typeof wellfoundJob.company === "string") {
     companyName = wellfoundJob.company;
@@ -943,45 +975,75 @@ export function transformWellFoundJob(
     companyName = (wellfoundJob.company as { name?: string }).name || "Unknown Company";
   }
 
-  // Extract title from job_id slug when title field is empty
-  // e.g., "4129433-senior-product-manager" → "Senior Product Manager"
-  let jobTitle = wellfoundJob.title;
-  if (!jobTitle && wellfoundJob.id) {
-    const slug = wellfoundJob.id.replace(/^\d+-/, ""); // Remove leading numeric ID
-    jobTitle = slug
-      .split("-")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
+  // Extract title: prefer job_title (new format), fallback to title (legacy)
+  // If still empty, extract from job_url slug (e.g., ".../3826979-founding-saas-engineer" → "Founding Saas Engineer")
+  let jobTitle = wellfoundJob.job_title || wellfoundJob.title || "";
+  if (!jobTitle) {
+    // Try extracting from job_url slug
+    const jobUrl = wellfoundJob.job_url || wellfoundJob.link || "";
+    const urlMatch = jobUrl.match(/\/jobs\/(\d+-[\w-]+)/);
+    if (urlMatch) {
+      const slug = urlMatch[1].replace(/^\d+-/, "");
+      jobTitle = slug
+        .split("-")
+        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+    }
+  }
+  if (!jobTitle && wellfoundJob.job_id) {
+    // Last resort: use job_id if it contains a slug
+    const idStr = String(wellfoundJob.job_id);
+    if (idStr.includes("-")) {
+      const slug = idStr.replace(/^\d+-/, "");
+      jobTitle = slug
+        .split("-")
+        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+    }
   }
   if (!jobTitle) jobTitle = "Unknown Position";
 
-  // Construct WellFound application URL from job_id when applicationUrl and link are empty
-  // WellFound job URLs follow the pattern: https://wellfound.com/jobs/{job_id}
-  let applyUrl = wellfoundJob.applicationUrl || wellfoundJob.link || "";
-  if (!applyUrl && wellfoundJob.id) {
-    applyUrl = `https://wellfound.com/jobs/${wellfoundJob.id}`;
+  // Extract application URL: prefer job_application_url (new), then job_url, then legacy fields
+  let applyUrl = wellfoundJob.job_application_url || wellfoundJob.job_url || wellfoundJob.applicationUrl || wellfoundJob.link || "";
+  if (!applyUrl && wellfoundJob.job_id) {
+    applyUrl = `https://wellfound.com/jobs/${wellfoundJob.job_id}`;
   }
 
-  // Store only essential fields in rawJson to avoid SQL serialization issues
+  // Extract location: prefer job_location (new), then company.location, then legacy location
+  const companyObj = typeof wellfoundJob.company === "object" ? wellfoundJob.company : null;
+  const jobLocation = wellfoundJob.job_location || wellfoundJob.location || (companyObj as any)?.location || "Remote";
+
+  // Extract description: prefer job_description (new), then legacy description
+  const description = wellfoundJob.job_description || wellfoundJob.description || "";
+
+  // Extract external ID: prefer job_id (new), then legacy id
+  const externalId = wellfoundJob.job_id ? String(wellfoundJob.job_id) : (wellfoundJob.id || `wellfound-${Date.now()}-${Math.random()}`);
+
+  // Store essential fields in rawJson for debugging and re-processing
   const essentialData = {
-    id: wellfoundJob.id,
-    title: jobTitle,
+    job_id: wellfoundJob.job_id,
+    job_title: jobTitle,
     company: companyName,
-    location: wellfoundJob.location,
-    link: applyUrl,
-    description: wellfoundJob.description,
-    compensation: (wellfoundJob as any).salary || (wellfoundJob as any).compensation,
-    remote: (wellfoundJob as any).remote,
+    job_location: jobLocation,
+    job_url: wellfoundJob.job_url,
+    job_application_url: wellfoundJob.job_application_url,
+    job_compensation: wellfoundJob.job_compensation || wellfoundJob.salary,
+    job_remote: wellfoundJob.job_remote || wellfoundJob.remote,
+    job_type: wellfoundJob.job_type,
+    skills: wellfoundJob.skills,
+    visa_sponsorship: wellfoundJob.visa_sponsorship,
+    company_size: companyObj?.size,
+    company_category: companyObj?.category,
   };
 
   return {
     title: jobTitle,
     company: companyName,
-    location: wellfoundJob.location || "Remote",
+    location: jobLocation,
     applyUrl: applyUrl,
-    description: wellfoundJob.description || buildWellFoundSyntheticDescription(wellfoundJob, companyName),
+    description: description || buildWellFoundSyntheticDescription(wellfoundJob as any, companyName),
     source: "wellfound",
-    externalId: wellfoundJob.id || `wellfound-${Date.now()}-${Math.random()}`,
+    externalId: externalId,
     status: "matched",
     ingestedAt: new Date(),
     rawJson: JSON.stringify(essentialData),

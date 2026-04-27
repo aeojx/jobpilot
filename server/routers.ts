@@ -1256,7 +1256,11 @@ export const appRouter = router({
           const duplicates = [];
 
           for (const rawJob of rawJobs) {
-            const isDuplicate = await checkDuplicate(rawJob.title || "Unknown", rawJob.company || "Unknown", rawJob.id);
+            // Extract company name for dedup check (company can be string or object)
+            const rawCompanyName = typeof rawJob.company === "string" ? rawJob.company : (rawJob.company?.name || "Unknown");
+            const rawTitle = rawJob.job_title || rawJob.title || "Unknown";
+            const rawId = rawJob.job_id ? String(rawJob.job_id) : rawJob.id;
+            const isDuplicate = await checkDuplicate(rawTitle, rawCompanyName, rawId);
             if (isDuplicate) {
               duplicates.push(rawJob.title);
               continue;
@@ -1533,24 +1537,42 @@ export const appRouter = router({
       let skipped = 0;
       const db = await getDb();
       for (const job of wellfoundJobs) {
-        // Fix title if it's "Unknown Position" — extract from rawJson id slug
+        // Fix title if it's "Unknown Position" — extract from rawJson fields
         let currentTitle = job.title;
         if (currentTitle === "Unknown Position" && job.rawJson) {
           try {
             const rawData = JSON.parse(job.rawJson as string);
-            if (rawData.id && typeof rawData.id === "string" && rawData.id.includes("-")) {
+            // Try new format field first (job_title), then URL slug extraction
+            let fixedTitle = rawData.job_title || "";
+            if (!fixedTitle && rawData.job_url) {
+              const urlMatch = rawData.job_url.match(/\/jobs\/(\d+-[\w-]+)/);
+              if (urlMatch) {
+                const slug = urlMatch[1].replace(/^\d+-/, "");
+                fixedTitle = slug.split("-").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+              }
+            }
+            if (!fixedTitle && rawData.job_id && String(rawData.job_id).includes("-")) {
+              const slug = String(rawData.job_id).replace(/^\d+-/, "");
+              fixedTitle = slug.split("-").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+            }
+            // Legacy fallback: old id field
+            if (!fixedTitle && rawData.id && typeof rawData.id === "string" && rawData.id.includes("-")) {
               const slug = rawData.id.replace(/^\d+-/, "");
-              currentTitle = slug.split("-").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+              fixedTitle = slug.split("-").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+            }
+            if (fixedTitle) {
+              currentTitle = fixedTitle;
               if (db) await db.update(jobs).set({ title: currentTitle }).where(eq(jobs.id, job.id));
             }
           } catch { /* ignore */ }
         }
 
-        // Fix applyUrl if empty — construct from rawJson id
+        // Fix applyUrl if empty — construct from rawJson fields
         if (!job.applyUrl && job.rawJson) {
           try {
             const rawData = JSON.parse(job.rawJson as string);
-            const newUrl = rawData.link || (rawData.id ? `https://wellfound.com/jobs/${rawData.id}` : "");
+            // Try new format fields first, then legacy
+            const newUrl = rawData.job_application_url || rawData.job_url || rawData.link || (rawData.job_id ? `https://wellfound.com/jobs/${rawData.job_id}` : "") || (rawData.id ? `https://wellfound.com/jobs/${rawData.id}` : "");
             if (newUrl && db) {
               await db.update(jobs).set({ applyUrl: newUrl }).where(eq(jobs.id, job.id));
             }

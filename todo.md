@@ -720,3 +720,20 @@
 - [x] Section 10: Final CTA — "Free 15-Minute Salary & LinkedIn Evaluation"
 - [x] Register /landing_ai route in App.tsx
 - [x] All CTAs route to WhatsApp booking (wa.me/971509410068) with "Free 15-Minute Salary & LinkedIn Evaluation" framing
+
+## v5.7 WellFound Ingestion Fix (Title & URL still missing)
+- [x] Investigate why transformWellFoundJob is not extracting title from raw data
+  Root cause: Apify scraper returns `job_title`, `job_url`, `job_application_url` but code expected `title`, `link`, `applicationUrl`
+- [x] Investigate why application URL is not being set from raw data
+  Root cause: Same field name mismatch — `job_application_url` vs `applicationUrl`
+- [x] Fix title extraction to properly pull from WellFound API response fields
+  Now reads: job_title → title → URL slug extraction → job_id slug → "Unknown Position"
+- [x] Fix application URL construction from WellFound job data
+  Now reads: job_application_url → job_url → applicationUrl → link → construct from job_id
+- [x] Add slug normalization for API input (auto-converts "Machine Learning Engineer" → "machine-learning-engineer")
+- [x] Fix company extraction (company is now an object with .name, not a string)
+- [x] Fix dedup check in scrapeWellFound procedure (extract company name from object)
+- [x] Update rescoreWellFound to use new field names from rawJson
+- [x] Verify fix with transform tests (12/13 pass, 1 expected edge case)
+- [x] Clean up 97 broken WellFound jobs from database
+- [x] All 100 vitest tests passing
