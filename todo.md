@@ -555,8 +555,8 @@
 - [x] Re-test and verify results (all 9 queries tested: 5+ results each, added tsquery error detection to executeFetch)
 
 ## v4.0 Commercial Landing Page & Stripe Integration
-- [ ] Set up Stripe integration via webdev_add_feature
-- [ ] Create 3 Stripe products/prices ($1 Test, $100 Mass Apply, $499 White Glove)
+- [x] ~~Set up Stripe integration via webdev_add_feature~~ (CANCELLED: replaced by WhatsApp CTA flow)
+- [x] ~~Create 3 Stripe products/prices ($1 Test, $100 Mass Apply, $499 White Glove)~~ (CANCELLED: replaced by WhatsApp CTA flow)
 - [x] Build Hormozi-style landing page: hero section with dream outcome headline
 - [x] Build problem/agitation section (pain of manual job hunting)
 - [x] Build solution reveal with real metrics (3,206 jobs, 351 apps, 4 interviews)
@@ -567,9 +567,9 @@
 - [x] Build urgency/scarcity section
 - [x] Build FAQ section
 - [x] Build final CTA section
-- [ ] Integrate Stripe Checkout sessions for all 3 tiers
-- [ ] Add success/cancel pages post-checkout
-- [ ] Update navigation to show landing page for non-authenticated visitors
+- [x] ~~Integrate Stripe Checkout sessions for all 3 tiers~~ (CANCELLED: replaced by WhatsApp CTA flow)
+- [x] ~~Add success/cancel pages post-checkout~~ (CANCELLED: replaced by WhatsApp CTA flow)
+- [x] ~~Update navigation to show landing page for non-authenticated visitors~~ (DONE: /landing and /landing_ai are public routes)
 
 ## v4.1 Next Steps Queue + Applier Ingestion Access
 
@@ -657,7 +657,7 @@
 - [x] Map WellFound job data to internal job schema (title, company, location, salary, link, etc.)
 - [x] Add error handling and retry logic for Apify API calls
 - [x] Fix company object handling and rawJson serialization (v4.9.1)
-- [ ] Write vitest tests for WellFound scraper integration
+- [x] Write vitest tests for WellFound scraper integration (18 tests covering new Apify format, title/URL fallbacks, legacy compat, location fallback, synthetic description)
 
 ## v5.0 Hormozi $100M Offer Landing Page Rewrite
 - [x] Rewrite NAV: logo + single CTA "Book Free Intake Call"
