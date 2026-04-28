@@ -1,0 +1,1 @@
+ALTER TABLE `jobs` MODIFY COLUMN `status` enum('ingested','matched','to_apply','blocked','applied','rejected','expired') NOT NULL DEFAULT 'ingested';

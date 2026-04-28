@@ -1,0 +1,1 @@
+ALTER TABLE `jobs` ADD `autoRejected` boolean DEFAULT false NOT NULL;

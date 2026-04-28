@@ -1,0 +1,9 @@
+{
+  "query": "INSERT IGNORE INTO `__drizzle_migrations` (hash, created_at) VALUES ('0001_overconfident_falcon', 1774784914797);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user WN3xd22ei9epifv.e8f98a17fdb7 --database 8xw3YDHLEcZPc6Z4gxVxDS --execute INSERT IGNORE INTO `__drizzle_migrations` (hash, created_at) VALUES ('0001_overconfident_falcon', 1774784914797);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1579
+}

@@ -1,0 +1,31 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user WN3xd22ei9epifv.e8f98a17fdb7 --database 8xw3YDHLEcZPc6Z4gxVxDS --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_8xw3YDHLEcZPc6Z4gxVxDS": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_8xw3YDHLEcZPc6Z4gxVxDS": "api_usage"
+    },
+    {
+      "Tables_in_8xw3YDHLEcZPc6Z4gxVxDS": "applier_gamification"
+    },
+    {
+      "Tables_in_8xw3YDHLEcZPc6Z4gxVxDS": "applier_stats"
+    },
+    {
+      "Tables_in_8xw3YDHLEcZPc6Z4gxVxDS": "fetch_history"
+    },
+    {
+      "Tables_in_8xw3YDHLEcZPc6Z4gxVxDS": "fetch_schedules"
+    },
+    {
+      "Tables_in_8xw3YDHLEcZPc6Z4gxVxDS": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_8xw3YDHLEcZPc6Z4gxVxDS\n__drizzle_migrations\napi_usage\napplier_gamification\napplier_stats\nfetch_history\nfetch_schedules\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 1539
+}

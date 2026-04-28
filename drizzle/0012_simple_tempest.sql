@@ -1,0 +1,1 @@
+ALTER TABLE `api_usage` MODIFY COLUMN `monthKey` varchar(16) NOT NULL;
